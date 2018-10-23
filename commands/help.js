@@ -1,15 +1,17 @@
-const Discord = require('discord.js');
+const DiscordMessageMenu = require ('./../menus');
 
-module.exports.run = async (client, message, args) => {
-    let output = "";
-    let cmds = client.commands;
-    cmds.forEach(element => {
+module.exports.run = async (client, message, args, prefix) => {
+    let items = [];
+    client.commands.forEach(element => {
         let name = element.help.name;
         let desc = element.help.description;
-        output += [name + ' - ' + desc + '\n'];
+        items.push('**' + prefix + name + '** - ' + desc + '\n');
     });
 
-    message.channel.send(output);
+    let menu = new DiscordMessageMenu(message, 'Discord Compiler Bot Help Menu:', 0x00FF00);
+    menu.setNumbered(false);
+    menu.buildMenu(items);
+    menu.displayPage(0);
 }
 
 module.exports.help = {

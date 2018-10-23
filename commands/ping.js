@@ -1,8 +1,11 @@
 const Discord = require('discord.js');
 
-module.exports.run = async (client, message, args) => {
-    message.channel.send('pong!');
-    
+module.exports.run = async (client, message, args, prefix) => {
+    const embed = new Discord.RichEmbed()
+    .setTitle('Ping Output:')
+    .setColor(0xFF0000)
+    .setDescription('**Pong!**');
+    message.channel.send(embed);
 }
 
 module.exports.help = {

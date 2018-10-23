@@ -33,11 +33,10 @@ client.on('message', message => {
     if (message.author.bot) return;
     // strip !
     message.content = message.content.substring(botconfig.prefix.length);
-
     let args = message.content.split(" ");
     let commandfile = client.commands.get(args[0]);
     if (commandfile)
-        commandfile.run(client, message, args.splice(0, 1))
+        commandfile.run(client, message, args.splice(0, 1), botconfig.prefix)
 });
 
 // Pump them callbacks
