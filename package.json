@@ -1,0 +1,25 @@
+{
+  "name": "discord-compiler",
+  "version": "1.0.0",
+  "description": "An OSS discord compiler bot",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+ssh://git@github.com/Headline/discord-compiler.git"
+  },
+  "keywords": [
+    "discord",
+    "js",
+    "compiler",
+    "bot"
+  ],
+  "author": "Headline & Tuti",
+  "license": "GPL-3.0",
+  "bugs": {
+    "url": "https://github.com/Headline/discord-compiler/issues"
+  },
+  "homepage": "https://github.com/Headline/discord-compiler#readme"
+}
