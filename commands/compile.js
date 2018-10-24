@@ -44,8 +44,8 @@ module.exports.run = async (client, message, args, prefix, compilerAPI) => {
     }
 
     let discordLanguages = [ 'asciidoc', 'autohotkey', 'bash', 'coffeescript', 'cpp',
-    'cs', 'css', 'diff', 'fix', 'glsl', 'ini', 'java', 'json', 'md', 'ml', 'prolog', 'py',
-    'tex', 'xml', 'xl'];
+    'cs', 'css', 'diff', 'fix', 'glsl', 'ini', 'java', 'json', 'md', 'ml', 'prolog', 'python',
+    'py', 'tex', 'xml', 'xl'];
     for (let i = 0; i < discordLanguages.length; i++) {
         if (code.startsWith(discordLanguages[i])) {
             code = code.replace(discordLanguages[i], '');
