@@ -1,7 +1,12 @@
 const botconfig = require('./settings.json');
-
 const Discord = require('discord.js');
+const WandBox = require ('./WandBox.js');
+
 const client = new Discord.Client({disableEveryone: true});
+const compilerAPI = new WandBox.Compilers(() => {
+    console.log('compiler loading has completed!');
+    compilerAPI.initialize();
+});
 
 // Add commands
 console.log('loading commands...');
@@ -22,7 +27,6 @@ fs.readdir('./commands/', (err, files) => {
     });
 });
 
-
 // Callbacks
 client.on('ready', () => {
     console.log('\'ready\' event executed. discord-compiler has started');
@@ -36,7 +40,7 @@ client.on('message', message => {
     let args = message.content.split(" ");
     let commandfile = client.commands.get(args[0]);
     if (commandfile)
-        commandfile.run(client, message, args.splice(0, 1), botconfig.prefix)
+        commandfile.run(client, message, args, botconfig.prefix, compilerAPI)
 });
 
 // Pump them callbacks

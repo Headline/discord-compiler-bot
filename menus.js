@@ -13,27 +13,18 @@ class DiscordMessageMenu {
      * @param {String} title 
      * @param {Number} color 
      */
-    constructor(authormessage, title, color) {
+    constructor(authormessage, title, color, displaycount) {
         this.menu = [];
         this.page = 0;
         this.left = '◀';
         this.right = '▶';
         this.authormessage = authormessage;
         this.message = null;
-        this.displaycount = 6;
+        this.displaycount = displaycount;
         this.title = title;
         this.color = color;
         this.targetid = authormessage.author.id;
         this.numbered = true;
-    }
-
-    /**
-     * Determines how many items should display per page.
-     * 
-     * @param {Number} displaycount 
-     */
-    setDisplayCount(displaycount) {
-        this.displaycount = displaycount;
     }
 
     /**

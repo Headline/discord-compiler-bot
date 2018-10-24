@@ -8,7 +8,7 @@ module.exports.run = async (client, message, args, prefix) => {
         items.push('**' + prefix + name + '** - ' + desc + '\n');
     });
 
-    let menu = new DiscordMessageMenu(message, 'Discord Compiler Bot Help Menu:', 0x00FF00);
+    let menu = new DiscordMessageMenu(message, 'Discord Compiler Bot Help Menu:', 0x00FF00, 6);
     menu.setNumbered(false);
     menu.buildMenu(items);
     menu.displayPage(0);
