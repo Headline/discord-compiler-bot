@@ -1,5 +1,5 @@
 const https = require('https');
-
+const fetch = require('node-fetch');
 /**
  * A class designed to fetch & hold the list of valid
  * compilers from wandbox.
@@ -52,10 +52,78 @@ class Compilers {
         return this.compilerinfo[language];
     }
 
+    isValidCompiler(compiler) {
+
+        for (let i = 0; i < this.languages.length; i++) {
+            for (let j = 0; j < this.compilerinfo[this.languages[i]].length; j++) {
+                if (compiler == this.compilerinfo[this.languages[i]][j])
+                    return true;
+            }
+        }
+        return false;
+    }
+
 }
 
-class Test {
+/**
+ * Class which represents all the settings and information for a single compilation
+ * request. This should be built and used in coordination with Compiler. 
+ */
+class CompileSetup {
+    /**
+     * Creates a compilation setup for usage with the Compiler object.
+     * You may pass a language instead of a compiler for the second parameter,
+     * and it will be compiled with the first compiler found in the list. The compiler
+     * used is #1 on the menu for ;compilers <lang>.
+     * @param {String} code 
+     * @param {String} compiler 
+     * @param {String} stdin 
+     * @param {Boolean} save 
+     * @param {Compilers} compilers 
+     */
+    constructor(code, compiler, stdin, save, compilers) {
+        this.code = code;
+        this.stdin = stdin;
+        this.save = save;
 
+        let comp = compiler.toLowerCase();
+        let langs = compilers.languages;
+        if (langs.indexOf(comp) >= 0)
+            this.compiler = compilers.compilerinfo[comp][0];
+        else
+            this.compiler = comp;
+    }
 }
 
-module.exports = {Compilers, Test};
+/**
+ * Request sender which creates and sends a CompileSetup
+ */
+class Compiler {
+    /**
+     * Creates a compilation object which compiles code.
+     * 
+     * @param {CompileSetup} compilesetup 
+     */
+    constructor(compilesetup) {
+        this.compilesetup = compilesetup
+    }
+
+    /**
+     * Sends a request to wandbox servers with the code, language, and compiler.
+     */
+    compile(onCompleted) {
+        let url = "https://wandbox.org/api/compile.json";
+        fetch(url, {
+            method: "POST",
+            body: JSON.stringify(this.compilesetup),
+            headers: {
+                'Content-Type': 'application/json; charset=utf-8'
+            },
+        })
+        .then(response =>response.json())
+        .then(json => onCompleted(json))
+        .catch(ex => console.log(ex));
+    }
+}
+
+module.exports = {Compilers, Compiler, CompileSetup};

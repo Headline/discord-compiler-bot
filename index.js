@@ -35,9 +35,10 @@ client.on('ready', () => {
 client.on('message', message => {
     if (!message.content.startsWith(botconfig.prefix)) return;
     if (message.author.bot) return;
+
     // strip !
     message.content = message.content.substring(botconfig.prefix.length);
-    let args = message.content.split(" ");
+    let args = message.content.split(" ").join('\n').split('\n');
     let commandfile = client.commands.get(args[0]);
     if (commandfile)
         commandfile.run(client, message, args, botconfig.prefix, compilerAPI)
