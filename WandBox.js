@@ -110,6 +110,7 @@ class Compiler {
 
     /**
      * Sends a request to wandbox servers with the code, language, and compiler.
+     * If the json object returned by onCompleted is null, an error has occured.
      */
     compile(onCompleted) {
         let url = "https://wandbox.org/api/compile.json";
@@ -122,7 +123,9 @@ class Compiler {
         })
         .then(response =>response.json())
         .then(json => onCompleted(json))
-        .catch(ex => console.log(ex));
+        .catch((ex) =>  {
+            onCompleted(null);
+        });
     }
 }
 

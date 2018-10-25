@@ -66,6 +66,15 @@ module.exports.run = async (client, message, args, prefix, compilerAPI) => {
             + " || Powered by wandbox.org")
             .setColor(0x00FF00);
 
+            /* The request failed */
+            if (json == null) {
+                embed.setColor(0xFF0000);
+                embed.setDescription("It appears that a request has failed. It has either timed out or wandbox.org is rejecting requests. Please try again later.");
+                message.channel.send(embed);
+                return;
+            }
+
+            /* We got something back, build embed. */
             if (json.hasOwnProperty('status')) {
                 if (json.status != 0)
                     embed.setColor(0xFF0000);
