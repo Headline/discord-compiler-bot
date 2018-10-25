@@ -2,6 +2,10 @@ const Discord = require('discord.js');
 const WandBox = require ('../WandBox.js');
 const stripAnsi = require('strip-ansi');
 
+// py
+const fs = require('fs');
+const spawn = require('child_process').spawn;
+
 function cleanControlChars(dirty) {
     return stripAnsi(dirty);
 }
@@ -97,6 +101,16 @@ module.exports.run = async (client, message, args, prefix, compilerAPI) => {
                 embed.addField('Program Output', `\`\`\`${json.program_message}\`\`\``);
             }
             message.channel.send(embed).then((msg) => {
+
+                /* On the deployed instance, we will track usage. This wont
+                 * have any effect if this file doesn't exist on your fs */
+                let file = '/var/www/html/discord-compiler/graph.py';
+                fs.stat(file, (err, stat) => {
+                    if (err == null) {
+                        const process = spawn('python', file);
+                    }
+                });
+
                 if (json.status == 0)
                     msg.react('✅');
                 else
