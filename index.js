@@ -9,6 +9,7 @@ const compilerAPI = new WandBox.Compilers(() => {
 });
 
 var cmdlist = [];
+var servers = 0;
 
 // Add commands
 console.log('loading commands...');
@@ -29,9 +30,26 @@ fs.readdir('./commands/', (err, files) => {
     });
 });
 
+client.on('guildCreate', (g) => {
+    servers += 1;
+    console.log(`joining ${g.name}`);
+    client.user.setPresence({ game: { name: `in ${servers} servers | ;help`}, status: 'online'})
+    .catch(console.log);
+});
+client.on('guildDelete', (g) => {
+    servers -= 1;
+    console.log(`leaving ${g.name}`);
+    client.user.setPresence({ game: { name: `in ${servers} servers | ;help`}, status: 'online'})
+    .catch(console.log);
+});
+
 // Callbacks
 client.on('ready', () => {
     console.log('\'ready\' event executed. discord-compiler has started');
+
+    console.log(`existing in ${client.guilds.size} servers`);
+    client.user.setPresence({ game: { name: `in ${client.guilds.size} servers | ;help`}, status: 'online'})
+    .catch(console.log);
 });
 
 client.on('message', message => {
