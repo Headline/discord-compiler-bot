@@ -119,7 +119,7 @@ module.exports.run = async (client, message, args, prefix, compilerAPI, cmdlist)
                 let file = '/var/www/html/discord-compiler/graph.py';
                 fs.stat(file, (err, stat) => {
                     if (err == null) {
-                        const process = spawn('python', file);
+                        const process = spawn('python', [file]);
                     }
                 });
 
