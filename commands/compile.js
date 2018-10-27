@@ -26,7 +26,8 @@ module.exports.run = async (client, message, args, prefix, compilerAPI, cmdlist)
         return;
     }
 
-    let code = message.content.match('```([\\s\\S]*)```')[1].trim();
+
+    let code = match[1].trim();
     if (code.length <= 0)
     {
         const embed = new Discord.RichEmbed()
@@ -56,6 +57,10 @@ module.exports.run = async (client, message, args, prefix, compilerAPI, cmdlist)
         return;
     }
 
+    let start = message.content.indexOf(args[1]) + args[1].length;
+    let end = message.content.indexOf('```');
+    let options = message.content.substring(start, end).trim();
+
     let discordLanguages = [ 'asciidoc', 'autohotkey', 'bash', 'coffeescript', 'cpp',
     'cs', 'css', 'diff', 'fix', 'glsl', 'ini', 'java', 'json', 'md', 'ml', 'prolog', 'python',
     'py', 'tex', 'xml', 'xl'];
@@ -66,7 +71,7 @@ module.exports.run = async (client, message, args, prefix, compilerAPI, cmdlist)
         }
     }
 
-    let setup = new WandBox.CompileSetup(code, lang, "", true, compilerAPI);
+    let setup = new WandBox.CompileSetup(code, lang, "", true, options, compilerAPI);
     let comp = new WandBox.Compiler(setup);
     let loading = client.emojis.get('504515210455941120');
     message.react(loading).then((msg) => {

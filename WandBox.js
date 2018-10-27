@@ -81,10 +81,11 @@ class CompileSetup {
      * @param {Boolean} save 
      * @param {Compilers} compilers 
      */
-    constructor(code, compiler, stdin, save, compilers) {
+    constructor(code, compiler, stdin, save, compiler_option_raw, compilers) {
         this.code = code;
         this.stdin = stdin;
         this.save = save;
+        this.compiler_option_raw = compiler_option_raw.split(' ').join('\n'); // joined by comma per doc spec
 
         let comp = compiler.toLowerCase();
         let langs = compilers.languages;
@@ -116,7 +117,7 @@ class Compiler {
         let url = "https://wandbox.org/api/compile.json";
         fetch(url, {
             method: "POST",
-            body: JSON.stringify(this.compilesetup),
+            body: JSON.stringify(this.compilesetup).replace('compiler_option_raw', 'compiler-option-raw'),
             headers: {
                 'Content-Type': 'application/json; charset=utf-8'
             },
