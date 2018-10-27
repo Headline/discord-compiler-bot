@@ -8,6 +8,8 @@ const compilerAPI = new WandBox.Compilers(() => {
     compilerAPI.initialize();
 });
 
+var cmdlist = [];
+
 // Add commands
 console.log('loading commands...');
 const fs = require('fs');
@@ -41,7 +43,15 @@ client.on('message', message => {
     let args = message.content.split(" ").join('\n').split('\n');
     let commandfile = client.commands.get(args[0]);
     if (commandfile)
-        commandfile.run(client, message, args, botconfig.prefix, compilerAPI)
+        commandfile.run(client, message, args, botconfig.prefix, compilerAPI, cmdlist);
+});
+
+client.on('messageDelete', (message) => {
+    cmdlist.forEach(([theirs, ours]) => {
+        if (theirs.id == message.id) {
+            ours.delete();
+        }
+    })
 });
 
 // Pump them callbacks

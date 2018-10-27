@@ -10,7 +10,7 @@ function cleanControlChars(dirty) {
     return stripAnsi(dirty);
 }
 
-module.exports.run = async (client, message, args, prefix, compilerAPI) => {
+module.exports.run = async (client, message, args, prefix, compilerAPI, cmdlist) => {
 
     let match = message.content.match('```([\\s\\S]*)```');
     if (!match)
@@ -19,7 +19,10 @@ module.exports.run = async (client, message, args, prefix, compilerAPI) => {
         .setTitle('Error:')
         .setColor(0xFF0000)
         .setDescription(`You must attach codeblocks containing code to your message`)
-        message.channel.send(embed);
+        message.channel.send(embed).then((msg) => {
+            let group = [message, msg];
+            cmdlist.push(group);            
+        });
         return;
     }
 
@@ -30,7 +33,10 @@ module.exports.run = async (client, message, args, prefix, compilerAPI) => {
         .setTitle('Error:')
         .setColor(0xFF0000)
         .setDescription(`You must actually supply code to compile!`)
-        message.channel.send(embed);
+        message.channel.send(embed).then((msg) => {
+            let group = [message, msg];
+            cmdlist.push(group);            
+        });
         return;
     }
 
@@ -43,7 +49,10 @@ module.exports.run = async (client, message, args, prefix, compilerAPI) => {
         .setColor(0xFF0000)
         .setDescription(`You must supply a valid language or compiler as an argument!\n`
                         + `Usage: ${prefix}compile <lang/compiler> \`\`\` <code> \`\`\``)
-        message.channel.send(embed);
+        message.channel.send(embed).then((msg) => {
+            let group = [message, msg];
+            cmdlist.push(group);            
+        });
         return;
     }
 
@@ -74,7 +83,10 @@ module.exports.run = async (client, message, args, prefix, compilerAPI) => {
             if (json == null) {
                 embed.setColor(0xFF0000);
                 embed.setDescription("It appears that a request has failed. It has either timed out or wandbox.org is rejecting requests. Please try again later.");
-                message.channel.send(embed);
+                message.channel.send(embed).then((msg) => {
+                    let group = [message, msg];
+                    cmdlist.push(group);            
+                });
                 return;
             }
 
@@ -115,6 +127,9 @@ module.exports.run = async (client, message, args, prefix, compilerAPI) => {
                     msg.react('✅');
                 else
                     msg.react('❌');
+
+                let group = [message, msg];
+                cmdlist.push(group);        
             });
         });
     });

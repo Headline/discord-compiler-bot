@@ -7,7 +7,10 @@ module.exports.run = async (client, message, args, prefix, compilerAPI) => {
         .setTitle('Error:')
         .setColor(0xFF0000)
         .setDescription(`You must supply a language in order view it's supported compilers`)
-        message.channel.send(embed);
+        message.channel.send(embed).then((msg) => {
+            let group = [message, msg];
+            cmdlist.push(group);            
+        });
         return;
     }
     let langs = compilerAPI.getCompilers(args[1].toLowerCase()); 
@@ -17,7 +20,10 @@ module.exports.run = async (client, message, args, prefix, compilerAPI) => {
         .setColor(0xFF0000)
         .setDescription(`The language *\'${args[1]}\'* is either not supported, or you have accidentially typed in the wrong language.` 
         + `Try using the *${prefix}languages* command to see supported languages!`);
-        message.channel.send(embed);
+        message.channel.send(embed).then((msg) => {
+            let group = [message, msg];
+            cmdlist.push(group);            
+        });
         return;
     }
     let menu = new DiscordMessageMenu(message, `Supported \'${args[1].toLowerCase()}\' compilers:`, 0x00FF00, 15);
