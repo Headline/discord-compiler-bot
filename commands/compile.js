@@ -63,8 +63,8 @@ module.exports.run = async (client, message, args, prefix, compilerAPI, cmdlist)
         options += args[i] + ' ';
     }
 
-    let discordLanguages = [ 'asciidoc', 'autohotkey', 'bash', 'coffeescript', 'c', 'cpp',
-    'cs', 'css', 'diff', 'fix', 'glsl', 'ini', 'java', 'json', 'md', 'ml', 'prolog', 'python',
+    let discordLanguages = [ 'asciidoc', 'autohotkey', 'bash', 'coffeescript', 'cpp',
+    'cs', 'css', 'c', 'diff', 'fix', 'glsl', 'ini', 'java', 'json', 'md', 'ml', 'prolog', 'python',
     'py', 'tex', 'xml', 'xl'];
 
     for (let i = 0; i < discordLanguages.length; i++) {
