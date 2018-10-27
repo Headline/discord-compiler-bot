@@ -47,8 +47,9 @@ client.on('guildDelete', (g) => {
 client.on('ready', () => {
     console.log('\'ready\' event executed. discord-compiler has started');
 
-    console.log(`existing in ${client.guilds.size} servers`);
-    client.user.setPresence({ game: { name: `in ${client.guilds.size} servers | ;help`}, status: 'online'})
+    servers = client.guilds.size;
+    console.log(`existing in ${servers} servers`);
+    client.user.setPresence({ game: { name: `in ${servers} servers | ;help`}, status: 'online'})
     .catch(console.log);
 });
 
