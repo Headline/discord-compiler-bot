@@ -3,6 +3,8 @@ A simple open-source Discord bot which can compile code, display the output of t
 
 **Adding this bot to your server is as simple as clicking [here](https://discordapp.com/oauth2/authorize?client_id=504095380166803466&scope=bot&permissions=388160).**
 
+**Just looking to try it out? Join our [support discord](https://discord.gg/ExraTaJ) and give it a shot!**
+
 ## Usage
 For a tutorial about how to use this bot, feel free to view our [wiki](https://github.com/Headline/discord-compiler/wiki)!
 
