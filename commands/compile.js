@@ -57,13 +57,16 @@ module.exports.run = async (client, message, args, prefix, compilerAPI, cmdlist)
         return;
     }
 
-    let start = message.content.indexOf(args[1]) + args[1].length;
-    let end = message.content.indexOf('```');
-    let options = message.content.substring(start, end).trim();
+    let options = "";
+    for (let i = 2; i < args.length; i++) {
+        if (args[i].indexOf('```') > -1) break;
+        options += args[i] + ' ';
+    }
 
-    let discordLanguages = [ 'asciidoc', 'autohotkey', 'bash', 'coffeescript', 'cpp',
+    let discordLanguages = [ 'asciidoc', 'autohotkey', 'bash', 'coffeescript', 'c', 'cpp',
     'cs', 'css', 'diff', 'fix', 'glsl', 'ini', 'java', 'json', 'md', 'ml', 'prolog', 'python',
     'py', 'tex', 'xml', 'xl'];
+
     for (let i = 0; i < discordLanguages.length; i++) {
         if (code.startsWith(discordLanguages[i])) {
             code = code.replace(discordLanguages[i], '');
