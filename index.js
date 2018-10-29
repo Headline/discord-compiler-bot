@@ -35,12 +35,26 @@ client.on('guildCreate', (g) => {
     console.log(`joining ${g.name}`);
     client.user.setPresence({ game: { name: `in ${servers} servers | ;help`}, status: 'online'})
     .catch(console.log);
+
+    let file = '/var/www/html/discord-compiler/graph.py';
+    fs.stat(file, (err, stat) => {
+        if (err == null) {
+            const process = spawn('python', [file, 'servers', '++']);
+        }
+    });
 });
 client.on('guildDelete', (g) => {
     servers -= 1;
     console.log(`leaving ${g.name}`);
     client.user.setPresence({ game: { name: `in ${servers} servers | ;help`}, status: 'online'})
     .catch(console.log);
+
+    let file = '/var/www/html/discord-compiler/graph.py';
+    fs.stat(file, (err, stat) => {
+        if (err == null) {
+            const process = spawn('python', [file, 'servers', '--']);
+        }
+    });   
 });
 
 // Callbacks

@@ -1,7 +1,7 @@
 const Discord = require('discord.js');
 const DiscordMessageMenu = require ('./../menus');
 
-module.exports.run = async (client, message, args, prefix, compilerAPI) => {
+module.exports.run = async (client, message, args, prefix, compilerAPI, cmdlist) => {
     if (args.length < 2) {
         const embed = new Discord.RichEmbed()
         .setTitle('Error:')
