@@ -104,6 +104,8 @@ module.exports.run = async (client, message, args, prefix, compilerAPI, cmdlist)
                     embed.setColor(0xFF0000);
                 embed.addField('Status code', `Finished with exit code: ${json.status}`);
             }
+            if (json.hasOwnProperty('signal'))
+                embed.addField('Signal', `\`\`\`${json.signal}\`\`\``);
             if (json.hasOwnProperty('url'))
                 embed.addField('URL', `Link: ${json.url}`);
             if (json.hasOwnProperty('compiler_message')) {
