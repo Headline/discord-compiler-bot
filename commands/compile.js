@@ -12,7 +12,8 @@ function cleanControlChars(dirty) {
 
 module.exports.run = async (client, message, args, prefix, compilerAPI, cmdlist) => {
 
-    let match = message.content.match('```([\\s\\S]*)```');
+    let regex = /```([\s\S]*?)```/g;
+    let match = regex.exec(message.content);
     if (!match)
     {
         const embed = new Discord.RichEmbed()
@@ -57,10 +58,33 @@ module.exports.run = async (client, message, args, prefix, compilerAPI, cmdlist)
         return;
     }
 
+    // compiler options
     let options = "";
     for (let i = 2; i < args.length; i++) {
         if (args[i].indexOf('```') > -1) break;
         options += args[i] + ' ';
+    }
+    options = options.trim();
+
+    // stdin
+    let stdin = "";
+    let split = options.split('|');
+    if (split.length > 1) { // they used the pipe operator.
+
+        // Since we used the pipe operator, we must sanitize options 
+        // so it's not plauged with our stdin
+        options = split[0].trim();
+
+        // now we'll actually build stdin
+        split.shift(); // disregard the command, language, and options
+        let input = split.join('|').trim(); // We'll allow other pipes, if that's their input...
+        stdin = input;
+    }
+
+    let match2 = regex.exec(message.content);
+    if (match2) { // two codeblocks? wtf?
+        code = match2[1].trim();
+        stdin = match[1].trim();
     }
 
     let discordLanguages = [ 'asciidoc', 'autohotkey', 'bash', 'coffeescript', 'cpp',
@@ -74,7 +98,7 @@ module.exports.run = async (client, message, args, prefix, compilerAPI, cmdlist)
         }
     }
 
-    let setup = new WandBox.CompileSetup(code, lang, "", true, options, compilerAPI);
+    let setup = new WandBox.CompileSetup(code, lang, stdin, true, options, compilerAPI);
     let comp = new WandBox.Compiler(setup);
     let loading = client.emojis.get('504515210455941120');
     message.react(loading).then((msg) => {
