@@ -87,12 +87,37 @@ module.exports.run = async (client, message, args, prefix, compilerAPI, cmdlist)
         stdin = match[1].trim();
     }
 
-    let discordLanguages = [ 'asciidoc', 'autohotkey', 'bash', 'coffeescript', 'cpp',
-    'cs', 'css', 'c', 'diff', 'fix', 'glsl', 'ini', 'java', 'json', 'md', 'ml', 'prolog', 'python',
-    'py', 'tex', 'xml', 'xl'];
+    let discordLanguages = [ "1c", "abnf", "accesslog", "actionscript", "ada", "apache", "applescript",
+	"arduino", "armasm", "asciidoc", "aspectj", "autohotkey", "autoit", "avrasm",
+	"awk", "axapta", "bash", "basic", "bnf", "brainfuck", "bf", "c", "cal", "capnproto", "ceylon",
+	"clean", "clojure-repl", "clojure", "cmake", "coffeescript", "coq", "cos",
+	"cpp", "crmsh", "crystal", "cs", "csharp", "csp", "css", "d", "dart", "delphi", "diff",
+	"django", "dns", "dockerfile", "dos", "dsconfig", "dts", "dust", "ebnf",
+	"elixir", "elm", "erb", "erlang-repl", "erlang", "excel", "fix", "flix", "fortran",
+	"fsharp", "gams", "gauss", "gcode", "gherkin", "glsl", "go", "golo", "gradle", "groovy",
+	"haml", "handlebars", "haskell", "haxe", "hsp", "htmlbars", "http", "hy", "inform7",
+	"ini", "irpf90", "java", "javascript", "jboss-cli", "json", "julia-repl", "julia",
+	"kotlin", "lasso", "ldif", "leaf", "less", "lisp", "livecodeserver", "livescript",
+	"llvm", "lsl", "lua", "makefile", "markdown", "mathematica", "matlab", "maxima",
+	"mel", "mercury", "mipsasm", "mizar", "mojolicious", "monkey", "moonscript", "n1ql",
+	"nginx", "nimrod", "nix", "nsis", "objectivec", "ocaml", "openscad", "oxygene",
+	"parser3", "perl", "pf", "php", "pony", "powershell", "processing", "profile",
+	"prolog", "protobuf", "puppet", "purebasic", "python", "q", "qml", "r", "rib",
+	"roboconf", "routeros", "rsl", "ruby", "ruleslanguage", "rust", "scala", "scheme",
+	"scilab", "scss", "shell", "smali", "smalltalk", "sml", "sqf", "sql", "stan", "stata",
+	"step21", "stylus", "subunit", "swift", "taggerscript", "tap", "tcl", "tex", "thrift",
+	"tp", "twig", "typescript", "vala", "vbnet", "vbscript-html", "vbscript", "verilog",
+    "vhdl", "vim", "x86asm", "xl", "xml", "xquery", "yaml", "zephir"
+    ];
 
+    let stop = 0;
+    while (code.charAt(stop) != '\n' && code.charAt(stop) != ' ') {
+        stop++;
+    }
+
+    let substr = code.substr(0, stop);
     for (let i = 0; i < discordLanguages.length; i++) {
-        if (code.startsWith(discordLanguages[i])) {
+        if (substr == discordLanguages[i]) {
             code = code.replace(discordLanguages[i], '');
             break;
         }
