@@ -1,6 +1,9 @@
 const botconfig = require('./settings.json');
 const Discord = require('discord.js');
 const WandBox = require ('./WandBox.js');
+// py
+const fs = require('fs');
+const spawn = require('child_process').spawn;
 
 const client = new Discord.Client({disableEveryone: true});
 const compilerAPI = new WandBox.Compilers(() => {
