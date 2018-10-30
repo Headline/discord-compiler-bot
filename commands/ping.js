@@ -1,6 +1,6 @@
 const Discord = require('discord.js');
 
-module.exports.run = async (client, message, args, prefix) => {
+module.exports.run = async (client, message, args, prefix, cmdlist) => {
     const embed = new Discord.RichEmbed()
     .setTitle('Ping Output:')
     .setColor(0xFF0000)
