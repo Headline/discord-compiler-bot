@@ -16,7 +16,6 @@ var servers = 0;
 
 // Add commands
 console.log('loading commands...');
-const fs = require('fs');
 client.commands = new Discord.Collection();
 fs.readdir('./commands/', (err, files) => {
     if (err)
