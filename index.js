@@ -80,5 +80,7 @@ client.on('message', message => {
         commandfile.run(client, message, args, botconfig.prefix, compilerAPI);
 });
 
+client.on('error', console.error);
+
 // Pump them callbacks
 client.login(botconfig.token);
