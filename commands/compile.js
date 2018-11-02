@@ -102,7 +102,7 @@ module.exports.run = async (client, message, args, prefix, compilerAPI) => {
     ];
 
     let stop = 0;
-    while (code.charAt(stop) != '\n' && code.charAt(stop) != ' ') {
+    while (code.charAt(stop) != '\n' && code.charAt(stop) != ' ' && stop < code.length) {
         stop++;
     }
 
