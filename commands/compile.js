@@ -1,6 +1,7 @@
 const Discord = require('discord.js');
 const WandBox = require ('../WandBox.js');
 const stripAnsi = require('strip-ansi');
+const botconfig = require('../settings.json');
 
 // py
 const fs = require('fs');
@@ -116,7 +117,7 @@ module.exports.run = async (client, message, args, prefix, compilerAPI) => {
 
     let setup = new WandBox.CompileSetup(code, lang, stdin, true, options, compilerAPI);
     let comp = new WandBox.Compiler(setup);
-    let loading = client.emojis.get('504515210455941120');
+    let loading = client.emojis.get(botconfig.loading_emote);
     message.react(loading).then((msg) => {
         comp.compile((json) => {
             message.clearReactions();

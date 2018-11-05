@@ -13,7 +13,8 @@ You will need to create a settings.json file alongisde index.js, the format is a
 ```json
 {
     "prefix": "YOUR_COMMAND_PREFIX_HERE",
-    "token": "YOUR_TOKEN_HERE"
+    "token": "YOUR_TOKEN_HERE",
+    "loading_emote": "YOUR_LOADING_EMOTE_ID_HERE"
 }
 ```
 We also depend on the following npm packages.
