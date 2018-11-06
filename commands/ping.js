@@ -5,7 +5,7 @@ module.exports.run = async (client, message, args, prefix) => {
     .setTitle('Ping Output:')
     .setColor(0xFF0000)
     .setDescription('**Pong!**');
-    message.channel.send(embed);
+    message.channel.send(embed).catch(console.log);
 };
 
 module.exports.help = {
