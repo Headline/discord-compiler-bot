@@ -158,7 +158,7 @@ module.exports.run = async (client, message, args, prefix, compilerAPI) => {
                     json.program_message = json.program_message.substring(0, 1016);
                 }
                 json.program_message = cleanControlChars(json.program_message);
-                embed.addField('Program Output', `\`\`\`${json.program_message}\`\`\``);
+                embed.addField('Program Output', `\`\`\`\n${json.program_message}\`\`\``);
             }
             message.channel.send(embed).then((msg) => {
 
