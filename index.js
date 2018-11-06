@@ -13,6 +13,17 @@ const compilerAPI = new WandBox.Compilers(() => {
 
 var servers = 0;
 
+function updateServers(count) {
+    let file = '/var/www/html/discord-compiler/graph.py';
+    fs.stat(file, (err, stat) => {
+        if (err == null) {
+            const process = spawn('python', [file, 'servers', String(servers)]);
+        }
+    });
+    client.user.setPresence({ game: { name: `in ${servers} servers | ;help`}, status: 'online'})
+    .catch(console.log);
+}
+
 // Add commands
 console.log('loading commands...');
 client.commands = new Discord.Collection();
@@ -34,28 +45,12 @@ fs.readdir('./commands/', (err, files) => {
 client.on('guildCreate', (g) => {
     servers += 1;
     console.log(`joining ${g.name}`);
-    client.user.setPresence({ game: { name: `in ${servers} servers | ;help`}, status: 'online'})
-    .catch(console.log);
-
-    let file = '/var/www/html/discord-compiler/graph.py';
-    fs.stat(file, (err, stat) => {
-        if (err == null) {
-            const process = spawn('python', [file, 'servers', '++']);
-        }
-    });
+    updateServers(servers);
 });
 client.on('guildDelete', (g) => {
     servers -= 1;
     console.log(`leaving ${g.name}`);
-    client.user.setPresence({ game: { name: `in ${servers} servers | ;help`}, status: 'online'})
-    .catch(console.log);
-
-    let file = '/var/www/html/discord-compiler/graph.py';
-    fs.stat(file, (err, stat) => {
-        if (err == null) {
-            const process = spawn('python', [file, 'servers', '--']);
-        }
-    });   
+    updateServers(servers);
 });
 
 // Callbacks
@@ -63,9 +58,9 @@ client.on('ready', () => {
     console.log('\'ready\' event executed. discord-compiler has started');
 
     servers = client.guilds.size;
+    updateServers(servers);
+
     console.log(`existing in ${servers} servers`);
-    client.user.setPresence({ game: { name: `in ${servers} servers | ;help`}, status: 'online'})
-    .catch(console.log);
 });
 
 client.on('message', message => {
