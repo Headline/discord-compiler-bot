@@ -94,7 +94,7 @@ module.exports.run = async (client, message, args, prefix, compilerAPI) => {
 	"mel", "mercury", "mipsasm", "mizar", "mojolicious", "monkey", "moonscript", "n1ql",
 	"nginx", "nimrod", "nix", "nsis", "objectivec", "ocaml", "openscad", "oxygene",
 	"parser3", "perl", "pf", "php", "pony", "powershell", "processing", "profile",
-	"prolog", "protobuf", "puppet", "purebasic", "python", "q", "qml", "r", "rib",
+	"prolog", "protobuf", "puppet", "purebasic", "python", "py", "q", "qml", "r", "rib",
 	"roboconf", "routeros", "rsl", "ruby", "ruleslanguage", "rust", "scala", "scheme",
 	"scilab", "scss", "shell", "smali", "smalltalk", "sml", "sqf", "sql", "stan", "stata",
 	"step21", "stylus", "subunit", "swift", "taggerscript", "tap", "tcl", "tex", "thrift",
