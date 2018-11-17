@@ -136,7 +136,12 @@ module.exports.run = async (client, message, args, prefix, compilerAPI) => {
                 return;
             }
 
-            /* We got something back, build embed. */
+            /** 
+             * We got something back, build embed. Our strategy here is to
+             * just insert whatever we get back. Whatever the API gives us,
+             * we'll show. 
+             * TODO: will we ever get nothing? does that mean the world is ending?
+             */
             if (json.hasOwnProperty('status')) {
                 if (json.status != 0)
                     embed.setColor(0xFF0000);
@@ -150,6 +155,12 @@ module.exports.run = async (client, message, args, prefix, compilerAPI) => {
                 if (json.compiler_message.length >= 1017) {
                     json.compiler_message = json.compiler_message.substring(0, 1016);
                 }
+                /**
+                 * Certain compiler outputs use unicode control characters that
+                 * make the user experience look nice (colors, etc). This ruins
+                 * the look of the compiler messages in discord, so we strip them
+                 * out with cleanControlChars()
+                 */
                 json.compiler_message = cleanControlChars(json.compiler_message);
                 embed.addField('Compiler Output', `\`\`\`${json.compiler_message}\n\`\`\`\n`);
             }
@@ -157,7 +168,15 @@ module.exports.run = async (client, message, args, prefix, compilerAPI) => {
                 if (json.program_message.length >= 1017) {
                     json.program_message = json.program_message.substring(0, 1016);
                 }
+
                 json.program_message = cleanControlChars(json.program_message);
+
+                /**
+                 * Annoyingly, people can print '`' chars and ruin the formatting of our
+                 * program output. To counteract this, we can place a unicode zero-width
+                 * character to escape it.
+                 */
+                json.program_message = json.program_message.replace(/`/g, "\u200B"+'`');
                 embed.addField('Program Output', `\`\`\`\n${json.program_message}\`\`\``);
             }
             message.channel.send(embed).then((msg) => {
