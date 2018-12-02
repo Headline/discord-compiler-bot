@@ -43,7 +43,8 @@ class Servers {
      * @param {Number} count 
      */
     updateSite(count) {
-        fs.stat('/var/www/html/discord-compiler/graph.py', (err) => {
+        let file = '/var/www/html/discord-compiler/graph.py';
+        fs.stat(file, (err) => {
             if (err == null) {
                 spawn('python', [file, 'servers', String(count)]);
             }
@@ -79,7 +80,7 @@ class Servers {
      * Decrements the server count and updates all
      */
     dec() {
-        this.count++;
+        this.count--;
         this.updateAll();
     }
 }
