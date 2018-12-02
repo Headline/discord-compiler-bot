@@ -1,16 +1,26 @@
-const botconfig = require('./settings.json');
+// npm requirements
 const Discord = require('discord.js');
-const WandBox = require ('./WandBox.js');
-const Statistics = require('./statistics.js');
+const client = new Discord.Client({disableEveryone: true});
 const fs = require('fs');
 
-const client = new Discord.Client({disableEveryone: true});
-const servers = new Statistics.Servers(0, client);
+// source imports
+const botconfig = require('./settings.json');
+const WandBox = require ('./WandBox.js');
+const Statistics = require('./statistics.js');
 
+// discordbots.org
+const dbllib = require('dblapi.js');
+let dbl = null;
+if (botconfig.dbltoken && botconfig.dbltoken.length > 0)
+    dbl = new dbllib(botconfig.dbltoken, client);
+
+// source import instantiations 
+const servers = new Statistics.Servers(0, client, dbl);
 const compilerAPI = new WandBox.Compilers(() => {
     console.log('compiler loading has completed!');
     compilerAPI.initialize();
 });
+
 
 // Add commands
 console.log('loading commands...');

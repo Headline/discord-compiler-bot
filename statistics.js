@@ -13,11 +13,13 @@ class Servers {
      * Creates an object which represents the server count tracking
      * 
      * @param {Number} count 
-     * @param {Discord.Client} client 
+     * @param {Discord.Client} client
+     * @param {dbl} dbl 
      */
-    constructor(count, client) {
+    constructor(count, client, dbl) {
         this.count = count;
         this.client = client;
+        this.dbl = dbl;
     }
 
     /**
@@ -36,6 +38,16 @@ class Servers {
      */
     getCount() {
         return this.count;
+    }
+
+    /**
+     * Updates discordbots.org server count with the supplied value. Only functions on
+     * instance.
+     * @param {Number} count 
+     */
+    updateDBL(count) {
+        if (this.dbl)
+            this.dbl.postStats(count);
     }
 
     /**
