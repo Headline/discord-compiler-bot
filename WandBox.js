@@ -53,7 +53,6 @@ class Compilers {
     }
 
     isValidCompiler(compiler) {
-
         for (let i = 0; i < this.languages.length; i++) {
             for (let j = 0; j < this.compilerinfo[this.languages[i]].length; j++) {
                 if (compiler == this.compilerinfo[this.languages[i]][j])

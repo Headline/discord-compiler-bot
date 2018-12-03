@@ -1,28 +1,26 @@
-const botconfig = require('./settings.json');
+// npm requirements
 const Discord = require('discord.js');
-const WandBox = require ('./WandBox.js');
-// py
-const fs = require('fs');
-const spawn = require('child_process').spawn;
-
 const client = new Discord.Client({disableEveryone: true});
+const fs = require('fs');
+
+// source imports
+const botconfig = require('./settings.json');
+const WandBox = require ('./WandBox.js');
+const Statistics = require('./statistics.js');
+
+// discordbots.org
+const dbllib = require('dblapi.js');
+let dbl = null;
+if (botconfig.dbltoken && botconfig.dbltoken.length > 0)
+    dbl = new dbllib(botconfig.dbltoken, client);
+
+// source import instantiations 
+const servers = new Statistics.Servers(0, client, dbl);
 const compilerAPI = new WandBox.Compilers(() => {
     console.log('compiler loading has completed!');
     compilerAPI.initialize();
 });
 
-var servers = 0;
-
-function updateServers(count) {
-    let file = '/var/www/html/discord-compiler/graph.py';
-    fs.stat(file, (err, stat) => {
-        if (err == null) {
-            const process = spawn('python', [file, 'servers', String(servers)]);
-        }
-    });
-    client.user.setPresence({ game: { name: `in ${servers} servers | ;help`}, status: 'online'})
-    .catch(console.log);
-}
 
 // Add commands
 console.log('loading commands...');
@@ -43,24 +41,21 @@ fs.readdir('./commands/', (err, files) => {
 });
 
 client.on('guildCreate', (g) => {
-    servers += 1;
+    servers.inc();
     console.log(`joining ${g.name}`);
-    updateServers(servers);
 });
 client.on('guildDelete', (g) => {
-    servers -= 1;
+    servers.dec();
     console.log(`leaving ${g.name}`);
-    updateServers(servers);
 });
 
 // Callbacks
 client.on('ready', () => {
     console.log('\'ready\' event executed. discord-compiler has started');
 
-    servers = client.guilds.size;
-    updateServers(servers);
-
-    console.log(`existing in ${servers} servers`);
+    servers.setCount(client.guilds.size);
+    servers.updateAll();
+    console.log(`existing in ${servers.getCount()} servers`);
 });
 
 client.on('message', message => {
@@ -71,8 +66,10 @@ client.on('message', message => {
     message.content = message.content.substring(botconfig.prefix.length);
     let args = message.content.split(" ").join('\n').split('\n');
     let commandfile = client.commands.get(args[0]);
-    if (commandfile)
+    if (commandfile) {
+        Statistics.Requests.DoRequest();
         commandfile.run(client, message, args, botconfig.prefix, compilerAPI);
+    }
 });
 
 client.on('error', console.error);

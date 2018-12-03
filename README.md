@@ -21,5 +21,6 @@ We also depend on the following npm packages.
 - discord.js
 - strip-ansi
 - node-fetch
+- dblapi.js
 
 Once these are installed simply execute `node index.js`

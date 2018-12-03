@@ -1,4 +1,3 @@
-const Discord = require('discord.js');
 const DiscordMessageMenu = require ('./../menus');
 
 module.exports.run = async (client, message, args, prefix, compilerAPI) => {
