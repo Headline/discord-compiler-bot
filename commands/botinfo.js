@@ -25,9 +25,11 @@ module.exports.run = async (client, message, args, prefix) => {
     .setColor(0x00FF00)
 
     .addField("Total Users", formatNumber(playercount), true)
-    .addField("Total Servers                    ", formatNumber(guildcount), true)
+    .addField("Total Servers", formatNumber(guildcount), true)
     .addField("CPU Usage", formatNumber(cpuusage.toFixed(2)+"%"), true)
-    .addField("Memory Usage     ", formatNumber(memusage.toFixed(2))+"MB", true)
+    .addField("Memory Usage", formatNumber(memusage.toFixed(2))+"MB", true)
+    .addField("Average Ping", client.ping+"ms", true)
+    .addField("Uptime", foramtTime(process.uptime()), true)
     .addField("System Info:", "**Node.js Version:** " + process.version
     + "\n**Operating System:** " + os.platform, false)
 
@@ -35,6 +37,21 @@ module.exports.run = async (client, message, args, prefix) => {
     + " || powered by wandbox.org");
 
     message.channel.send(embed).catch(console.log);
+}
+
+/**
+ * Time format
+ * @param {Number} seconds
+ */
+function foramtTime(secs) {
+    let seconds = Math.floor(secs);
+    let hours = Math.floor(seconds / 3600) % 24;
+    let minutes = Math.floor(seconds / 60) % 60;
+    let seconds2 = seconds % 60;
+    return [hours, minutes, seconds2]
+        .map(v => v < 10 ? "0" + v : v)
+        .filter((v,i) => v !== "00" || i > 0)
+        .join(":");
 }
 
 /**
