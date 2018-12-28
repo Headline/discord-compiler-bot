@@ -27,5 +27,6 @@ module.exports.run = async (client, message, args, prefix, compilerAPI) => {
 
 module.exports.help = {
     name:"compilers",
-    description:"displays all compilers"
+    description:"displays all compilers",
+    dev: false
 }

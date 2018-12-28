@@ -68,6 +68,10 @@ client.on('message', message => {
     let commandfile = client.commands.get(args[0]);
     if (commandfile) {
         Statistics.Requests.DoRequest();
+
+        if(commandfile.dev && message.author.id != botconfig.owner_id)
+            return;
+
         commandfile.run(client, message, args, botconfig.prefix, compilerAPI);
     }
 });

@@ -8,5 +8,6 @@ module.exports.run = async (client, message, args, prefix, compilerAPI) => {
 
 module.exports.help = {
     name:"languages",
-    description:"displays all supported languages"
+    description:"displays all supported languages",
+    dev: false
 }
