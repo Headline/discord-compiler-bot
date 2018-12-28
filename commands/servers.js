@@ -34,5 +34,6 @@ module.exports.run = async (client, message, args, prefix) => {
 
 module.exports.help = {
     name:"servers",
-    description:"displays all servers the bot is in"
+    description:"displays all servers the bot is in",
+    dev: true
 }

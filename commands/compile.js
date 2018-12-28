@@ -189,5 +189,6 @@ module.exports.run = async (client, message, args, prefix, compilerAPI) => {
 
 module.exports.help = {
     name:"compile",
-    description:"compiles given code"
+    description:"compiles given code",
+    dev: false
 }

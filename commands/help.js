@@ -5,7 +5,10 @@ module.exports.run = async (client, message, args, prefix) => {
     client.commands.forEach(element => {
         let name = element.help.name;
         let desc = element.help.description;
-        items.push('**' + prefix + name + '** - ' + desc + '\n');
+        let dev = element.help.dev;
+
+        if (!dev)
+            items.push('**' + prefix + name + '** - ' + desc + '\n');
     });
 
     let menu = new DiscordMessageMenu(message, 'Discord Compiler Bot Help Menu:', 0x00FF00, 6);
@@ -16,5 +19,6 @@ module.exports.run = async (client, message, args, prefix) => {
 
 module.exports.help = {
     name:"help",
-    description:"displays all commands"
+    description:"displays all commands",
+    dev: false
 }
