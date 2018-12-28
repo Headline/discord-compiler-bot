@@ -17,6 +17,7 @@ class DiscordMessageMenu {
         this.menu = [];
         this.page = 0;
         this.left = '◀';
+        this.stop = '🛑';
         this.right = '▶';
         this.authormessage = authormessage;
         this.message = null;
@@ -25,6 +26,8 @@ class DiscordMessageMenu {
         this.color = color;
         this.targetid = authormessage.author.id;
         this.numbered = true;
+        this.timeout = null;
+        this.collector = null;
     }
 
     /**
@@ -70,18 +73,33 @@ class DiscordMessageMenu {
      */
     handleMessage(result, that) {
         that.message = result;
-        that.message.react(that.left).then(result => { // left first
-            that.message.react(that.right).catch(console.log) // then right
-        }).catch(console.log);
+        if (!result.reactions.find((x) => x.emoji.name == that.stop)) {
+            result.react(that.left).then(result => { // left first
+                result.message.react(that.stop).then(result => { // then stop
+                    result.message.react(that.right).then((result) => { 
+                    }).catch(console.log); // then right
+               }).catch(console.log);
+            }).catch(console.log);
+        }
+
+        // used after creation of collector to determine whether or not
+        // this is the first call to handleMessage()
+        let first = that.collector == null;
 
         // Reactions
-        const collector = that.message.createReactionCollector((reaction, user) =>
-        that.targetid == user.id
+        that.collector = result.createReactionCollector((reaction, user) => {
+            if  (that.targetid == user.id
             && (reaction.emoji.name === that.left
-            || reaction.emoji.name == that.right)
+            || reaction.emoji.name == that.stop
+            || reaction.emoji.name == that.right)) {
+                that.collectionuser = user;
+                return true;
+            }
+            return false;
+        }
         ).once("collect", reaction => {
             const chosen = reaction.emoji.name;
-            if (chosen === that.left) {
+            if (chosen == that.left) {
                 if (that.page > 0)
                     that.displayPage(--that.page)
                 else
@@ -93,9 +111,19 @@ class DiscordMessageMenu {
                 else
                     that.displayPage(++that.page);
             }
-            that.message.clearReactions();
-            collector.stop();
+            else if (chosen == that.stop) {
+                result.clearReactions().then((r) => that.collector.stop());
+                that.timeout.stop();
+                return;
+            }
+            that.timeout.restart();
+            reaction.remove(that.collectionuser);
         });
+
+        if (first) {
+            that.timeout = new MessageTimeout(result, that.collector);
+            that.timeout.start();
+        }
     }
 
     /**
@@ -140,4 +168,34 @@ class DiscordMessageMenu {
     }
 }
 
+class MessageTimeout {
+    constructor(message, collector, delay) {
+        this.message = message;
+        this.collector = collector
+        this.delay = delay;
+        this.timeout = null;
+        console.log("creation...");
+    }
+
+    start() {
+        console.log("starting...");
+        this.timeout = setTimeout(this.run, 30 * 1000, this.message, this.collector);
+    }
+
+    stop() {
+        console.log("stopping...");
+        clearTimeout(this.timeout);
+    }
+
+    run(message, collector) {
+        message.clearReactions().then(result => collector.stop());
+        console.log("clearing...");
+    }
+
+    restart() {
+        console.log("restarting...");
+        clearTimeout(this.timeout);
+        this.start();
+    }
+}
 module.exports = DiscordMessageMenu;
