@@ -28,7 +28,7 @@ module.exports.run = async (client, message, args, prefix) => {
     .addField("Total Servers", formatNumber(guildcount), true)
     .addField("CPU Usage", formatNumber(cpuusage.toFixed(2)+"%"), true)
     .addField("Memory Usage", formatNumber(memusage.toFixed(2))+"MB", true)
-    .addField("Average Ping", client.ping+"ms", true)
+    .addField("Average Ping", client.ping.toFixed(0)+"ms", true)
     .addField("Uptime", foramtTime(process.uptime()), true)
     .addField("System Info:", "**Node.js Version:** " + process.version
     + "\n**Operating System:** " + os.platform, false)
