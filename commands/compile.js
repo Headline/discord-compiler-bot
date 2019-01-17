@@ -84,7 +84,7 @@ module.exports.run = async (client, message, args, prefix, compilerAPI) => {
 	"elixir", "elm", "erb", "erlang-repl", "erlang", "excel", "fix", "flix", "fortran",
 	"fsharp", "gams", "gauss", "gcode", "gherkin", "glsl", "go", "golo", "gradle", "groovy",
 	"haml", "handlebars", "haskell", "haxe", "hsp", "htmlbars", "http", "hy", "inform7",
-	"ini", "irpf90", "java", "javascript", "jboss-cli", "json", "julia-repl", "julia",
+	"ini", "irpf90", "java", "javascript", "jboss-cli", "json", "js", "julia-repl", "julia",
 	"kotlin", "lasso", "ldif", "leaf", "less", "lisp", "livecodeserver", "livescript",
 	"llvm", "lsl", "lua", "makefile", "markdown", "mathematica", "matlab", "maxima",
 	"mel", "mercury", "mipsasm", "mizar", "mojolicious", "monkey", "moonscript", "n1ql",
