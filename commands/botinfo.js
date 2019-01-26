@@ -14,7 +14,7 @@ module.exports.run = async (client, message, args, prefix) => {
     .setTitle('Current Bot Info:')
 
     .setDescription("Discord Compiler Bot\n"
-    + "Developed by Headline (Michael Flaherty)\n"
+    + "Developed by Headline#9999 (Michael Flaherty)\n"
     + "==============================\n"
     + "[Invitation link]("+invitelink+")"
     + "\n[Vote for us!]("+votelink+")"
