@@ -36,7 +36,7 @@ module.exports.run = async (client, message, args, prefix) => {
     .setFooter("Requested by: " + message.author.tag
     + " || powered by wandbox.org");
 
-    message.channel.send(embed).catch(console.log);
+    message.channel.send(embed).catch();
 }
 
 /**

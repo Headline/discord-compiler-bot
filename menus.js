@@ -77,9 +77,9 @@ class DiscordMessageMenu {
             result.react(that.left).then(result => { // left first
                 result.message.react(that.stop).then(result => { // then stop
                     result.message.react(that.right).then((result) => { 
-                    }).catch(console.log); // then right
-               }).catch(console.log);
-            }).catch(console.log);
+                    }).catch(); // then right
+               }).catch();
+            }).catch();
         }
 
         // used after creation of collector to determine whether or not
@@ -117,7 +117,7 @@ class DiscordMessageMenu {
                 return;
             }
             that.timeout.restart();
-            reaction.remove(that.collectionuser);
+            reaction.remove(that.collectionuser).catch();
         });
 
         if (first) {
@@ -149,21 +149,23 @@ class DiscordMessageMenu {
         .setTitle(this.title)
         .setColor(this.color)
         .setDescription(output)
-        .setThumbnail(this.authormessage.guild.iconURL)
         .setFooter("Requested by: " + this.authormessage.author.tag + ' | page: ' + (this.page+1) + '/' + (this.getMaxPage()+1));
 
+
+        if (this.authormessage.guild != null)
+            embed.setThumbnail(this.authormessage.guild.iconURL)
 
         if (!this.message) { // we haven't already sent one, so send()
             let that = this;
             this.message = this.authormessage.channel.send(embed)
             .then(result => that.handleMessage(result, that))
-            .catch(console.log);
+            .catch();
         }
         else { // we *did* send one, so edit()
             let that = this;
             this.message.edit(embed)
             .then(result => that.handleMessage(result, that))
-            .catch(console.log);
+            .catch();
         }
     }
 }
@@ -174,26 +176,21 @@ class MessageTimeout {
         this.collector = collector
         this.delay = delay;
         this.timeout = null;
-        console.log("creation...");
     }
 
     start() {
-        console.log("starting...");
         this.timeout = setTimeout(this.run, 30 * 1000, this.message, this.collector);
     }
 
     stop() {
-        console.log("stopping...");
         clearTimeout(this.timeout);
     }
 
     run(message, collector) {
-        message.clearReactions().then(result => collector.stop());
-        console.log("clearing...");
+        message.clearReactions().then(result => collector.stop()).catch();
     }
 
     restart() {
-        console.log("restarting...");
         clearTimeout(this.timeout);
         this.start();
     }
