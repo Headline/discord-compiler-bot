@@ -14,7 +14,10 @@ You will need to create a settings.json file alongisde index.js, the format is a
 {
     "prefix": "YOUR_COMMAND_PREFIX_HERE",
     "token": "YOUR_TOKEN_HERE",
-    "loading_emote": "YOUR_LOADING_EMOTE_ID_HERE"
+    "loading_emote": "YOUR_LOADING_EMOTE_ID_HERE",
+    "invite_link": "BOT_INVITE_LINK",
+    "discordbots_link": "DISCORDBOTS_DOT_ORG_LINK",
+    "support_server": "SUPPORT_SERVER_ID"
 }
 ```
 We also depend on the following npm packages.
@@ -24,3 +27,7 @@ We also depend on the following npm packages.
 - dblapi.js
 
 Once these are installed simply execute `node index.js`
+
+
+## License
+This project is licensed with the GNU GPLv3 general purpose license.

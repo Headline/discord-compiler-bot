@@ -10,9 +10,13 @@ const Statistics = require('./statistics.js');
 
 // discordbots.org
 const dbllib = require('dblapi.js');
+
 let dbl = null;
 if (botconfig.dbltoken && botconfig.dbltoken.length > 0)
     dbl = new dbllib(botconfig.dbltoken, client);
+
+const SupportServerModule = require('./supportserver.js');
+let SupportServer = null;
 
 // source import instantiations 
 const servers = new Statistics.Servers(0, client, dbl);
@@ -42,10 +46,12 @@ fs.readdir('./commands/', (err, files) => {
 
 client.on('guildCreate', (g) => {
     servers.inc();
+    SupportServer.postJoined(g);
     console.log(`joining ${g.name}`);
 });
 client.on('guildDelete', (g) => {
     servers.dec();
+    SupportServer.postLeft(g);
     console.log(`leaving ${g.name}`);
 });
 
@@ -56,6 +62,8 @@ client.on('ready', () => {
     servers.setCount(client.guilds.size);
     servers.updateAll();
     console.log(`existing in ${servers.getCount()} servers`);
+
+    SupportServer = new SupportServerModule.SupportServer(client);
 });
 
 client.on('message', message => {
