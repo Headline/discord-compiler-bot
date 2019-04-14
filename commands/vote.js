@@ -11,7 +11,7 @@ module.exports.run = async (client, message, args, prefix) => {
 };
 
 module.exports.help = {
-    name:"ping",
-    description:"test command for the compiler bot",
+    name:"vote",
+    description:"displays the link to vote for this bot",
     dev: false
 }
