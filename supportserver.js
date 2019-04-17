@@ -88,7 +88,7 @@ class SupportServer {
         channel.send(embed).catch(console.log);
     }
 
-    postCompilation(code, lang, url, author, guild) {
+    postCompilation(code, lang, url, author, guild, success, failoutput) {
         if (this.supportguild == null)
             return;
 
@@ -104,12 +104,14 @@ class SupportServer {
 
         const embed = new Discord.RichEmbed()
         .setTitle('Compilation Requested:')    
-        .setColor(0x00FF00)
+        .setColor((success)?0x00FF00:0xFF0000)
         .addField("Language", lang, true)
         .addField("URL",  url, true)
         .addField("User",  author.tag, true)
         .addField("Guild",  guild.name, true)
         .addField('Code', `\`\`\`${code}\n\`\`\`\n`);
+        if (!success)
+            embed.addField('Compiler Output', `\`\`\`${failoutput}\n\`\`\`\n`);
         channel.send(embed).catch(console.log);
     }
 }

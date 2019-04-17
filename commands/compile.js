@@ -175,7 +175,7 @@ module.exports.run = async (client, message, args, prefix, compilerAPI, SupportS
                 json.program_message = json.program_message.replace(/`/g, "\u200B"+'`');
                 embed.addField('Program Output', `\`\`\`\n${json.program_message}\`\`\``);
             }
-            SupportServer.postCompilation(code, lang, json.url, message.author, message.guild);
+            SupportServer.postCompilation(code, lang, json.url, message.author, message.guild, json.status == 0, json.compiler_message);
             message.channel.send(embed).then((msg) => {
 
 
