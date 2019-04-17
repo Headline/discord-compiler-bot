@@ -77,7 +77,7 @@ client.on('message', message => {
     if (commandfile) {
         Statistics.Requests.DoRequest();
 
-        if(commandfile.dev && message.author.id != botconfig.owner_id)
+        if(commandfile.help.dev && message.author.id != botconfig.owner_id)
             return;
 
         commandfile.run(client, message, args, botconfig.prefix, compilerAPI);
