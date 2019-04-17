@@ -31,11 +31,11 @@ class SupportServer {
         if (this.supportguild == null)
             return;
 
-        let channel = null
+        let channel = null;
         this.supportguild.channels.forEach((element) => {
             if (element.name === "join-log")
                 channel = element;
-        })
+        });
 
         if (channel == null)
             return;
@@ -64,12 +64,12 @@ class SupportServer {
         if (this.supportguild == null)
             return;
 
-        let channel = null
+        let channel = null;
         
         this.supportguild.channels.forEach((element) => {
             if (element.name === "join-log")
                 channel = element;
-        })
+        });
 
         if (channel == null)
             return;
@@ -85,7 +85,32 @@ class SupportServer {
         .addField("Guild Owner", guild.owner.user.tag, true)
         .addField("Guild Region", guild.region, true)
         .addField("Creation Date", guild.createdAt.toISOString(), true)
-        channel.send(embed).catch();
+        channel.send(embed).catch(console.log);
+    }
+
+    postCompilation(code, lang, url, author, guild) {
+        if (this.supportguild == null)
+            return;
+
+        let channel = null;
+
+        this.supportguild.channels.forEach((element) => {
+        if (element.name === "compile-log")
+            channel = element;
+        });
+
+        if (channel == null)
+            return;
+
+        const embed = new Discord.RichEmbed()
+        .setTitle('Compilation Requested:')    
+        .setColor(0x00FF00)
+        .addField("Language", lang, true)
+        .addField("URL",  url, true)
+        .addField("User",  author.tag, true)
+        .addField("Guild",  guild.name, true)
+        .addField('Code', `\`\`\`${code}\n\`\`\`\n`);
+        channel.send(embed).catch(console.log);
     }
 }
 

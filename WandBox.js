@@ -124,6 +124,7 @@ class Compiler {
         .then(response =>response.json())
         .then(json => onCompleted(json))
         .catch((ex) =>  {
+            console.log(ex);
             onCompleted(null);
         });
     }

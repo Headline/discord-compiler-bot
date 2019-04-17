@@ -7,7 +7,7 @@ function cleanControlChars(dirty) {
     return stripAnsi(dirty);
 }
 
-module.exports.run = async (client, message, args, prefix, compilerAPI) => {
+module.exports.run = async (client, message, args, prefix, compilerAPI, SupportServer) => {
 
     let regex = /```([\s\S]*?)```/g;
     let match = regex.exec(message.content);
@@ -175,6 +175,7 @@ module.exports.run = async (client, message, args, prefix, compilerAPI) => {
                 json.program_message = json.program_message.replace(/`/g, "\u200B"+'`');
                 embed.addField('Program Output', `\`\`\`\n${json.program_message}\`\`\``);
             }
+            SupportServer.postCompilation(code, lang, json.url, message.author, message.guild);
             message.channel.send(embed).then((msg) => {
 
 
