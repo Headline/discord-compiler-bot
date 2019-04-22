@@ -102,6 +102,9 @@ class SupportServer {
         if (channel == null)
             return;
 
+        if (code.length >= 1017) {
+            code = code.substring(0, 1016);
+        }
         const embed = new Discord.RichEmbed()
         .setTitle('Compilation Requested:')    
         .setColor((success)?0x00FF00:0xFF0000)
