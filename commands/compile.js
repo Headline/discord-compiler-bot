@@ -1,3 +1,5 @@
+const url = require("url");
+const fetch = require("node-fetch");
 const Discord = require('discord.js');
 const WandBox = require ('../WandBox.js');
 const stripAnsi = require('strip-ansi');
@@ -9,30 +11,6 @@ function cleanControlChars(dirty) {
 
 module.exports.run = async (client, message, args, prefix, compilerAPI, SupportServer) => {
 
-    let regex = /```([\s\S]*?)```/g;
-    let match = regex.exec(message.content);
-    if (!match)
-    {
-        const embed = new Discord.RichEmbed()
-        .setTitle('Error:')
-        .setColor(0xFF0000)
-        .setDescription(`You must attach codeblocks containing code to your message`)
-        message.channel.send(embed).catch();
-        return;
-    }
-
-
-    let code = match[1].trim();
-    if (code.length <= 0)
-    {
-        const embed = new Discord.RichEmbed()
-        .setTitle('Error:')
-        .setColor(0xFF0000)
-        .setDescription(`You must actually supply code to compile!`)
-        message.channel.send(embed).catch();
-        return;
-    }
-
     let lang = args[1].toLowerCase();
     if (compilerAPI.languages.indexOf(lang) < 0
     &&  !compilerAPI.isValidCompiler(lang))
@@ -42,31 +20,86 @@ module.exports.run = async (client, message, args, prefix, compilerAPI, SupportS
         .setColor(0xFF0000)
         .setDescription(`You must supply a valid language or compiler as an argument!\n`
                         + `Usage: ${prefix}compile <lang/compiler> \`\`\` <code> \`\`\``)
-        message.channel.send(embed).catch();   
+        message.channel.send(embed).catch();
         return;
     }
 
-    // compiler options
-    let options = "";
+    // Figure out the args passed, it should go in the following order:
+    // compile <language> < http://online.file/url | pipe data here
+    // Both online file input and pipe data are optional. If the redirect input
+    // character happens after pipe character just assume it's not file input
+    let argsData = {
+        options: "",
+        fileInput: "",
+        fileInputReached: false,
+        stdin: "",
+        stdinReached: false,
+    };
     for (let i = 2; i < args.length; i++) {
         if (args[i].indexOf('```') > -1) break;
-        options += args[i] + ' ';
+
+        if (args[i] === "|") {
+            argsData.pipeReached = true;
+            continue;
+        } else if (args[i] === "<") {
+            argsData.fileInputReached = true;
+            continue;
+        }
+
+        if (argsData.pipeReached) {
+            argsData.pipe += args[i] + " ";
+        } else if (argsData.fileInputReached) {
+            argsData.fileInput += args[i] + " ";
+        } else {
+            argsData.options += args[i] + " ";
+        }
     }
-    options = options.trim();
+    options = argsData.options.trim();
+    let fileInput = url.parse(argsData.fileInput.trim());
+    let stdin = argsData.stdin.trim();
 
-    // stdin
-    let stdin = "";
-    let split = options.split('|');
-    if (split.length > 1) { // they used the pipe operator.
+    let code = null;
 
-        // Since we used the pipe operator, we must sanitize options 
-        // so it's not plauged with our stdin
-        options = split[0].trim();
+    if (fileInput.protocol && fileInput.hostname) {
+        try {
+            let response = await fetch(fileInput.href);
+            let data = await response.text();
+            if (!response.ok) {
+                throw new Error(
+                    `Error requesting online code URL - ${response.status}\n ${data}`
+                );
+            }
+            code = data;
+        } catch (e) {
+            console.error("There was some error with online code input", e.message);
+        }
+    };
 
-        // now we'll actually build stdin
-        split.shift(); // disregard the command, language, and options
-        let input = split.join('|').trim(); // We'll allow other pipes, if that's their input...
-        stdin = input;
+    let regex = /```([\s\S]*?)```/g;
+    let match = regex.exec(message.content);
+
+    if (!code) {
+        // If we reach this it means no online file input
+        if (!match)
+        {
+            const embed = new Discord.RichEmbed()
+            .setTitle('Error:')
+            .setColor(0xFF0000)
+            .setDescription(`You must attach codeblocks containing code to your message`)
+            message.channel.send(embed).catch();
+            return;
+        }
+
+        code = match[1].trim();
+        if (code.length <= 0)
+        {
+            const embed = new Discord.RichEmbed()
+            .setTitle('Error:')
+            .setColor(0xFF0000)
+            .setDescription(`You must actually supply code to compile!`)
+            message.channel.send(embed).catch();
+            return;
+        }
     }
 
     let match2 = regex.exec(message.content);
@@ -117,7 +150,7 @@ module.exports.run = async (client, message, args, prefix, compilerAPI, SupportS
     message.react(loading).then((msg) => {
         comp.compile((json) => {
             message.clearReactions().catch();
-            
+
             const embed = new Discord.RichEmbed()
             .setTitle('Compilation Results:')
             .setFooter("Requested by: " + message.author.tag
@@ -132,10 +165,10 @@ module.exports.run = async (client, message, args, prefix, compilerAPI, SupportS
                 return;
             }
 
-            /** 
+            /**
              * We got something back, build embed. Our strategy here is to
              * just insert whatever we get back. Whatever the API gives us,
-             * we'll show. 
+             * we'll show.
              * TODO: will we ever get nothing? does that mean the world is ending?
              */
             if (json.hasOwnProperty('status')) {
