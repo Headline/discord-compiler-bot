@@ -39,15 +39,15 @@ module.exports.run = async (client, message, args, prefix, compilerAPI, SupportS
         if (args[i].indexOf('```') > -1) break;
 
         if (args[i] === "|") {
-            argsData.pipeReached = true;
+            argsData.stdinReached = true;
             continue;
         } else if (args[i] === "<") {
             argsData.fileInputReached = true;
             continue;
         }
 
-        if (argsData.pipeReached) {
-            argsData.pipe += args[i] + " ";
+        if (argsData.stdinReached) {
+            argsData.stdin += args[i] + " ";
         } else if (argsData.fileInputReached) {
             argsData.fileInput += args[i] + " ";
         } else {
