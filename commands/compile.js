@@ -138,8 +138,8 @@ module.exports.run = async (client, message, args, prefix, compilerAPI, SupportS
 
     let substr = code.substr(0, stop);
     for (let i = 0; i < discordLanguages.length; i++) {
-        if (substr == discordLanguages[i]) {
-            code = code.replace(discordLanguages[i], '');
+        if (substr.toLowerCase() == discordLanguages[i]) {
+            code = code.replace(substr, '');
             break;
         }
     }
