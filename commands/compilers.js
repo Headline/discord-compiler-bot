@@ -6,7 +6,7 @@ module.exports.run = async (client, message, args, prefix, compilerAPI) => {
         const embed = new Discord.RichEmbed()
         .setTitle('Error:')
         .setColor(0xFF0000)
-        .setDescription(`You must supply a language in order view it's supported compilers`)
+        .setDescription(`You must supply a language in order view its supported compilers`)
         message.channel.send(embed).catch(console.log);
         return;
     }
