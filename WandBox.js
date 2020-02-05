@@ -32,10 +32,19 @@ class Compilers {
     initialize() {
         this.compilerinfo = [];
         this.languages = [];
+        
+        // List of compilers WandBox has set up incorrectly and need to be ignored to prevent backend environmental setup errors.
+        this.brokencompilers = ['ghc-head'];
 
         this.compilers.forEach((obj) => {
             let lang = obj.language.toLowerCase();
             let compiler = obj.name;
+            
+            // Skip any broken compilers on WandBox so users cannot accidentally use them.
+            if (this.brokencompilers.includes(compiler)) {
+                return;
+            }
+            
             if (this.languages.indexOf(lang) < 0) {
                 this.languages.push(lang);
                 this.compilerinfo[lang] = [];
