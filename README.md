@@ -1,5 +1,5 @@
-# Discord Compiler Bot
-A simple open-source Discord bot which can compile code, display the output of the compiler, and run the program. This bot is great for prototyping ideas, or testing concepts on-the-fly with very little effort. It supports almost every programing language on the market (c++, c, java, python, ruby, javascript, go, php, lua, & more!). 
+# Discord Compiler
+A Discord bot which can compile code, display the output of the compiler, and run the program. This bot is great for prototyping ideas, or testing concepts on-the-fly with very little effort. It supports almost every programing language you could name (c++, c, java, python, ruby, javascript, go, php, lua, & more!). 
 
 **Adding this bot to your server is as simple as clicking [here](https://discordapp.com/oauth2/authorize?client_id=504095380166803466&scope=bot&permissions=388160).**
 
@@ -9,25 +9,13 @@ A simple open-source Discord bot which can compile code, display the output of t
 For a tutorial about how to use this bot, feel free to view our [wiki](https://github.com/Headline/discord-compiler/wiki)!
 
 ## Hosting it yourself?
-You will need to create a settings.json file alongisde index.js, the format is as follows:
-```json
-{
-    "prefix": "YOUR_COMMAND_PREFIX_HERE",
-    "token": "YOUR_TOKEN_HERE",
-    "loading_emote": "YOUR_LOADING_EMOTE_ID_HERE",
-    "invite_link": "BOT_INVITE_LINK",
-    "discordbots_link": "DISCORDBOTS_DOT_ORG_LINK",
-    "support_server": "SUPPORT_SERVER_ID"
-}
-```
-We also depend on the following npm packages.
-- discord.js
-- strip-ansi
-- node-fetch
-- dblapi.js
-
-Once these are installed simply execute `node index.js`
-
+Only a few steps are required to get this bot up-and-running.
+1) Rename .env.example to .env and fill out the required information
+2) Run `npm install` to install the bot's dependencies
+3) Run `npm start` to start the bot
 
 ## License
 This project is licensed with the GNU GPLv3 general purpose license.
+
+## Icons
+Icons made by [Freepik](https://www.flaticon.com/authors/freepik) and [pixelmeetup](https://www.flaticon.com/authors/pixelmeetup) from [www.flaticon.com](https://www.flaticon.com/)
