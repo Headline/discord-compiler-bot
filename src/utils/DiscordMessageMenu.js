@@ -170,7 +170,7 @@ export default class DiscordMessageMenu {
 
 
             if (this.authormessage.guild != null)
-                embed.setThumbnail(this.authormessage.guild.iconURL)
+                embed.setThumbnail(this.authormessage.guild.iconURL())
 
             if (!this.message) { // we haven't already sent one, so send()
                 this.message = await this.authormessage.channel.send(embed);
