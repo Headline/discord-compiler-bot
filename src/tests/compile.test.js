@@ -38,12 +38,17 @@ describe('Compile Command', () => {
         assert.equal(argsData.options, options);
         assert.equal(argsData.stdin, 'testing 1 2 3');
     });
+    it('Parse stdin block from text', () => {
+        const stdin = cmd.getStdinBlockFromText('```\ntesting 1 2 3\n```\n```cpp\nint main() {}\n```');
+        assert.equal(stdin, 'testing 1 2 3');
+    });
+
     it('Parse code from text', () => {
-        const code = cmd.getCodeFromText('```cpp\nint main() {}\n```');
+        const code = cmd.getCodeBlockFromText('```cpp\nint main() {}\n```');
         assert.equal(code, 'cpp\nint main() {}');
     });
     it('Clean language specifier', () => {
-        let code = cmd.getCodeFromText('```cpp\nint main() {}\n```');
+        let code = cmd.getCodeBlockFromText('```cpp\nint main() {}\n```');
         code = cmd.cleanLanguageSpecifier(code);
         assert.equal(code, '\nint main() {}');
     });

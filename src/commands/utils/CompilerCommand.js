@@ -69,6 +69,6 @@ export default class CompilerCommand {
      * @return {string}
      */
     toString() {
-      return this.client.router.prefix + this.name.toLowerCase();
+      return this.client.prefix + this.name.toLowerCase();
     }
 }

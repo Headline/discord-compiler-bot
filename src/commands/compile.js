@@ -13,7 +13,7 @@ export default class CompileCommand extends CompilerCommand {
     constructor(client) {
         super(client, {
             name: 'compile',
-            description: 'Compiles a script',
+            description: 'Compiles a script \nNote: This command\'s code input MUST be encapsulated in codeblocks',
             developerOnly: false
         });
     }
@@ -47,13 +47,17 @@ export default class CompileCommand extends CompilerCommand {
         }
         // Standard ``` <code> ``` request
         else {
-            code = this.getCodeFromText(msg.message.content);
+            code = this.getCodeBlockFromText(msg.message.content);
             if (code) {
                 code = this.cleanLanguageSpecifier(code);
             }
             else {
                 msg.replyFail('You must attach codeblocks containing code to your message');
                 return;
+            }
+            const stdinblock = getStdinBlockFromText(msg.message.content);
+            if (stdinblock) {
+                argsData.stdin = stdinblock;
             }
         }
 
@@ -146,15 +150,42 @@ export default class CompileCommand extends CompilerCommand {
      * Parses the code from the input text
      * 
      * @param {string} text 
-     * @return {string} null if input error
+     * @return {string} null if no block found
      */
-    getCodeFromText(text) {
+    getCodeBlockFromText(text) {
         const regex = /```([\s\S]*?)```/g;
         let match = regex.exec(text);
         if (!match)
             return null;
 
-        return match[1].trim();
+        // If we match again, then our code belongs in the new match
+        let block1 = match[1].trim();
+        match = regex.exec(text);
+        if (!match)
+            return block1;
+        else
+            return match[1].trim();
+    }
+
+    /**
+     * Parses the stdin block from the input text
+     * 
+     * @param {string} text 
+     * @return {string} null if no block found
+     */
+    getStdinBlockFromText(text) {
+        const regex = /```([\s\S]*?)```/g;
+        let match = regex.exec(text);
+        if (!match)
+            return null;
+
+        // If we match again, our stdin belongs in the first match result
+        let block1 = match[1].trim();
+        match = regex.exec(text);
+        if (!match)
+            return null;
+        else
+            return block1;
     }
 
     async getCodeFromURL(rawUrl) {
@@ -278,16 +309,20 @@ export default class CompileCommand extends CompilerCommand {
     /**
      * Displays the help information for the given command
      *
-     * @param {Message} grouper
+     * @param {CompilerCommandMessage} message
      */
     async help(message) {
-
-        response
+        const embed = new MessageEmbed()
             .setTitle('Command Usage')
             .setDescription(`*${this.description}*`)
-            .addHelpField('Add a tag', `${this.toString()} add \`<tagName>\``)
-            .addHelpField('Remove a tag', `${this.toString()} remove \`<tagName>\``)
-            .isUsage()
-        return message.dispatch(response);
+            .setColor(0x00FF00)
+            .addField('Standard compile', `${this.toString()} <language|compiler> \\\`\\\`\\\`<code>\\\`\\\`\\\``)
+            .addField('Compile w/ options', `${this.toString()} <language|compiler> <options> \\\`\\\`\\\`<code>\\\`\\\`\\\``)
+            .addField('Compile w/ stdin', `${this.toString()} <language|compiler> | <stdin> \\\`\\\`\\\`<code>\\\`\\\`\\\``)
+            .addField('Compile w/ url code', `${this.toString()} <language|compiler> < http://online.file/url`)
+            .setThumbnail('https://imgur.com/TNzxfMB.png')
+            .setFooter(`Requested by: ${message.message.author.tag}`)
+        return await message.dispatch('', embed);
     }
+
 }

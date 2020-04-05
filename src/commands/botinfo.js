@@ -98,16 +98,16 @@ export default class BotInfoCommand extends CompilerCommand {
     /**
      * Displays the help information for the given command
      *
-     * @param {Message} grouper
+     * @param {CompilerCommandMessage} message
      */
     async help(message) {
-
-        response
+        const embed = new MessageEmbed()
             .setTitle('Command Usage')
             .setDescription(`*${this.description}*`)
-            .addHelpField('Add a tag', `${this.toString()} add \`<tagName>\``)
-            .addHelpField('Remove a tag', `${this.toString()} remove \`<tagName>\``)
-            .isUsage()
-        return message.dispatch(response);
+            .setColor(0x00FF00)
+            .addField('View bot info', `${this.toString()}`)
+            .setThumbnail('https://imgur.com/TNzxfMB.png')
+            .setFooter(`Requested by: ${message.message.author.tag}`)
+        return await message.dispatch('', embed);
     }
 }
