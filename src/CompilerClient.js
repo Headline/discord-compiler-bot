@@ -19,12 +19,19 @@ export default class CompilerClient extends Client {
     this.commands = new CommandCollection(this);
     this.messagerouter = new MessageRouter(this, options);
 
+    /**
+     * Setup compilers cache
+     */
     this.compilers = new Compilers(this);
 
+    /**
+     * Environment Variables
+     */
     this.loading_emote = options.loading_emote;
     this.prefix = options.prefix;
     this.invite_link = options.invite_link;
     this.discordbots_link = options.discordbots_link;
+    this.support_server = options.support_server;
   }
 
   async initializeCompilers() {
