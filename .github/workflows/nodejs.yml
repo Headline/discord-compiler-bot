@@ -1,6 +1,8 @@
 name: Node.js CI
 
 on:
+  schedule:
+    - cron: "0 2 * * 1-7"
   push:
     branches: [ master ]
   pull_request:
