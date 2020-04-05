@@ -27,7 +27,9 @@ export default class BotInfoCommand extends CompilerCommand {
         const guildcount = this.client.guilds.cache.size;
         const invitelink = this.client.invite_link;
         const votelink = this.client.discordbots_link;
-
+		const githublink = this.client.github_link;
+		const statslink = this.client.stats_link;
+		
         const embed = new MessageEmbed()
             .setTitle('Current Bot Info:')
 
@@ -36,8 +38,8 @@ export default class BotInfoCommand extends CompilerCommand {
                 + "==============================\n"
                 + "[Invitation link](" + invitelink + ")"
                 + "\n[Vote for us!](" + votelink + ")"
-                + "\n[GitHub Repository](https://github.com/Headline/discord-compiler)"
-                + "\n[Statistics Tracker](http://headlinedev.xyz/discord-compiler)"
+                + "\n[GitHub Repository](" + githublink + ")"
+                + "\n[Statistics Tracker](" + statslink + ")"
                 + "\n==============================\n")
 
             .setColor(0x00FF00)

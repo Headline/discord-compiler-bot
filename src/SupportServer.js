@@ -12,7 +12,7 @@ export default class SupportServer {
     constructor(client) {
         let guild = null;
          client.guilds.cache.forEach((g) => {
-            if (g.id == this.client.support_server) {
+            if (g.id == client.support_server) {
                 guild = g;
             }
         })
@@ -46,7 +46,7 @@ export default class SupportServer {
         .addField("Name", guild.name, true)
         .addField("Guild Id",  guild.id, true)
         .addField("Total Members", guild.memberCount, true)
-        .addField("Total Channels", guild.channels.array.length, true)
+        .addField("Total Channels", guild.channels.cache.size, true)
         .addField("Guild Owner", guild.owner.user.tag, true)
         .addField("Guild Region", guild.region, true)
         .addField("Creation Date", guild.createdAt.toISOString(), true)
@@ -65,7 +65,7 @@ export default class SupportServer {
 
         let channel = null;
         
-        this.supportguild.channels.forEach((element) => {
+        this.supportguild.channels.cache.forEach((element) => {
             if (element.name === "join-log")
                 channel = element;
         });
@@ -80,7 +80,7 @@ export default class SupportServer {
         .addField("Name", guild.name, true)
         .addField("Guild Id",  guild.id, true)
         .addField("Total Members", guild.memberCount, true)
-        .addField("Total Channels", guild.channels.array.length, true)
+        .addField("Total Channels", guild.channels.cache.array.length, true)
         .addField("Guild Owner", guild.owner.user.tag, true)
         .addField("Guild Region", guild.region, true)
         .addField("Creation Date", guild.createdAt.toISOString(), true)
@@ -93,7 +93,7 @@ export default class SupportServer {
 
         let channel = null;
 
-        this.supportguild.channels.forEach((element) => {
+        this.supportguild.channels.cache.forEach((element) => {
         if (element.name === "compile-log")
             channel = element;
         });

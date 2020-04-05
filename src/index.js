@@ -11,9 +11,13 @@ const client = new CompilerClient({
 	prefix: process.env.BOT_PREFIX,
 	loading_emote: process.env.LOADING_EMOTE,
 	support_server: process.env.SUPPORT_SERVER,
+	invite_link: process.env.INVITE_LINK,
+	discordbots_link: process.env.DISCORDBOTS_LINK,
+	github_link: process.env.GITHUB_LINK,
+	stats_link: process.env.STATS_LINK,
 });
 
-const supportserver = new SupportServer(client);
+let supportserver = null;
 let statstracking = null;
 
 client.commands.registerCommandsIn(join(__dirname, 'commands'));
@@ -34,6 +38,9 @@ client.on('guildCreate', g => {
 	log.info('Client#ready');
 	client.hook();
 	statstracking = new Servers(client.guilds.cache.size, client, process.env.DBL_TOKEN);
+	supportserver = new SupportServer(client);
+	
+	client.setSupportServer(supportserver);
 	await client.initializeCompilers();
 })
 .on('commandRegistered', (command) => {

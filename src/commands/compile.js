@@ -113,7 +113,7 @@ export default class CompileCommand extends CompilerCommand {
              * Certain compiler outputs use unicode control characters that
              * make the user experience look nice (colors, etc). This ruins
              * the look of the compiler messages in discord, so we strip them
-             * out with cleanControlChars()
+             * out with stripAnsi()
              */
             json.compiler_message = stripAnsi(json.compiler_message);
             embed.addField('Compiler Output', `\`\`\`${json.compiler_message}\n\`\`\`\n`);
@@ -134,6 +134,7 @@ export default class CompileCommand extends CompilerCommand {
             embed.addField('Program Output', `\`\`\`\n${json.program_message}\`\`\``);
         }
 
+		this.client.supportServer.postCompilation(code, lang, json.url, msg.message.author, msg.message.guild, json.status == 0, json.compiler_message);
         let responsemsg = await msg.dispatch('', embed);
         if (json.hasOwnProperty('status')) {
             if (json.status != 0) {

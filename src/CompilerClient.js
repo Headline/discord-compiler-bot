@@ -19,6 +19,8 @@ export default class CompilerClient extends Client {
     this.commands = new CommandCollection(this);
     this.messagerouter = new MessageRouter(this, options);
 
+	this.supportServer = null;
+	
     /**
      * Setup compilers cache
      */
@@ -32,8 +34,14 @@ export default class CompilerClient extends Client {
     this.invite_link = options.invite_link;
     this.discordbots_link = options.discordbots_link;
     this.support_server = options.support_server;
+	this.github_link = options.github_link;
+	this.stats_link = options.stats_link;
   }
 
+  setSupportServer(supportServer) {
+	this.supportServer = supportServer;
+  }
+  
   async initializeCompilers() {
     try {
       await this.compilers.initialize();
