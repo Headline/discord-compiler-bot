@@ -111,6 +111,7 @@ export default class SupportServer {
         .addField("URL",  url, true)
         .addField("User",  author.tag, true)
         .addField("Guild",  guild.name, true)
+        .addField("Guild ID",  guild.id, true)
         .addField('Code', `\`\`\`${code}\n\`\`\`\n`);
         if (!success)
             embed.addField('Compiler Output', `\`\`\`${failoutput}\n\`\`\`\n`);

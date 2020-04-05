@@ -39,6 +39,13 @@ export default class CompilerCommand {
        * @type {string}
        */
       this.description = info.description || '';
+
+      /**
+       * Developer flag for non-public commands
+       *
+       * @type {string}
+       */
+      this.developerOnly = info.developerOnly || false;
     }
 
     /**

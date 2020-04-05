@@ -30,7 +30,12 @@ export default class HelpCommand extends CompilerCommand {
                 return await msg.replyFail(`Command: ${command} not found!`);
             }
 
-            await this.client.commands.get(command).help(msg);
+            let cmd = this.client.commands.get(command);
+            if (cmd.developerOnly) {
+                return await msg.replyFail(`Command: ${command} not found!`);
+            }
+
+            await cmd.help(msg);
         }
         // Nothing given to us, show the full list
         else {
@@ -43,10 +48,13 @@ export default class HelpCommand extends CompilerCommand {
                 .setFooter(`Requested by: ${msg.message.author.tag}`)
 
 
-            for (const command of this.client.commands.array())
+            for (const command of this.client.commands.array()) {
+                if (command.developerOnly)
+                    continue;
+
                 if (command.name != 'help')
                     embed.addField(command.toString(), `\`\`\`${command.description}\`\`\``);
-
+            }
             await msg.dispatch('', embed);
         }
     }

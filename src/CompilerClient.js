@@ -1,7 +1,8 @@
-import {Client, ClientOptions, Snowflake} from 'discord.js'
+import { Client, ClientOptions, Snowflake } from 'discord.js'
 import CommandCollection from './commands/utils/CommandCollection'
 import MessageRouter from './commands/utils/MessageRouter'
-import {Compilers} from './utils/Wandbox'
+import { Compilers } from './utils/Wandbox'
+import log from './log'
 
 /**
  * discord.js client with added utility for general bot operations
@@ -18,9 +19,9 @@ export default class CompilerClient extends Client {
 
     this.commands = new CommandCollection(this);
     this.messagerouter = new MessageRouter(this, options);
+  
+    this.supportServer = null;
 
-	this.supportServer = null;
-	
     /**
      * Setup compilers cache
      */
@@ -34,20 +35,28 @@ export default class CompilerClient extends Client {
     this.invite_link = options.invite_link;
     this.discordbots_link = options.discordbots_link;
     this.support_server = options.support_server;
-	this.github_link = options.github_link;
-	this.stats_link = options.stats_link;
+    this.github_link = options.github_link;
+    this.stats_link = options.stats_link;
+    this.owner_id = options.owner_id;
   }
 
   setSupportServer(supportServer) {
-	this.supportServer = supportServer;
+    this.supportServer = supportServer;
   }
-  
-  async initializeCompilers() {
+
+  async initialize() {
     try {
       await this.compilers.initialize();
     }
     catch (error) {
       this.emit('compilersFailure', error);
+    }
+
+    try {
+      await this.messagerouter.blacklist.initialize();
+    }
+    catch(error) {
+      log.error(`MessageRouter#Blacklist -> blacklist.json write failure (${error.message})`);
     }
   }
   /**

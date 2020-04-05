@@ -15,6 +15,7 @@ const client = new CompilerClient({
 	discordbots_link: process.env.DISCORDBOTS_LINK,
 	github_link: process.env.GITHUB_LINK,
 	stats_link: process.env.STATS_LINK,
+	owner_id: process.env.OWNER_ID,
 });
 
 let supportserver = null;
@@ -41,7 +42,7 @@ client.on('guildCreate', g => {
 	supportserver = new SupportServer(client);
 	
 	client.setSupportServer(supportserver);
-	await client.initializeCompilers();
+	await client.initialize();
 	statstracking.updateAll();
 })
 .on('commandRegistered', (command) => {
