@@ -1,5 +1,5 @@
-const fs = require('fs');
-const spawn = require('child_process').spawn;
+import fs from 'fs'
+import { spawn } from 'child_process'
 
 /**
  * Manages server count for when statistics tracking & status display.
@@ -8,12 +8,12 @@ const spawn = require('child_process').spawn;
  * track the bot's growth along with any other information that we deem to be
  * relevant.
  */
-class Servers {
+export class Servers {
     /**
      * Creates an object which represents the server count tracking
      * 
      * @param {Number} count 
-     * @param {Discord.Client} client
+     * @param {Client} client
      * @param {dbl} dbl 
      */
     constructor(count, client, dbl) {
@@ -101,12 +101,12 @@ class Servers {
  * Simple singleton class which contains stats tracking to be done
  * on a request-by-request basis.
  */
-class Requests {
+export class Requests {
     /**
      * Increments the stats request count by one. Like before,
      * this has no effect if run outside of the public bot environment.
      */
-    static DoRequest() {
+    static doRequest() {
         let file = '/var/www/html/discord-compiler/graph.py';
         fs.stat(file, (err, stat) => {
             if (err == null) {
@@ -115,5 +115,3 @@ class Requests {
         });
     }
 }
-
-module.exports = {Servers, Requests};
