@@ -55,7 +55,7 @@ export default class CompileCommand extends CompilerCommand {
                 msg.replyFail('You must attach codeblocks containing code to your message');
                 return;
             }
-            const stdinblock = getStdinBlockFromText(msg.message.content);
+            const stdinblock = this.getStdinBlockFromText(msg.message.content);
             if (stdinblock) {
                 argsData.stdin = stdinblock;
             }
