@@ -67,33 +67,32 @@ export class Servers {
      * Updates the discord presence with the supplied server count
      * @param {Number} count 
      */
-    updateDiscord(count) {
-        this.client.user.setPresence({ game: { name: `in ${count} servers | ;help`}, status: 'online'})
-        .catch(console.log);
+    async updateDiscord(count) {
+        await this.client.user.setPresence({ activity: { name: `in ${count} servers | ;help`}, status: 'online'})
     }
 
     /**
      * Updates both the website & the discord presence with latest count
      */
-    updateAll() {
+    async updateAll() {
         this.updateSite(this.count);
-        this.updateDiscord(this.count);
+        await this.updateDiscord(this.count);
     }   
 
     /**
      * Increments the server count & updates all
      */
-    inc() {
+    async inc() {
         this.count++;
-        this.updateAll();
+        await this.updateAll();
     }
 
     /**
      * Decrements the server count and updates all
      */
-    dec() {
+    async dec() {
         this.count--;
-        this.updateAll();
+        await this.updateAll();
     }
 }
 

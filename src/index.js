@@ -42,6 +42,7 @@ client.on('guildCreate', g => {
 	
 	client.setSupportServer(supportserver);
 	await client.initializeCompilers();
+	statstracking.updateAll();
 })
 .on('commandRegistered', (command) => {
 	log.info(`Client#commandRegistered -> ${command.name}`);
