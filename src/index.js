@@ -53,10 +53,10 @@ client.on('guildCreate', g => {
 	log.error(`Compilers#compilersFailure -> ${error}`);
 })
 .on('missingPermissions', (guild) => {
-	log.error(`Client#missingPermissions -> Missing critical permission in ${guild.name} [${guild.id}]`);
+	log.warn(`Client#missingPermissions -> Missing permission in ${guild.name} [${guild.id}]`);
 })
 .on('commandExecuted', (f) => {
 	Requests.doRequest();
-	log.info(`Client#commandExecuted -> ${f.name} command executed`);
+	log.debug(`Client#commandExecuted -> ${f.name} command executed`);
 })
 client.login(process.env.BOT_TOKEN);

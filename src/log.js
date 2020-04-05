@@ -2,7 +2,7 @@ import { createLogger, format, transports } from 'winston';
 const { label, combine, timestamp, printf, colorize } = format;
 
 const log = createLogger({
-    level: 'debug',
+    level: 'info',
     format: combine(
         colorize({
             debug: 'blue',
