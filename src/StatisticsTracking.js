@@ -14,12 +14,10 @@ export class Servers {
      * 
      * @param {Number} count 
      * @param {Client} client
-     * @param {dbl} dbl 
      */
-    constructor(count, client, dbl) {
+    constructor(count, client) {
         this.count = count;
         this.client = client;
-        this.dbl = dbl;
     }
 
     /**
@@ -38,16 +36,6 @@ export class Servers {
      */
     getCount() {
         return this.count;
-    }
-
-    /**
-     * Updates discordbots.org server count with the supplied value. Only functions on
-     * instance.
-     * @param {Number} count 
-     */
-    updateDBL(count) {
-        if (this.dbl)
-            this.dbl.postStats(count);
     }
 
     /**

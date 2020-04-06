@@ -4,6 +4,7 @@ import { join } from 'path'
 import log from './log'
 import SupportServer from './SupportServer'
 import {Servers, Requests} from './StatisticsTracking'
+import DBL from 'dblapi.js'
 
 dotenv.config();
 
@@ -20,8 +21,65 @@ const client = new CompilerClient({
 
 let shouldTrackStatistics = process.env.TRACK_STATISTICS;
 
+/**
+ * Support server communication link
+ * @type {SupportServer}
+ */
 let supportserver = null;
+
+/**
+ * Statistics tracking helper class
+ * @type {Servers}
+ */
 let statstracking = null;
+
+/**
+ * DBL Api object
+ * @type {DBL}
+ */
+let dblapi = null;
+
+/**
+ * Sets up Discord Bot List for public server count display,
+ * bot info, and webhooks. Should be called after Discord.Client ready event
+ * 
+ * @param {CompilerClient} client ready client instance
+ */
+function setupDBL(client) {
+	if (!process.env.DBL_TOKEN) {
+		return null;
+	}
+
+	// If we have webhook capability
+	if (process.env.DBL_WEBHOOK_PORT && process.env.DBL_WEBHOOK_PASSWORD) {
+		let options = {
+			webhookPort: process.env.DBL_WEBHOOK_PORT, 
+			webhookAuth: process.env.DBL_WEBHOOK_PASSWORD,
+		};
+
+		dblapi = new DBL(process.env.DBL_TOKEN, options, client);
+		dblapi.webhook.on('ready', (hook) => {
+			log.info(`DBL#ready -> Webhook running at http://${hook.hostname}:${hook.port}${hook.path}`)
+		})
+		.on('vote', async (vote) => {
+			await supportserver.postVote(vote.user);
+		});
+		
+	}
+	// No webhooks available, lets just set up default stuff
+	else {
+		dblapi = new DBL(process.env.DBL_TOKEN, client);
+	}
+
+	dblapi.on('posted', () => {
+		log.info('DBL#posted -> Server count posted');
+	})
+	.on('error', (e) => {
+		log.warn(`DBL#error -> DBL failure: ${e}`);
+	});
+
+	return dblapi;
+}
 
 client.commands.registerCommandsIn(join(__dirname, 'commands'));
 
@@ -40,13 +98,21 @@ client.on('guildCreate', g => {
 .on('ready', async () => {
 	log.info('Client#ready');
 	client.hook();
-	statstracking = new Servers(client.guilds.cache.size, client, process.env.DBL_TOKEN);
+	statstracking = new Servers(client.guilds.cache.size, client);
 	supportserver = new SupportServer(client);
 	
 	client.setSupportServer(supportserver);
 	await client.initialize();
 	if (shouldTrackStatistics)
 		statstracking.updateAll();
+	
+	try {
+		dblapi = setupDBL(client);
+	}
+	catch (error)
+	{
+		log.error(`DBL$dblSetup -> ${error}`);
+	}
 })
 .on('commandRegistered', (command) => {
 	log.info(`Client#commandRegistered -> ${command.name}`);
@@ -64,4 +130,5 @@ client.on('guildCreate', g => {
 	Requests.doRequest();
 	log.debug(`Client#commandExecuted -> ${f.name} command executed`);
 })
+
 client.login(process.env.BOT_TOKEN);

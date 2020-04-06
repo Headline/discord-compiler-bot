@@ -1,4 +1,4 @@
-import { Client, Guild, MessageEmbed } from 'discord.js'
+import { Client, Guild, MessageEmbed, Channel } from 'discord.js'
 
 /**
  * A helper class which abstracts all support server information postings. 
@@ -18,12 +18,49 @@ export default class SupportServer {
                }
            })
            
-           this.supportguild = guild;   
+           /**
+            * Support Guild
+            * 
+            * @type {Guild}
+            */
+           this.supportguild = guild;
         }
         else
         {
             this.supportguild = client.support_server
         }
+
+        /**
+         * Discord client
+         * 
+         * @type {Client}
+         */
+        this.client = client;
+    }
+
+    /**
+     * Posts the user id
+     * @param {string} userid discord user id
+     */
+    async postVote(userid)
+    {
+        if (!this.supportguild)
+            return;
+
+        /**
+         * @type {Channel}
+         */
+        let channel = null;
+        this.supportguild.channels.cache.forEach((c) => {
+            if (c.name === "general")
+                channel = c;
+        });
+
+        if (channel == null)
+            return;
+        
+        let user = await this.client.users.fetch(userid);
+        channel.send(`${user.tag} has just voted for us on top.gg! :heart:`);
     }
 
     /**
