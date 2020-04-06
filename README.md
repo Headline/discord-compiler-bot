@@ -5,6 +5,9 @@ A Discord bot which can compile code, display the output of the compiler, and ru
 
 **Just looking to try it out? Join our [support discord](https://discord.gg/ExraTaJ) and give it a shot!**
 
+If you enjoy using this project and would like to support me, please consider [donating](https://donatebot.io/checkout/505721414662225921) ❤️
+
+
 ## Usage
 For a tutorial about how to use this bot, feel free to view our [wiki](https://github.com/Headline/discord-compiler/wiki)!
 
