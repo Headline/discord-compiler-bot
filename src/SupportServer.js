@@ -60,7 +60,7 @@ export default class SupportServer {
             return;
         
         let user = await this.client.users.fetch(userid);
-        channel.send(`${user.tag} has just voted for us on top.gg! :heart:`);
+        channel.send(`${user.tag} has just voted for us on top.gg!  :heart:`);
     }
 
     /**
