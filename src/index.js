@@ -18,19 +18,21 @@ const client = new CompilerClient({
 	owner_id: process.env.OWNER_ID,
 });
 
+let shouldTrackStatistics = process.env.TRACK_STATISTICS;
+
 let supportserver = null;
 let statstracking = null;
 
 client.commands.registerCommandsIn(join(__dirname, 'commands'));
 
 client.on('guildCreate', g => {
-	if (statstracking)
+	if (shouldTrackStatistics)
 		statstracking.inc();
 	supportserver.postJoined(g);
 	log.debug(`Client#guildCreate -> ${g.name}`);
 })
 .on('guildDelete', g => {
-	if (statstracking)
+	if (shouldTrackStatistics)
 		statstracking.dec();
 	supportserver.postLeft(g);
 	log.debug(`Client#guildDelete -> ${g.name}`);
@@ -43,7 +45,8 @@ client.on('guildCreate', g => {
 	
 	client.setSupportServer(supportserver);
 	await client.initialize();
-	statstracking.updateAll();
+	if (shouldTrackStatistics)
+		statstracking.updateAll();
 })
 .on('commandRegistered', (command) => {
 	log.info(`Client#commandRegistered -> ${command.name}`);

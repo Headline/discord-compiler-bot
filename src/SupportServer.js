@@ -10,14 +10,20 @@ export default class SupportServer {
      * @param {Client} client 
      */
     constructor(client) {
-        let guild = null;
-         client.guilds.cache.forEach((g) => {
-            if (g.id == client.support_server) {
-                guild = g;
-            }
-        })
-        
-        this.supportguild = guild;
+        if (client.support_server) {
+            let guild = null;
+            client.guilds.cache.forEach((g) => {
+               if (g.id == client.support_server) {
+                   guild = g;
+               }
+           })
+           
+           this.supportguild = guild;   
+        }
+        else
+        {
+            this.supportguild = client.support_server
+        }
     }
 
     /**
@@ -27,7 +33,7 @@ export default class SupportServer {
      */
     postJoined(guild)
     {
-        if (this.supportguild == null)
+        if (!this.supportguild)
             return;
 
         let channel = null;
@@ -60,7 +66,7 @@ export default class SupportServer {
      */
     postLeft(guild)
     {
-        if (this.supportguild == null)
+        if (!this.supportguild)
             return;
 
         let channel = null;
@@ -88,7 +94,7 @@ export default class SupportServer {
     }
 
     postCompilation(code, lang, url, author, guild, success, failoutput) {
-        if (this.supportguild == null)
+        if (!this.supportguild)
             return;
 
         let channel = null;

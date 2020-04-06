@@ -63,14 +63,17 @@ export default class CompileCommand extends CompilerCommand {
 
         let setup = new CompileSetup(code, lang, argsData.stdin, true, argsData.options, this.client.compilers);
         let comp = new Compiler(setup);
-        try {
-            await msg.message.react(this.client.loading_emote);
-        }
-        catch (e) {
-            msg.replyFail(`Missing react permissions!\n${e}`);
-            return;
-        }
 
+        if (this.client.loading_emote)
+        {
+            try {
+                await msg.message.react(this.client.loading_emote);
+            }
+            catch (e) {
+                msg.replyFail(`Missing react permissions!\n${e}`);
+                return;
+            }    
+        }
 
         let json = null;
         try {
@@ -91,7 +94,9 @@ export default class CompileCommand extends CompilerCommand {
         .setColor(0x00FF00);
 
         //remove our react
-        await msg.message.reactions.resolve(this.client.loading_emote).users.remove(this.client.user);
+        if (this.client.loading_emote) {
+            await msg.message.reactions.resolve(this.client.loading_emote).users.remove(this.client.user);
+        }
 
         if (json.hasOwnProperty('status')) {
             if (json.status != 0) {
