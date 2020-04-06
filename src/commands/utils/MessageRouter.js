@@ -1,8 +1,9 @@
-import CompilerClient from '../../CompilerClient'
-import {Message, Guild} from 'discord.js'
-import CompilerCommandMessage from './CompilerCommandMessage'
 import log from '../../log'
 import fs from 'fs'
+import { Message } from 'discord.js'
+
+import CompilerClient from '../../CompilerClient'
+import CompilerCommandMessage from './CompilerCommandMessage'
 
 export default class MessageRouter {
 
@@ -12,7 +13,7 @@ export default class MessageRouter {
    * @param {RouterOptions} options
    */
 
-   constructor(client, options) {
+  constructor(client, options) {
     /**
      * Discord client
      * @type {CompilerClient}
@@ -25,6 +26,10 @@ export default class MessageRouter {
      */
     this.prefix = options.prefix;
 
+    /**
+     * Wrapper which allows for easy guild blacklsting
+     * @type {GuildBlacklist}
+     */
     this.blacklist = new GuildBlacklist();
   }
 
@@ -44,19 +49,19 @@ export default class MessageRouter {
       return false;
 
     // Disable direct message 
-	// Allow this someday maybe?
+    // Allow this someday maybe?
     if (message.guild == null)
       return false;
 
-  
+
     if (this.blacklist.isBlacklisted(message.guild.id)) {
       const msg = new CompilerCommandMessage(message);
       await msg.replyFail('This guild has been blacklisted from executing commands.'
-      + '\nThis may have happened due to abuse, spam, or other reasons.'
-      + '\nIf you feel that this has been done in error, request an unban in the support server.');
+        + '\nThis may have happened due to abuse, spam, or other reasons.'
+        + '\nIf you feel that this has been done in error, request an unban in the support server.');
       return;
     }
-  
+
     const commandStr = message.content.substr(this.prefix.length).match(/(?:[^\s"]+|"[^"]*")+/g);
     if (!commandStr)
       return false;
@@ -68,6 +73,11 @@ export default class MessageRouter {
     if (commandFunc.developerOnly && message.author.id != this.client.owner_id)
       return false;
 
+    /**
+     * Event that's called before every command execution from a client
+     * 
+     * @event CompilerClient#commandExecuted
+     */
     this.client.emit('commandExecuted', commandFunc)
 
     await commandFunc.run(new CompilerCommandMessage(message));
@@ -129,13 +139,13 @@ class GuildBlacklist {
       let data = await this.readFile();
       this.data = JSON.parse(data);
     }
-    catch(error) {
+    catch (error) {
       log.warn('MessageRouter#Blacklist -> blacklist.json not found, creating...');
       try {
         await this.writeFile();
       }
       catch (error) {
-        throw(error);
+        throw (error);
       }
     }
   }

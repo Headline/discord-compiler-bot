@@ -1,11 +1,14 @@
-import { Message, MessageEmbed, Client } from 'discord.js'
+import { MessageEmbed } from 'discord.js'
+
 import CompilerCommand from './utils/CompilerCommand'
 import CompilerCommandMessage from './utils/CompilerCommandMessage'
-import DiscordMessageMenu from '../utils/DiscordMessageMenu'
+import CompilerClient from '../CompilerClient'
 
 export default class UnBlacklistCommand extends CompilerCommand {
     /**
-     *  Creates the Compile command
+     *  Creates the unblacklist command
+     * 
+     * @param {CompilerClient} client
      */
     constructor(client) {
         super(client, {
@@ -22,6 +25,10 @@ export default class UnBlacklistCommand extends CompilerCommand {
      */
     async run(msg) {
         const args = msg.getArgs();
+
+        if (args.length != 1)
+            return await msg.replyFail('You must supply a guild to unblacklist!');
+
         const guild = args[0];
 
         if (!this.client.messagerouter.blacklist.isBlacklisted(guild))
@@ -37,13 +44,5 @@ export default class UnBlacklistCommand extends CompilerCommand {
             .setFooter(`Requested by: ${msg.message.author.tag}`)
         await msg.dispatch('', embed);
 
-    }
-
-    /**
-     * Displays the help information for the given command
-     *
-     * @param {CompilerCommandMessage} message
-     */
-    async help(message) {
     }
 }

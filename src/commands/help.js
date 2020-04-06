@@ -1,10 +1,14 @@
-import { Message, MessageEmbed, Client } from 'discord.js'
+import { MessageEmbed } from 'discord.js'
+
 import CompilerCommand from './utils/CompilerCommand'
 import CompilerCommandMessage from './utils/CompilerCommandMessage'
+import CompilerClient from '../CompilerClient'
 
 export default class HelpCommand extends CompilerCommand {
     /**
-     *  Creates the Compile command
+     *  Creates the help command
+     * 
+     * @param {CompilerClient} client
      */
     constructor(client) {
         super(client, {

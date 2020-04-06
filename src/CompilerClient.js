@@ -1,8 +1,9 @@
-import { Client, ClientOptions, Snowflake } from 'discord.js'
+import { Client } from 'discord.js'
+
 import CommandCollection from './commands/utils/CommandCollection'
 import MessageRouter from './commands/utils/MessageRouter'
 import { Compilers } from './utils/Wandbox'
-import log from './log'
+import { SupportServer } from './SupportServer'
 
 /**
  * discord.js client with added utility for general bot operations
@@ -17,9 +18,23 @@ export default class CompilerClient extends Client {
   constructor(options = {}) {
     super(options);
 
+
+    /**
+     * Collection of commands for lookup
+     * @type {CommandCollection}
+     */
     this.commands = new CommandCollection(this);
+
+    /**
+     * Handles command routing, owner checks, and arg splitting
+     * @type {MessageRouter}
+     */
     this.messagerouter = new MessageRouter(this, options);
-  
+
+    /**
+     * Support server helper tools
+     * @type {SupportServer}
+     */
     this.supportServer = null;
 
     /**
@@ -40,27 +55,48 @@ export default class CompilerClient extends Client {
     this.owner_id = options.owner_id;
   }
 
+  /**
+   * Sets the support server property
+   * 
+   * @param {SupportServer} supportServer 
+   */
   setSupportServer(supportServer) {
     this.supportServer = supportServer;
   }
 
+  /**
+   * Initializes compiler client's resources
+   */
   async initialize() {
     try {
       await this.compilers.initialize();
     }
     catch (error) {
+      /**
+       * Event that's called when the compilers were unable to initialize
+       * 
+       * @event CompilerClient#compilersFailure
+       * @type {Error}
+       */
       this.emit('compilersFailure', error);
     }
 
     try {
       await this.messagerouter.blacklist.initialize();
     }
-    catch(error) {
-      log.error(`MessageRouter#Blacklist -> blacklist.json write failure (${error.message})`);
+    catch (error) {
+      /**
+       * Event thats called when the blacklist is unable to be initialized
+       * 
+       * @event CompilerClient#blacklistFailure
+       * @type {Error}
+       */
+      this.emit('blacklistFailure', error);
     }
   }
+
   /**
-   * hook - Hooks bot processes to discord.js client
+   * hook - Hooks command routing to discord.js client
    */
   hook() {
     this.on('message', async (message) => {

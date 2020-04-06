@@ -24,8 +24,6 @@ export class Compilers extends Collection {
     /**
      * Asyncronously fetches the list of valid compilers from wandbox and populates cache.
      * Note: This can throw
-     *
-     * @return {type}  description
      */
     async initialize() {
         let compilers = null;

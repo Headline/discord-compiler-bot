@@ -1,15 +1,19 @@
-import {Message, MessageEmbed} from 'discord.js'
-import CompilerCommand from './utils/CompilerCommand';
-import CompilerCommandMessage from './utils/CompilerCommandMessage'
 import url from 'url';
-import {Compiler, CompileSetup} from '../utils/Wandbox';
+import { MessageEmbed } from 'discord.js'
 import stripAnsi from 'strip-ansi';
 import fetch from 'node-fetch';
 
+import CompilerCommand from './utils/CompilerCommand';
+import CompilerCommandMessage from './utils/CompilerCommandMessage'
+import CompilerClient from '../CompilerClient'
+import { Compiler, CompileSetup } from '../utils/Wandbox';
+
 export default class CompileCommand extends CompilerCommand {
-  /**
-   *  Creates the Compile command
-   */
+    /**
+     *  Creates the compile command
+     * 
+     * @param {CompilerClient} client
+     */    
     constructor(client) {
         super(client, {
             name: 'compile',

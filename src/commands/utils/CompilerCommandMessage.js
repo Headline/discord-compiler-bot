@@ -1,10 +1,10 @@
 import { Message, StringResolvable, MessageOptions, MessageEmbed, Attachment, Author } from "discord.js";
-import CompilerCommand from "./CompilerCommand";
+import CompilerCommand from './CompilerCommand'
 
 export default class CompilerCommandMessage {
 
     /**
-     * Constructs a grouper message
+     * Constructs a compiler message
      *
      * @param {Message} message
      */
@@ -19,7 +19,7 @@ export default class CompilerCommandMessage {
         /**
          * Command that this message triggers
          *
-         * @type {GrouperCommand}
+         * @type {CompilerCommand}
          */
         this.command = null;
     }
@@ -42,6 +42,13 @@ export default class CompilerCommandMessage {
         catch (e) { 
             // if we don't have permissions here, we're kinda screwed, let's just
             // scream loud and hope our log gets read
+
+            /**
+             * Called when a non-recoverable permissions error occurs
+             * 
+             * @event CompilerClient#missingPermissions
+             * @type {Guild} guild the permissions error occured in
+             */
             this.message.client.emit('missingPermissions', this.message.guild)
         }
     }
@@ -61,6 +68,13 @@ export default class CompilerCommandMessage {
         catch (e) { 
             // if we don't have permissions here, we're kinda screwed, let's just
             // scream loud and hope our log gets read
+
+            /**
+             * Called when a non-recoverable permissions error occurs
+             * 
+             * @event CompilerClient#missingPermissions
+             * @type {Guild} guild the permissions error occured in
+             */
             this.message.client.emit('missingPermissions', this.message.guild)
         }
     }
@@ -91,7 +105,7 @@ export default class CompilerCommandMessage {
     /**
      * Set a command object to the message
      *
-     * @param {GrouperCommand} command - Command to set it to
+     * @param {CompilerCommand} command - Command to set it to
      */
     setCommand(command) {
         this.command = command;

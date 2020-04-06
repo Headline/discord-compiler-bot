@@ -8,15 +8,15 @@ export default class CommandCollection extends Collection {
     /**
      * Creates a new store for commands
      *
-     * @param {GrouperClient} client
+     * @param {CompilerClient} client
      */
     constructor(client) {
         super();
 
         /**
-         * GrouperClient
+         * CompilerClient
          *
-         * @type {GrouperClient}
+         * @type {CompilerClient}
          */
         this.client = client;
     }
@@ -24,7 +24,7 @@ export default class CommandCollection extends Collection {
     /**
      * Register a command
      *
-     * @param {GrouperCommand | Function} command
+     * @param {CompilerCommand | Function} command
      */
     registerCommand(command) {
         if (typeof command === 'function') {
@@ -44,8 +44,8 @@ export default class CommandCollection extends Collection {
         /**
          * Emitted when a command is registered
          *
-         * @event GrouperClient#commandRegistered
-         * @param {GrouperCommand} command Command that was registered
+         * @event CompilerClient#commandRegistered
+         * @param {CompilerCommand} command Command that was registered
          */
         this.client.emit('commandRegistered', command);
     }

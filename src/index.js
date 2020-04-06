@@ -1,10 +1,11 @@
 import dotenv from 'dotenv';
-import CompilerClient from './CompilerClient'
 import { join } from 'path'
 import log from './log'
+import DBL from 'dblapi.js'
+
+import CompilerClient from './CompilerClient'
 import SupportServer from './SupportServer'
 import {Servers, Requests} from './StatisticsTracking'
-import DBL from 'dblapi.js'
 
 dotenv.config();
 
@@ -19,6 +20,10 @@ const client = new CompilerClient({
 	owner_id: process.env.OWNER_ID,
 });
 
+/**
+ * Boolean to determine if statistics should be tracked
+ * @type {boolean}
+ */
 let shouldTrackStatistics = process.env.TRACK_STATISTICS;
 
 /**
@@ -120,15 +125,18 @@ client.on('guildCreate', g => {
 .on('compilersReady', () => {
 	log.info("Compilers#compilersReady");
 })
-.on('compilersFailure', (error) => {
-	log.error(`Compilers#compilersFailure -> ${error}`);
-})
 .on('missingPermissions', (guild) => {
 	log.warn(`Client#missingPermissions -> Missing permission in ${guild.name} [${guild.id}]`);
 })
 .on('commandExecuted', (f) => {
 	Requests.doRequest();
 	log.debug(`Client#commandExecuted -> ${f.name} command executed`);
+})
+.on('blacklistFailure', (error) => {
+	log.error(`MessageRouter#Blacklist -> blacklist.json write failure (${error.message})`);
+})
+.on('compilersFailure', (error) => {
+	log.error(`Compilers#compilersFailure -> ${error}`);
 })
 
 client.login(process.env.BOT_TOKEN);
