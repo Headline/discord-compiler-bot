@@ -39,6 +39,16 @@ export default class MessageRouter {
     if (!message.content.startsWith(this.prefix))
       return false;
 
+    // Message from discord system (lul?)
+    if (message.system)
+      return false;
+
+    // Disable direct message 
+	// Allow this someday maybe?
+    if (message.guild == null)
+      return false;
+
+  
     if (this.blacklist.isBlacklisted(message.guild.id)) {
       const msg = new CompilerCommandMessage(message);
       await msg.replyFail('This guild has been blacklisted from executing commands.'
