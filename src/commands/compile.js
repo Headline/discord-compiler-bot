@@ -29,6 +29,11 @@ export default class CompileCommand extends CompilerCommand {
      */
     async run(msg) {
         const args = msg.getArgs();
+		
+		if (args.length < 1) {
+			return await this.help(msg);
+		}
+		
         let lang = args[0].toLowerCase();
         args.shift();
 
