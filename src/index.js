@@ -138,5 +138,8 @@ client.on('guildCreate', g => {
 .on('compilersFailure', (error) => {
 	log.error(`Compilers#compilersFailure -> ${error}`);
 })
+.on('commandExecutionError', (name, guild, error) => {
+	log.error(`Client#commandExecutionError -> An error has occured in ${name} command: ${error} in ${guild.name}[${guild.id}]`)
+});
 
 client.login(process.env.BOT_TOKEN);

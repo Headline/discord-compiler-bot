@@ -79,8 +79,7 @@ export default class CompileCommand extends CompilerCommand {
                 await msg.message.react(this.client.loading_emote);
             }
             catch (e) {
-                msg.replyFail(`Missing react permissions!\n${e}`);
-                return;
+                msg.replyFail(`Failed to react to message, am I missing permissions?\n${e}`);
             }    
         }
 
@@ -104,7 +103,12 @@ export default class CompileCommand extends CompilerCommand {
 
         //remove our react
         if (this.client.loading_emote) {
-            await msg.message.reactions.resolve(this.client.loading_emote).users.remove(this.client.user);
+            try {
+                await msg.message.reactions.resolve(this.client.loading_emote).users.remove(this.client.user);
+            }
+            catch (error) {
+                msg.replyFail(`Unable to remove reactions, am I missing permissions?\n${error}`);
+            }
         }
 
         if (json.hasOwnProperty('status')) {
@@ -150,14 +154,12 @@ export default class CompileCommand extends CompilerCommand {
 
 		this.client.supportServer.postCompilation(code, lang, json.url, msg.message.author, msg.message.guild, json.status == 0, json.compiler_message);
         let responsemsg = await msg.dispatch('', embed);
-        if (json.hasOwnProperty('status')) {
-            if (json.status != 0) {
-                responsemsg.react('❌');
-                embed.setColor(0xFF0000);
-            }
-            else {
-                responsemsg.react('✅');
-            }
+        try {
+            responsemsg.react((embed.color == 0xFF0000)?'❌':'✅');
+        }
+        catch (error) {
+            msg.replyFail(`Unable to react to message, am I missing permissions?\n${error}`);
+            return;
         }
     }
 

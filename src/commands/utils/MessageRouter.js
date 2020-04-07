@@ -1,6 +1,6 @@
 import log from '../../log'
 import fs from 'fs'
-import { Message } from 'discord.js'
+import { Message, Guild } from 'discord.js'
 
 import CompilerClient from '../../CompilerClient'
 import CompilerCommandMessage from './CompilerCommandMessage'
@@ -80,7 +80,20 @@ export default class MessageRouter {
      */
     this.client.emit('commandExecuted', commandFunc)
 
-    await commandFunc.run(new CompilerCommandMessage(message));
+    try {
+      await commandFunc.run(new CompilerCommandMessage(message));
+    }
+    catch (error) {
+      /**
+       * Event thats called on uncaught command exceptions
+       * 
+       * @event CompilerClient#commandExecutionError
+       * @type {string}
+       * @type {Guild}
+       * @type {Error}
+       */
+      this.client.emit('commandExecutionError', commandFunc.name, message.guild, error);
+    }
   }
 }
 
