@@ -93,12 +93,18 @@ client.on('guildCreate', g => {
 		statstracking.inc();
 	supportserver.postJoined(g);
 	log.debug(`Client#guildCreate -> ${g.name}`);
+
+	if (dblapi)
+		dblapi.postStats(statstracking.count);
 })
 .on('guildDelete', g => {
 	if (shouldTrackStatistics)
 		statstracking.dec();
 	supportserver.postLeft(g);
 	log.debug(`Client#guildDelete -> ${g.name}`);
+	
+	if (dblapi)
+		dblapi.postStats(statstracking.count);
 })
 .on('ready', async () => {
 	log.info('Client#ready');
