@@ -92,7 +92,7 @@ client.on('guildCreate', g => {
 	if (shouldTrackStatistics)
 		statstracking.inc();
 	supportserver.postJoined(g);
-	log.debug(`Client#guildCreate -> ${g.name}`);
+	log.ifno(`Client#guildCreate -> ${g.name}`);
 
 	if (dblapi)
 		dblapi.postStats(statstracking.count);
@@ -100,15 +100,17 @@ client.on('guildCreate', g => {
 .on('guildDelete', g => {
 	if (shouldTrackStatistics)
 		statstracking.dec();
-	supportserver.postLeft(g);
-	log.debug(`Client#guildDelete -> ${g.name}`);
-	
 	if (dblapi)
 		dblapi.postStats(statstracking.count);
+
+	supportserver.postLeft(g);
+	log.info(`Client#guildDelete -> ${g.name}`);
 })
 .on('ready', async () => {
 	log.info('Client#ready');
 	client.hook();
+
+	//Start up all internal tracking
 	statstracking = new Servers(client.guilds.cache.size, client);
 	supportserver = new SupportServer(client);
 	
@@ -117,8 +119,11 @@ client.on('guildCreate', g => {
 	if (shouldTrackStatistics)
 		statstracking.updateAll();
 	
+	//Start dblapi tracking
 	try {
 		dblapi = setupDBL(client);
+		if (dblapi)
+			dblapi.postStats(statstracking.count);
 	}
 	catch (error)
 	{
