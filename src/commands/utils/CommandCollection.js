@@ -32,11 +32,11 @@ export default class CommandCollection extends Collection {
         }
 
         if(!(command instanceof CompilerCommand)) {
-            throw 'Invalid command class: ' + command;
+            throw new Error('Invalid command class: ' + command);
         }
 
         if (this.some(cmd => cmd.name === command.name)) {
-            throw `Command name "${command.name}" is already registered`;
+            throw new Error(`Command name "${command.name}" is already registered`);
         }
 
         this.set(command.name.toLowerCase(), command);

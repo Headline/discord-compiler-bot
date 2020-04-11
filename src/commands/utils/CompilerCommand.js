@@ -56,7 +56,7 @@ export default class CompilerCommand {
      * @param {Message} message
      */
     async run(message) {
-      throw `${this.constructor.name} doesn't have a run() method.`;
+      throw new Error(`${this.constructor.name} doesn't have a run() method.`);
     }
 
     /**
@@ -67,7 +67,7 @@ export default class CompilerCommand {
      * @param {Message} message
      */
     async help(message) {
-      throw `${this.constructor.name} doesn't have a help() method.`;
+      throw new Error(`${this.constructor.name} doesn't have a help() method.`);
     }
 
     /**

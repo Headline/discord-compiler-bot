@@ -150,8 +150,8 @@ export class Compiler {
             // We have a request error so lets throw up to our handler
             // which prints the output in an embed
             if (!response.ok)
-                throw `WandBox replied with response code ${response.status}. `
-                + `This could mean WandBox is experiencing an outage, or a network connection error has occured`;
+                throw new Error(`WandBox replied with response code ${response.status}. `
+                + `This could mean WandBox is experiencing an outage, or a network connection error has occured`);
 
             const json = await response.json();
             return json;    

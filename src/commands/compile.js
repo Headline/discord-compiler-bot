@@ -50,7 +50,7 @@ export default class CompileCommand extends CompilerCommand {
                 code = await this.getCodeFromURL(argsData.fileInput);
             }
             catch (e) {
-                msg.replyFail(`Could not retrieve code from url \n ${e}`);
+                msg.replyFail(`Could not retrieve code from url \n ${e.message}`);
                 return;
             }
         }
@@ -88,7 +88,7 @@ export default class CompileCommand extends CompilerCommand {
             json = await comp.compile();
         }
         catch (e) {
-            msg.replyFail(`Wandbox request failure \n ${e} \nPlease try again later`);
+            msg.replyFail(`Wandbox request failure \n ${e.message} \nPlease try again later`);
             return;
         }
         if (!json) {
@@ -216,7 +216,7 @@ export default class CompileCommand extends CompilerCommand {
             let response = await fetch(fileInput.href);
             let data = await response.text();
             if (!response.ok) {
-                throw `Error requesting online code URL - ${response.status}\n ${data}`;
+                throw new Error(`Error requesting online code URL - ${response.status}\n ${data}`);
             }
 
             return data;
