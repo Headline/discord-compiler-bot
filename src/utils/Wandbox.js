@@ -146,6 +146,13 @@ export class Compiler {
                     'Content-Type': 'application/json; charset=utf-8'
                 },
             });
+
+            // We have a request error so lets throw up to our handler
+            // which prints the output in an embed
+            if (!response.ok)
+                throw `WandBox replied with response code ${response.status}. `
+                + `This could mean WandBox is experiencing an outage, or a network connection error has occured`;
+
             const json = await response.json();
             return json;    
         }
