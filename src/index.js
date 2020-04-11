@@ -92,7 +92,7 @@ client.on('guildCreate', g => {
 	if (shouldTrackStatistics)
 		statstracking.inc();
 	supportserver.postJoined(g);
-	log.ifno(`Client#guildCreate -> ${g.name}`);
+	log.info(`Client#guildCreate -> ${g.name}`);
 
 	if (dblapi)
 		dblapi.postStats(statstracking.count);
