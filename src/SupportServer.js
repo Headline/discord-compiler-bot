@@ -25,10 +25,6 @@ export default class SupportServer {
             */
            this.supportguild = guild;
         }
-        else
-        {
-            this.supportguild = client.support_server
-        }
 
         /**
          * Discord client
