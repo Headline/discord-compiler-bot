@@ -217,13 +217,13 @@ class MessageTimeout {
             await message.reactions.cache.forEach(async (reaction) => {
                 reaction.remove(message.author);
             });
-            //await message.reactions.removeAll();
-            collector.stop();    
         }
         catch (err)
         {
-            throw(err);
+            // We failed out here, there's not much to do other then silenty die.
+            // Rethrowing an error here won't propegate up any further...
         }
+        collector.stop();    
     }
 
     restart() {
