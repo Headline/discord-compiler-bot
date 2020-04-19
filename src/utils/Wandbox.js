@@ -1,4 +1,3 @@
-import https from 'https';
 import fetch from 'node-fetch';
 import { Collection } from 'discord.js'
 
