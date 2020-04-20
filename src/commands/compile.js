@@ -111,19 +111,25 @@ export default class CompileCommand extends CompilerCommand {
             }
         }
 
-        if (json.hasOwnProperty('status')) {
+        if (json.status) {
             if (json.status != 0) {
-                embed.setColor(0xFF0000);
+                embed.setColor((0xFF0000));
             }
             else {
+                embed.setColor(0x00FF00);
+                embed.addField('Status code', `Finished with exit code: ${json.status}`);    
             }
-            embed.addField('Status code', `Finished with exit code: ${json.status}`);
         }
-        if (json.hasOwnProperty('signal'))
+
+        if (json.signal) {
             embed.addField('Signal', `\`\`\`${json.signal}\`\`\``);
-        if (json.hasOwnProperty('url'))
+        }
+
+        if (json.url) {
             embed.addField('URL', `Link: ${json.url}`);
-        if (json.hasOwnProperty('compiler_message')) {
+        }
+
+        if (json.compiler_message) {
             if (json.compiler_message.length >= 1017) {
                 json.compiler_message = json.compiler_message.substring(0, 1016);
             }
@@ -136,7 +142,8 @@ export default class CompileCommand extends CompilerCommand {
             json.compiler_message = stripAnsi(json.compiler_message);
             embed.addField('Compiler Output', `\`\`\`${json.compiler_message}\n\`\`\`\n`);
         }
-        if (json.hasOwnProperty('program_message')) {
+
+        if (json.program_message) {
             if (json.program_message.length >= 1017) {
                 json.program_message = json.program_message.substring(0, 1016);
             }
@@ -154,6 +161,7 @@ export default class CompileCommand extends CompilerCommand {
 
 		this.client.supportServer.postCompilation(code, lang, json.url, msg.message.author, msg.message.guild, json.status == 0, json.compiler_message);
         let responsemsg = await msg.dispatch('', embed);
+        
         try {
             responsemsg.react((embed.color == 0xFF0000)?'❌':'✅');
         }
