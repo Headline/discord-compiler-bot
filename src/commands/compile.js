@@ -96,11 +96,6 @@ export default class CompileCommand extends CompilerCommand {
             return;
         }
 
-        const embed = new MessageEmbed()
-        .setTitle('Compilation Results:')
-        .setFooter("Requested by: " + msg.message.author.tag + " || Powered by wandbox.org")
-        .setColor(0x00FF00);
-
         //remove our react
         if (this.client.loading_emote) {
             try {
@@ -110,6 +105,32 @@ export default class CompileCommand extends CompilerCommand {
                 msg.replyFail(`Unable to remove reactions, am I missing permissions?\n${error}`);
             }
         }
+
+		this.client.supportServer.postCompilation(code, lang, json.url, msg.message.author, msg.message.guild, json.status == 0, json.compiler_message);
+        
+        let embed = this.buildResponseEmbed(msg, json);
+        let responsemsg = await msg.dispatch('', embed);
+        
+        try {
+            responsemsg.react((embed.color == 0xFF0000)?'❌':'✅');
+        }
+        catch (error) {
+            msg.replyFail(`Unable to react to message, am I missing permissions?\n${error}`);
+            return;
+        }
+    }
+
+    /**
+     * Builds a compilation response embed
+     * 
+     * @param {CompilerCommandMessage} msg 
+     * @param {*} json 
+     */
+    buildResponseEmbed(msg, json) {
+        const embed = new MessageEmbed()
+        .setTitle('Compilation Results:')
+        .setFooter("Requested by: " + msg.message.author.tag + " || Powered by wandbox.org")
+        .setColor(0x00FF00);
 
         if (json.status) {
             if (json.status != 0) {
@@ -158,17 +179,7 @@ export default class CompileCommand extends CompilerCommand {
             json.program_message = json.program_message.replace(/`/g, "\u200B"+'`');
             embed.addField('Program Output', `\`\`\`\n${json.program_message}\`\`\``);
         }
-
-		this.client.supportServer.postCompilation(code, lang, json.url, msg.message.author, msg.message.guild, json.status == 0, json.compiler_message);
-        let responsemsg = await msg.dispatch('', embed);
-        
-        try {
-            responsemsg.react((embed.color == 0xFF0000)?'❌':'✅');
-        }
-        catch (error) {
-            msg.replyFail(`Unable to react to message, am I missing permissions?\n${error}`);
-            return;
-        }
+        return embed;
     }
 
     /**

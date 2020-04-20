@@ -1,11 +1,11 @@
 import assert from 'assert'
 import "regenerator-runtime/runtime.js";
 
-
 import CompileCommand from '../commands/compile'
 
 const cmd = new CompileCommand();
-describe('Compile Command', () => {
+describe('Compile Command', function() {
+    this.timeout(5000);
     it('Parse url', () => {
         let url = "http://michaelwflaherty.com/files/conversation.txt"
         let argsData = cmd.parseArguments(['<', url]);
@@ -52,5 +52,20 @@ describe('Compile Command', () => {
         code = cmd.cleanLanguageSpecifier(code);
         assert.equal(code, '\nint main() {}');
     });
+    it('Compilation Embed', async () => {
+        let json = JSON.parse('{ \"permlink\": \"98AbZMTsa5f9MwDd\", \"status\": \"0\", \"url\": \"https://someurl.com\"}')
+        
+        let msg = {
+            message : {
+                author: {
+                    tag: 'awd'
+                }
+            }
+        }
 
+        let embed = cmd.buildResponseEmbed(msg, json);
+
+        assert.equal(embed.color, 0x00FF00);
+        assert.equal(embed.fields.length, 2);
+    });
 });
