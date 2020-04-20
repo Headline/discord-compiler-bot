@@ -1,4 +1,6 @@
 import { Message, MessageEmbed } from 'discord.js'
+import MessageTimeout from './MessageTimeout'
+
 /**
  * Discord Embed Menu helper class to make your life easer. It 
  * allows for on-the-fly menus, and is nearly effortless.
@@ -116,7 +118,7 @@ export default class DiscordMessageMenu {
                         try {
                             await result.reactions.cache.forEach(async (reaction) => {
                                 await reaction.remove(result.author);
-                            });        
+                            });
                         }
                         catch (error) {
                             throw(error); // throw to higher level
@@ -132,7 +134,7 @@ export default class DiscordMessageMenu {
             });
 
             if (first) {
-                this.timeout = new MessageTimeout(result, this.collector);
+                this.timeout = new MessageTimeout(result, this.collector, 30);
                 this.timeout.start();
             }
         }
@@ -185,49 +187,5 @@ export default class DiscordMessageMenu {
         catch (error) {
             throw (error); // give to higher level for handling
         }
-    }
-}
-
-/**
- * Internal timer helper that expires old help command outputs
- */
-class MessageTimeout {
-    constructor(message, collector, delay) {
-        this.message = message;
-        this.collector = collector
-        this.delay = delay;
-        this.timeout = null;
-    }
-
-    start() {
-        this.timeout = setTimeout(this.run, 30 * 1000, this.message, this.collector);
-    }
-
-    stop() {
-        clearTimeout(this.timeout);
-    }
-
-    /**
-     * 
-     * @param {Message} message 
-     * @param {ReactionCollector} collector 
-     */
-    async run(message, collector) {
-        try {
-            await message.reactions.cache.forEach(async (reaction) => {
-                reaction.remove(message.author);
-            });
-            //await message.reactions.removeAll();
-            collector.stop();    
-        }
-        catch (err)
-        {
-            throw(err);
-        }
-    }
-
-    restart() {
-        clearTimeout(this.timeout);
-        this.start();
     }
 }

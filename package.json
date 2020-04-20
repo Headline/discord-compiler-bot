@@ -1,11 +1,11 @@
 {
   "name": "discord-compiler",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "description": "A Discord bot that compiles your spaghetti",
   "main": "index.js",
   "scripts": {
     "build": "babel src -d build",
-    "run": "node build/index.js",
+    "run": "node --async-stack-traces build/index.js",
     "start": "babel src -d build && npm run run",
     "clean": "rm -rf `find build -mindepth 1 | grep -v 'getkeep$'`",
     "test": "npm run clean && npm run build && mocha build/tests/*.js"
