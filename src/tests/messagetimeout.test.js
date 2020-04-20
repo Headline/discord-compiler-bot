@@ -6,6 +6,13 @@ import MessageTimeout from '../utils/MessageTimeout'
 class testobj {
     constructor(done) {
         this.done = done;
+        this.reactions = {
+            cache: {
+                forEach(funct) {
+                    // fake stub for loop
+                }
+            }
+        }
     }
     stop() {
         this.done();

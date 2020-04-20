@@ -118,7 +118,7 @@ export default class DiscordMessageMenu {
                         try {
                             await result.reactions.cache.forEach(async (reaction) => {
                                 await reaction.remove(result.author);
-                            });        
+                            });
                         }
                         catch (error) {
                             throw(error); // throw to higher level
