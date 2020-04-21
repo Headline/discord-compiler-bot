@@ -40,7 +40,7 @@ export default class CompilersCommand extends CompilerCommand {
         menu.buildMenu(langs);
 
         try {
-            menu.displayPage(0);
+            await menu.displayPage(0);
         }
         catch (error) {
             msg.replyFail('Error with menu system, am I missing permissions?\n' + error);

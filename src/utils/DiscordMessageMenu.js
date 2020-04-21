@@ -1,5 +1,6 @@
 import { Message, MessageEmbed } from 'discord.js'
 import MessageTimeout from './MessageTimeout'
+import CompilerCommandMessage from '../commands/utils/CompilerCommandMessage';
 
 /**
  * Discord Embed Menu helper class to make your life easer. It 
@@ -70,7 +71,6 @@ export default class DiscordMessageMenu {
      * Interal callback for displayPage(). Do not use.
      * 
      * @param {Message} result 
-     * @param {DiscordMessageMenu} that 
      */
     async handleMessage(result) {
         try {
@@ -96,41 +96,34 @@ export default class DiscordMessageMenu {
                 return false;
             }
             ).once("collect", async (reaction) => {
-                const chosen = reaction.emoji.name;
-                if (chosen == this.left) {
-                    if (this.page > 0)
-                        this.displayPage(--this.page)
-                    else
-                        this.displayPage(this.page)
-                }
-                else if (chosen == this.right) {
-                    if (this.page + 1 > this.getMaxPage())
-                        this.displayPage(this.page)
-                    else
-                        this.displayPage(++this.page);
-                }
-                else if (chosen == this.stop) {
-
-                    try {
+                try {
+                    const chosen = reaction.emoji.name;
+                    if (chosen == this.left) {
+                        if (this.page > 0)
+                            this.displayPage(--this.page)
+                        else
+                            this.displayPage(this.page)
+                    }
+                    else if (chosen == this.right) {
+                        if (this.page + 1 > this.getMaxPage())
+                            this.displayPage(this.page)
+                        else
+                            this.displayPage(++this.page);
+                    }
+                    else if (chosen == this.stop) {
                         await result.reactions.removeAll();
+    
+                        this.collector.stop();
+                        this.timeout.stop();
+                        return;
                     }
-                    catch (error) { // try to remove our reactions the slow way then
-                        try {
-                            await result.reactions.cache.forEach(async (reaction) => {
-                                await reaction.remove(result.author);
-                            });
-                        }
-                        catch (error) {
-                            throw(error); // throw to higher level
-                        }
-                    }
-
-                    this.collector.stop();
-                    this.timeout.stop();
-                    return;
+                    this.timeout.restart();
+                    await reaction.users.remove(this.collectionuser);    
                 }
-                this.timeout.restart();
-                await reaction.users.remove(this.collectionuser);
+                catch(err) {
+                    let msg = new CompilerCommandMessage(this.message);
+                    msg.replyFail(`Unrecoverable menu failure: ${err.message}`);
+                }
             });
 
             if (first) {
@@ -150,30 +143,30 @@ export default class DiscordMessageMenu {
      * @param {number} page 
      */
     async displayPage(page) {
+        // Pagination building
+        let start = page * this.displaycount;
+        let end = start + this.displaycount;
+        let items = this.menu.slice(start, end);
+
+        // put every item on it's own line
+        let output = "";
+        items.forEach(element => {
+            output += element + '\n';
+        });
+
+        // Message dispatch
+        const embed = new MessageEmbed()
+            .setTitle(this.title)
+            .setColor(this.color)
+            .setDescription(output)
+            .setFooter("Requested by: " + this.authormessage.author.tag 
+            + ' | page: ' + (this.page + 1) + '/' + (this.getMaxPage() + 1));
+
+
+        if (this.authormessage.guild != null)
+            embed.setThumbnail(this.authormessage.guild.iconURL())
+
         try {
-            // Pagination building
-            let start = page * this.displaycount;
-            let end = start + this.displaycount;
-            let items = this.menu.slice(start, end);
-
-            // put every item on it's own line
-            let output = "";
-            items.forEach(element => {
-                output += element + '\n';
-            });
-
-            // Message dispatch
-            const embed = new MessageEmbed()
-                .setTitle(this.title)
-                .setColor(this.color)
-                .setDescription(output)
-                .setFooter("Requested by: " + this.authormessage.author.tag 
-                + ' | page: ' + (this.page + 1) + '/' + (this.getMaxPage() + 1));
-
-
-            if (this.authormessage.guild != null)
-                embed.setThumbnail(this.authormessage.guild.iconURL())
-
             if (!this.message) { // we haven't already sent one, so send()
                 this.message = await this.authormessage.channel.send(embed);
                 await this.handleMessage(this.message);

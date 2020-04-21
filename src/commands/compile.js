@@ -73,10 +73,12 @@ export default class CompileCommand extends CompilerCommand {
         let setup = new CompileSetup(code, lang, argsData.stdin, true, argsData.options, this.client.compilers);
         let comp = new Compiler(setup);
 
+        let reactionSuccess = false;
         if (this.client.loading_emote)
         {
             try {
                 await msg.message.react(this.client.loading_emote);
+                reactionSuccess = true;
             }
             catch (e) {
                 msg.replyFail(`Failed to react to message, am I missing permissions?\n${e}`);
@@ -97,7 +99,7 @@ export default class CompileCommand extends CompilerCommand {
         }
 
         //remove our react
-        if (this.client.loading_emote) {
+        if (reactionSuccess && this.client.loading_emote) {
             try {
                 await msg.message.reactions.resolve(this.client.loading_emote).users.remove(this.client.user);
             }

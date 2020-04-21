@@ -12,7 +12,9 @@ dotenv.config();
 const client = new CompilerClient({
 	prefix: process.env.BOT_PREFIX,
 	loading_emote: process.env.LOADING_EMOTE,
-	support_server: process.env.SUPPORT_SERVER,
+	join_log: process.env.JOIN_LOG,
+	dbl_log: process.env.DBL_LOG,
+	compile_log: process.env.COMPILE_LOG,
 	invite_link: process.env.INVITE_LINK,
 	discordbots_link: process.env.DISCORDBOTS_LINK,
 	github_link: process.env.GITHUB_LINK,
@@ -88,22 +90,26 @@ function setupDBL(client) {
 
 client.commands.registerCommandsIn(join(__dirname, 'commands'));
 
-client.on('guildCreate', g => {
+client.on('guildCreate', async (g) => {
 	if (shouldTrackStatistics)
 		statstracking.inc();
-	supportserver.postJoined(g);
-	log.info(`Client#guildCreate -> ${g.name}`);
 
 	if (dblapi)
-		dblapi.postStats(statstracking.count);
+		await dblapi.postStats(statstracking.count);
+
+	await supportserver.postJoined(g);
+
+	log.info(`Client#guildCreate -> ${g.name}`);
 })
-.on('guildDelete', g => {
+.on('guildDelete', async (g) => {
 	if (shouldTrackStatistics)
 		statstracking.dec();
-	if (dblapi)
-		dblapi.postStats(statstracking.count);
 
-	supportserver.postLeft(g);
+	if (dblapi)
+		await dblapi.postStats(statstracking.count);
+
+	await supportserver.postLeft(g);
+
 	log.info(`Client#guildDelete -> ${g.name}`);
 })
 .on('ready', async () => {
@@ -117,7 +123,7 @@ client.on('guildCreate', g => {
 	client.setSupportServer(supportserver);
 	await client.initialize();
 	if (shouldTrackStatistics)
-		statstracking.updateAll();
+		await statstracking.updateAll();
 	
 	//Start dblapi tracking
 	try {

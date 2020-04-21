@@ -49,7 +49,9 @@ export default class CompilerClient extends Client {
     this.prefix = options.prefix;
     this.invite_link = options.invite_link;
     this.discordbots_link = options.discordbots_link;
-    this.support_server = options.support_server;
+    this.join_log = options.join_log;
+    this.compile_log = options.compile_log;
+    this.dbl_log = options.dbl_log;
     this.github_link = options.github_link;
     this.stats_link = options.stats_link;
     this.owner_id = options.owner_id;

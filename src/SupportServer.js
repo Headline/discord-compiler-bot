@@ -1,81 +1,66 @@
 import { Client, Guild, MessageEmbed, Channel } from 'discord.js'
+import CompilerClient from './CompilerClient'
+import log from './log'
 
 /**
  * A helper class which abstracts all support server information postings. 
  */
 export default class SupportServer {
     /**
-     * Creates a SupportServer object & sets necessary instance variables for proper function
+     * Creates a SupportServer object
      * 
      * @param {Client} client 
      */
     constructor(client) {
-        if (client.support_server) {
-            let guild = null;
-            client.guilds.cache.forEach((g) => {
-               if (g.id == client.support_server) {
-                   guild = g;
-               }
-           })
-           
-           /**
-            * Support Guild
-            * 
-            * @type {Guild}
-            */
-           this.supportguild = guild;
-        }
-
         /**
          * Discord client
          * 
-         * @type {Client}
+         * @type {CompilerClient}
          */
         this.client = client;
     }
 
     /**
-     * Posts the user id
+     * Posts a notification to the support guild when a user has voted
+     * 
      * @param {string} userid discord user id
      */
     async postVote(userid)
     {
-        if (!this.supportguild)
+        if (!this.client.dbl_log)
             return;
 
         /**
          * @type {Channel}
          */
-        let channel = null;
-        this.supportguild.channels.cache.forEach((c) => {
-            if (c.name === "general")
-                channel = c;
-        });
-
-        if (channel == null)
+        let channel = await this.client.channels.fetch(this.client.dbl_log);
+        if (!channel)
             return;
         
         let user = await this.client.users.fetch(userid);
-        channel.send(`${user.tag} has just voted for us on top.gg!  :heart:`);
+        try {
+            await channel.send(`${user.tag} has just voted for us on top.gg!  :heart:`)
+        }
+        catch (err) {
+            log.error(`SupportServer#postVote -> ${err}`);
+        }
     }
 
     /**
-     * Posts to the join log of the support server for tracking.
+     * Posts to the join log of the support server when the bot enters a new guild
      * 
      * @param {Guild} guild
      */
-    postJoined(guild)
+    async postJoined(guild)
     {
-        if (!this.supportguild)
+        if (!this.client.join_log)
             return;
 
-        let channel = null;
-        this.supportguild.channels.cache.forEach((c) => {
-            if (c.name === "join-log")
-                channel = c;
-        });
-
-        if (channel == null)
+        /**
+         * @type {Channel}
+         */
+        let channel = await this.client.channels.fetch(this.client.join_log);
+        if (!channel)
             return;
 
         const embed = new MessageEmbed()
@@ -89,27 +74,30 @@ export default class SupportServer {
         .addField("Guild Owner", guild.owner.user.tag, true)
         .addField("Guild Region", guild.region, true)
         .addField("Creation Date", guild.createdAt.toISOString(), true)
-        channel.send(embed).catch();
+
+        try {
+            await channel.send(embed)
+        }
+        catch (err) {
+            log.error(`SupportServer#postJoined -> ${err}`);
+        }
     }
 
     /**
-     * Posts to the join log of the support server for tracking.
+     * Posts to the join log of the support server when the bot leaves a guild
      * 
      * @param {Guild} guild
      */
-    postLeft(guild)
+    async postLeft(guild)
     {
-        if (!this.supportguild)
+        if (!this.client.join_log)
             return;
 
-        let channel = null;
-        
-        this.supportguild.channels.cache.forEach((element) => {
-            if (element.name === "join-log")
-                channel = element;
-        });
-
-        if (channel == null)
+        /**
+         * @type {Channel}
+         */
+        let channel = await this.client.channels.fetch(this.client.join_log);
+        if (!channel)
             return;
 
         const embed = new MessageEmbed()
@@ -123,26 +111,35 @@ export default class SupportServer {
         .addField("Guild Owner", guild.owner.user.tag, true)
         .addField("Guild Region", guild.region, true)
         .addField("Creation Date", guild.createdAt.toISOString(), true)
-        channel.send(embed).catch(console.log);
+
+        try {
+            await channel.send(embed)
+        }
+        catch (err) {
+            log.error(`SupportServer#postLeft -> ${err}`);
+        }
     }
 
-    postCompilation(code, lang, url, author, guild, success, failoutput) {
-        if (!this.supportguild)
+    async postCompilation(code, lang, url, author, guild, success, failoutput) {
+        if (!this.client.compile_log)
             return;
 
-        let channel = null;
-
-        this.supportguild.channels.cache.forEach((element) => {
-        if (element.name === "compile-log")
-            channel = element;
-        });
-
-        if (channel == null)
+        /**
+         * @type {Channel}
+         */
+        let channel = await this.client.channels.fetch(this.client.compile_log);
+        if (!channel)
             return;
 
         if (code.length >= 1017) {
             code = code.substring(0, 1016);
         }
+        if (failoutput) {
+            if (failoutput.length > 1017) {
+                failoutput = failoutput.substring(0, 1016);
+            }
+        }
+
         const embed = new MessageEmbed()
         .setTitle('Compilation Requested:')    
         .setColor((success)?0x00FF00:0xFF0000)
@@ -154,6 +151,12 @@ export default class SupportServer {
         .addField('Code', `\`\`\`${code}\n\`\`\`\n`);
         if (!success)
             embed.addField('Compiler Output', `\`\`\`${failoutput}\n\`\`\`\n`);
-        channel.send(embed).catch(console.log);
+        
+        try {
+            await channel.send(embed)
+        }
+        catch (err) {
+            log.error(`SupportServer#postCompilation -> ${err}`);
+        }
     }
 }
