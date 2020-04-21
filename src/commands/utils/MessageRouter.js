@@ -61,6 +61,13 @@ export default class MessageRouter {
         + '\nIf you feel that this has been done in error, request an unban in the support server.');
       return;
     }
+    if (this.blacklist.isBlacklisted(message.author.id)) {
+      const msg = new CompilerCommandMessage(message);
+      await msg.replyFail('Your user account has been blacklisted from executing commands.'
+        + '\nThis may have happened due to abuse, spam, or other reasons.'
+        + '\nIf you feel that this has been done in error, request an unban in the support server.');
+      return;
+    }
 
     const commandStr = message.content.substr(this.prefix.length).match(/(?:[^\s"]+|"[^"]*")+/g);
     if (!commandStr)

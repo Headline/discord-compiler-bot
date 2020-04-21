@@ -146,6 +146,7 @@ export default class SupportServer {
         .addField("Language", lang, true)
         .addField("URL",  url, true)
         .addField("User",  author.tag, true)
+        .addField("User ID",  author.id, true)
         .addField("Guild",  guild.name, true)
         .addField("Guild ID",  guild.id, true)
         .addField('Code', `\`\`\`${code}\n\`\`\`\n`);
