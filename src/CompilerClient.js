@@ -72,6 +72,13 @@ export default class CompilerClient extends Client {
   }
 
   /**
+   * Sets the statistics api
+   * @param {StatisticsAPI} stats 
+   */
+  setStatsAPI(stats) {
+    this.stats = stats;
+  }
+  /**
    * Initializes compiler client's resources
    */
   async initialize() {
