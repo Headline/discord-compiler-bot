@@ -26,7 +26,7 @@ const client = new CompilerClient({
  * Sets the bot's presence to 'MAINTENENCE MODE' to alert users of work being done
  * @type {string}
  */
-let maintenanceMode = true;
+let maintenanceMode = false;
 
 /**
  * API url in the form of https://url.com/
