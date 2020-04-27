@@ -5,7 +5,7 @@ import DBL from 'dblapi.js'
 
 import CompilerClient from './CompilerClient'
 import SupportServer from './SupportServer'
-import {Servers, Requests} from './StatisticsTracking'
+import {StatisticsAPI} from './StatisticsTracking'
 
 dotenv.config();
 
@@ -22,6 +22,13 @@ const client = new CompilerClient({
 	owner_id: process.env.OWNER_ID,
 });
 
+let maintenenceMdoe = true;
+
+/**
+ * API url in the form of https://url.com/
+ */
+let statisticsAPI = process.env.STATS_API_LINK;
+
 /**
  * Boolean to determine if statistics should be tracked
  * @type {boolean}
@@ -36,7 +43,7 @@ let supportserver = null;
 
 /**
  * Statistics tracking helper class
- * @type {Servers}
+ * @type {StatisticsAPI}
  */
 let statstracking = null;
 
@@ -91,24 +98,38 @@ function setupDBL(client) {
 client.commands.registerCommandsIn(join(__dirname, 'commands'));
 
 client.on('guildCreate', async (g) => {
+	let guildCount = client.guilds.cache.size;
 	if (shouldTrackStatistics)
-		statstracking.inc();
+		await statstracking.insertServerCount(guildCount);
 
 	if (dblapi)
-		await dblapi.postStats(statstracking.count);
+		await dblapi.postStats(guildCount);
 
 	await supportserver.postJoined(g);
+
+	if (maintenenceMdoe)
+		await client.user.setPresence({activity: {name: `MAINTENENCE MODE`}, status: 'dnd'});
+	else
+		await client.user.setPresence({activity: {name: `in ${guildCount} servers | ;help`}, status: 'online'});
 
 	log.info(`Client#guildCreate -> ${g.name}`);
 })
 .on('guildDelete', async (g) => {
+
+	let guildCount = client.guilds.cache.size;
 	if (shouldTrackStatistics)
-		statstracking.dec();
+		await statstracking.insertServerCount(guildCount);
 
 	if (dblapi)
-		await dblapi.postStats(statstracking.count);
+		await dblapi.postStats(guildCount);
 
 	await supportserver.postLeft(g);
+
+	if (maintenenceMdoe)
+		await client.user.setPresence({activity: {name: `MAINTENENCE MODE`}, status: 'dnd'});
+	else
+		await client.user.setPresence({activity: {name: `in ${guildCount} servers | ;help`}, status: 'online'});
+
 
 	log.info(`Client#guildDelete -> ${g.name}`);
 })
@@ -117,19 +138,28 @@ client.on('guildCreate', async (g) => {
 	client.hook();
 
 	//Start up all internal tracking
-	statstracking = new Servers(client.guilds.cache.size, client);
+	statstracking = new StatisticsAPI(client, statisticsAPI);
 	supportserver = new SupportServer(client);
 	
 	client.setSupportServer(supportserver);
 	await client.initialize();
+
+	let guildCount = client.guilds.cache.size;
+
+	if (maintenenceMdoe)
+		await client.user.setPresence({activity: {name: `MAINTENENCE MODE`}, status: 'dnd'});
+	else
+		await client.user.setPresence({activity: {name: `in ${guildCount} servers | ;help`}, status: 'online'});
+
+
 	if (shouldTrackStatistics)
-		await statstracking.updateAll();
+		await statstracking.insertServerCount(guildCount);
 	
 	//Start dblapi tracking
 	try {
 		dblapi = setupDBL(client);
 		if (dblapi)
-			dblapi.postStats(statstracking.count);
+			dblapi.postStats(guildCount);
 	}
 	catch (error)
 	{
@@ -146,7 +176,11 @@ client.on('guildCreate', async (g) => {
 	log.warn(`Client#missingPermissions -> Missing permission in ${guild.name} [${guild.id}]`);
 })
 .on('commandExecuted', (f) => {
-	Requests.doRequest();
+	if (shouldTrackStatistics)
+	{
+		statstracking.commandExecuted(f.name);
+		statstracking.incrementRequestCount();	
+	}
 	log.debug(`Client#commandExecuted -> ${f.name} command executed`);
 })
 .on('blacklistFailure', (error) => {

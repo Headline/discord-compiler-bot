@@ -1,104 +1,124 @@
-import fs from 'fs'
-import { spawn } from 'child_process'
+import fetch from 'node-fetch'
+import CompilerClient from './CompilerClient'
+import log from './log'
 
 /**
- * Manages server count for when statistics tracking & status display.
- * Functions like |updateSite| have no effect if the graph.py doesn't exist,
- * which is only useful for the main public instance. These statistics help
- * track the bot's growth along with any other information that we deem to be
- * relevant.
+ * Internal class to handle statistics api requests
  */
-export class Servers {
+export class StatisticsAPI {
     /**
      * Creates an object which represents the server count tracking
      * 
-     * @param {Number} count 
-     * @param {Client} client
+     * @param {CompilerClient} client
+     * @param {string} url
      */
-    constructor(count, client) {
-        this.count = count;
+    constructor(client, url) {
+        /**
+         * API Key for request authentication
+         * 
+         * @type {string}
+         */
+        this.key = process.env.STATS_API_KEY;
+
+        /**
+         * Discord client
+         * 
+         * @type {CompilerClient}
+         */        
         this.client = client;
+
+        /**
+         * Stats API url
+         * 
+         * @type {string}
+         */
+        this.url = url;
     }
 
     /**
-     * Sets the server count to a new value
+     * Informs the API that a command has been used
      * 
-     * Note: this does not contain a call to updateAll()
-     * 
-     * @param {Number} count 
+     * @param {string} cmd command which has been executed
      */
-    setCount(count) {
-        this.count = count;
-    }
+    async commandExecuted(cmd) {
+        try {
+            let obj = {
+                key: this.key,
+                command: cmd
+            };
 
-    /**
-     * Gets the current server count
-     */
-    getCount() {
-        return this.count;
-    }
+            const response = await fetch(this.url + 'insert/command', {
+                method: "POST",
+                body: JSON.stringify(obj),
+                headers: {
+                    'Content-Type': 'application/json; charset=utf-8'
+                },
+            });
 
-    /**
-     * Updates the website stats with the supplied server count
-     * @param {Number} count 
-     */
-    updateSite(count) {
-        let file = '/var/www/html/discord-compiler/graph.py';
-        fs.stat(file, (err) => {
-            if (err == null) {
-                spawn('python', [file, 'servers', String(count)]);
+            if (!response.ok) {
+                let resp = await response.json();
+                log.warn(`StatisticsAPI#commandExecuted (response) -> ${resp.message}`);
             }
-        });
+        }
+        catch (error) {
+            log.error(`StatisticsAPI#commandExecuted -> ${error.message}`);
+        }
     }
-
     /**
-     * Updates the discord presence with the supplied server count
-     * @param {Number} count 
+     * Increments the request count information by one
      */
-    async updateDiscord(count) {
-        await this.client.user.setPresence({ activity: { name: `in ${count} servers | ;help`}, status: 'online'})
-    }
+    async incrementRequestCount() {
+        try {
+            let obj = {
+                key: this.key,
+                type: 'request'
+            };
 
-    /**
-     * Updates both the website & the discord presence with latest count
-     */
-    async updateAll() {
-        this.updateSite(this.count);
-        await this.updateDiscord(this.count);
-    }   
+            const response = await fetch(this.url + 'insert/legacy', {
+                method: "POST",
+                body: JSON.stringify(obj),
+                headers: {
+                    'Content-Type': 'application/json; charset=utf-8'
+                },
+            });
 
-    /**
-     * Increments the server count & updates all
-     */
-    async inc() {
-        this.count++;
-        await this.updateAll();
-    }
-
-    /**
-     * Decrements the server count and updates all
-     */
-    async dec() {
-        this.count--;
-        await this.updateAll();
-    }
-}
-
-/**
- * Simple singleton class which contains stats tracking to be done
- * on a request-by-request basis.
- */
-export class Requests {
-    /**
-     * Increments the stats request count by one. Like before,
-     * this has no effect if run outside of the public bot environment.
-     */
-    static doRequest() {
-        let file = '/var/www/html/discord-compiler/graph.py';
-        fs.stat(file, (err, stat) => {
-            if (err == null) {
-                spawn('python', [file]);
+            if (!response.ok) {
+                let resp = await response.json();
+                log.warn(`StatisticsAPI#incrementRequestCount (response) -> ${resp.message}`);
             }
-        });
+        }
+        catch (error) {
+            log.error(`StatisticsAPI#incrementRequestCount -> ${error.message}`);
+        }
+    }
+
+    /**
+     * Feeds API server count information
+     * @param {number} count 
+     */
+    async insertServerCount(count) {
+        try {
+            let obj = {
+                key: this.key,
+                amount: count,
+                type: 'server'
+            };
+
+            const response = await fetch(this.url + 'insert/legacy', {
+                method: "POST",
+                body: JSON.stringify(obj),
+                headers: {
+                    'Content-Type': 'application/json; charset=utf-8'
+                },
+            });
+
+            if (!response.ok) {
+                let resp = await response.json();
+                log.warn(`StatisticsAPI#insertServerCount (response) -> ${resp.message}`);
+            }
+        }
+        catch (error) {
+            log.error(`StatisticsAPI#insertServerCount -> ${error.message}`);
+        }
     }
 }
