@@ -147,6 +147,10 @@ client.on('guildCreate', async (g) => {
 	supportserver = new SupportServer(client);
 	
 	client.setSupportServer(supportserver);
+
+	if (shouldTrackStatistics)
+		client.setStatsAPI(statstracking);
+
 	await client.initialize();
 
 	let guildCount = client.guilds.cache.size;

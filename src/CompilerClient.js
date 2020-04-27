@@ -4,7 +4,7 @@ import CommandCollection from './commands/utils/CommandCollection'
 import MessageRouter from './commands/utils/MessageRouter'
 import { Compilers } from './utils/Wandbox'
 import { SupportServer } from './SupportServer'
-
+import { StatisticsAPI } from './StatisticsTracking'
 /**
  * discord.js client with added utility for general bot operations
  */
@@ -18,6 +18,11 @@ export default class CompilerClient extends Client {
   constructor(options = {}) {
     super(options);
 
+    /**
+     * Statistics tracking API
+     * @type {StatisticsAPI}
+     */
+    this.stats = null;
 
     /**
      * Collection of commands for lookup

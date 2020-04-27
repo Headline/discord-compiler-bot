@@ -64,6 +64,37 @@ export class StatisticsAPI {
             log.error(`StatisticsAPI#commandExecuted -> ${error.message}`);
         }
     }
+
+    /**
+     * Informs the API which language has just been compiled
+     * 
+     * @param {string} lang langauge compiled
+     */
+    async compilationExecuted(lang) {
+        try {
+            let obj = {
+                key: this.key,
+                language: lang
+            };
+
+            const response = await fetch(this.url + 'insert/language', {
+                method: "POST",
+                body: JSON.stringify(obj),
+                headers: {
+                    'Content-Type': 'application/json; charset=utf-8'
+                },
+            });
+
+            if (!response.ok) {
+                let resp = await response.json();
+                log.warn(`StatisticsAPI#compilationExecuted (response) -> ${resp.message}`);
+            }
+        }
+        catch (error) {
+            log.error(`StatisticsAPI#compilationExecuted -> ${error.message}`);
+        }
+    }
+
     /**
      * Increments the request count information by one
      */

@@ -109,7 +109,8 @@ export default class CompileCommand extends CompilerCommand {
         }
 
 		this.client.supportServer.postCompilation(code, lang, json.url, msg.message.author, msg.message.guild, json.status == 0, json.compiler_message);
-        
+        this.client.stats.compilationExecuted(lang);
+
         let embed = this.buildResponseEmbed(msg, json);
         let responsemsg = await msg.dispatch('', embed);
         
