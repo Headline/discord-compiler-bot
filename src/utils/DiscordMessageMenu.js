@@ -122,7 +122,9 @@ export default class DiscordMessageMenu {
                 }
                 catch(err) {
                     let msg = new CompilerCommandMessage(this.message);
-                    msg.replyFail(`Unrecoverable menu failure: ${err.message}`);
+                    msg.replyFail(`Menu failure: ${err.message}\nAm I missing the "Manage Messages" permission?`);
+                    this.collector.stop();
+                    this.timeout.stop();
                 }
             });
 

@@ -185,7 +185,7 @@ client.on('guildCreate', async (g) => {
 	log.warn(`Client#missingPermissions -> Missing permission in ${guild.name} [${guild.id}]`);
 })
 .on('commandExecuted', (f) => {
-	if (shouldTrackStatistics)
+	if (shouldTrackStatistics && !f.developerOnly)
 	{
 		statstracking.commandExecuted(f.name);
 		statstracking.incrementRequestCount();	
