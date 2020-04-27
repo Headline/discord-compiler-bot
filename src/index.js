@@ -22,10 +22,15 @@ const client = new CompilerClient({
 	owner_id: process.env.OWNER_ID,
 });
 
-let maintenenceMdoe = true;
+/**
+ * Sets the bot's presence to 'MAINTENENCE MODE' to alert users of work being done
+ * @type {string}
+ */
+let maintenanceMode = true;
 
 /**
  * API url in the form of https://url.com/
+ * @type {string}
  */
 let statisticsAPI = process.env.STATS_API_LINK;
 
@@ -107,7 +112,7 @@ client.on('guildCreate', async (g) => {
 
 	await supportserver.postJoined(g);
 
-	if (maintenenceMdoe)
+	if (maintenanceMode)
 		await client.user.setPresence({activity: {name: `MAINTENENCE MODE`}, status: 'dnd'});
 	else
 		await client.user.setPresence({activity: {name: `in ${guildCount} servers | ;help`}, status: 'online'});
@@ -125,7 +130,7 @@ client.on('guildCreate', async (g) => {
 
 	await supportserver.postLeft(g);
 
-	if (maintenenceMdoe)
+	if (maintenanceMode)
 		await client.user.setPresence({activity: {name: `MAINTENENCE MODE`}, status: 'dnd'});
 	else
 		await client.user.setPresence({activity: {name: `in ${guildCount} servers | ;help`}, status: 'online'});
@@ -146,7 +151,7 @@ client.on('guildCreate', async (g) => {
 
 	let guildCount = client.guilds.cache.size;
 
-	if (maintenenceMdoe)
+	if (maintenanceMode)
 		await client.user.setPresence({activity: {name: `MAINTENENCE MODE`}, status: 'dnd'});
 	else
 		await client.user.setPresence({activity: {name: `in ${guildCount} servers | ;help`}, status: 'online'});
