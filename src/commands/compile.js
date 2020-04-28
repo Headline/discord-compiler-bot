@@ -109,6 +109,15 @@ export default class CompileCommand extends CompilerCommand {
         }
 
 		this.client.supportServer.postCompilation(code, lang, json.url, msg.message.author, msg.message.guild, json.status == 0, json.compiler_message);
+        
+        // if we were given a compiler we need to find the langauge
+        if (!this.client.compilers.has(lang)) {
+            this.client.compilers.forEach((value, key, map) => {
+                if (value.includes(lang)) {
+                    lang = key;
+                }
+            });
+        }
         this.client.stats.compilationExecuted(lang);
 
         let embed = this.buildResponseEmbed(msg, json);
