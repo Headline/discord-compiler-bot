@@ -14,7 +14,7 @@ export default class BotInfoCommand extends CompilerCommand {
     constructor(client) {
         super(client, {
             name: 'botinfo',
-            description: 'Displays the bot\'s state information',
+            description: 'Displays information about the bot\'s status',
             developerOnly: false
         });
     }

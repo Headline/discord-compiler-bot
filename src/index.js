@@ -23,7 +23,8 @@ const client = new CompilerClient({
 });
 
 /**
- * Sets the bot's presence to 'MAINTENENCE MODE' to alert users of work being done
+ * Sets the bot's presence to 'MAINTENENCE MODE' to alert users of work being done. This also
+ * disables statistics tracking
  * @type {string}
  */
 let maintenanceMode = false;
@@ -38,7 +39,7 @@ let statisticsAPI = process.env.STATS_API_LINK;
  * Boolean to determine if statistics should be tracked
  * @type {boolean}
  */
-let shouldTrackStatistics = process.env.TRACK_STATISTICS;
+let shouldTrackStatistics = (maintenanceMode)?false:process.env.TRACK_STATISTICS;
 
 /**
  * Support server communication link
@@ -83,7 +84,6 @@ function setupDBL(client) {
 		.on('vote', async (vote) => {
 			await supportserver.postVote(vote.user);
 		});
-		
 	}
 	// No webhooks available, lets just set up default stuff
 	else {
@@ -115,7 +115,7 @@ client.on('guildCreate', async (g) => {
 	if (maintenanceMode)
 		await client.user.setPresence({activity: {name: `MAINTENENCE MODE`}, status: 'dnd'});
 	else
-		await client.user.setPresence({activity: {name: `in ${guildCount} servers | ;help`}, status: 'online'});
+		await client.user.setPresence({activity: {name: `in ${guildCount} servers | ;invite`}, status: 'online'});
 
 	log.info(`Client#guildCreate -> ${g.name}`);
 })
@@ -133,7 +133,7 @@ client.on('guildCreate', async (g) => {
 	if (maintenanceMode)
 		await client.user.setPresence({activity: {name: `MAINTENENCE MODE`}, status: 'dnd'});
 	else
-		await client.user.setPresence({activity: {name: `in ${guildCount} servers | ;help`}, status: 'online'});
+		await client.user.setPresence({activity: {name: `in ${guildCount} servers | ;invite`}, status: 'online'});
 
 
 	log.info(`Client#guildDelete -> ${g.name}`);
@@ -158,7 +158,7 @@ client.on('guildCreate', async (g) => {
 	if (maintenanceMode)
 		await client.user.setPresence({activity: {name: `MAINTENENCE MODE`}, status: 'dnd'});
 	else
-		await client.user.setPresence({activity: {name: `in ${guildCount} servers | ;help`}, status: 'online'});
+		await client.user.setPresence({activity: {name: `in ${guildCount} servers | ;invite`}, status: 'online'});
 
 
 	if (shouldTrackStatistics)

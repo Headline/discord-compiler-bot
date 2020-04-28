@@ -13,7 +13,7 @@ export default class BlacklistCommand extends CompilerCommand {
     constructor(client) {
         super(client, {
             name: 'blacklist',
-            description: 'Blacklists a guild from sending requiests',
+            description: 'Blacklists a guild from sending requests',
             developerOnly: true,
         });
     }
