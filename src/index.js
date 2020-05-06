@@ -20,6 +20,9 @@ const client = new CompilerClient({
 	github_link: process.env.GITHUB_LINK,
 	stats_link: process.env.STATS_LINK,
 	owner_id: process.env.OWNER_ID,
+	ws: {
+		intents: ["GUILDS", "GUILD_MESSAGES", "GUILD_MESSAGE_REACTIONS"]
+	}
 });
 
 /**
