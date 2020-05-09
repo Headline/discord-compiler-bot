@@ -36,6 +36,9 @@ export default class UnBlacklistCommand extends CompilerCommand {
 
         await this.client.messagerouter.blacklist.unblacklist(guild);
 
+        // lets update all blacklists
+        this.client.shard.broadcastEval(`this.messagerouter.blacklist.removeFromCache('${guild}')`);
+
         const embed = new MessageEmbed()
             .setTitle('Guild Unblacklisted')
             .setDescription(`${guild} has been unblacklisted`)

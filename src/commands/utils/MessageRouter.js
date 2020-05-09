@@ -139,6 +139,33 @@ class GuildBlacklist {
   }
 
   /**
+   * Inserts the given guild into the cache if it exists, sbut does not write it to a file.
+   * This is useful for sharding in order to prevent unnecessary file IO.
+   * 
+   * Paired with removeFromCache
+   * 
+   * @param {string} guildid guild snowflake
+   */
+  addToCache(guildid) {
+    if (!this.isBlacklisted(guildid))
+      this.data.guilds.push(guildid);
+  }
+
+  /**
+   * Removes the guild from the cache, should it exist.
+   * This is useful for sharding in order to prevent unnecessary file IO.
+   * 
+   * Paired with addToCache
+   * 
+   * @param {string} guildid guild snowflake
+   */
+  removeFromCache(guildid) {
+    if (this.isBlacklisted(guildid))
+      this.data.guilds.splice(this.data.guilds.indexOf(guildid), 1);
+  }
+
+
+  /**
    * Blacklists a guild
    * 
    * @param {string} guildid 

@@ -36,6 +36,9 @@ export default class BlacklistCommand extends CompilerCommand {
 
         await this.client.messagerouter.blacklist.blacklist(guild);
 
+        // lets update all blacklists with our newest blacklist
+        this.client.shard.broadcastEval(`this.messagerouter.blacklist.addToCache('${guild}')`);
+
         const embed = new MessageEmbed()
             .setTitle('Guild Blacklisted')
             .setDescription(`${guild} has been blacklisted`)

@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "build": "babel src -d build",
-    "run": "node --async-stack-traces build/index.js",
+    "run": "node build/index.js",
     "start": "babel src -d build && npm run run",
     "clean": "rm -rf `find build -mindepth 1 | grep -v 'getkeep$'`",
     "test": "npm run clean && npm run build && mocha build/tests/*.js"
@@ -28,8 +28,10 @@
   "dependencies": {
     "@babel/cli": "^7.7.4",
     "@babel/core": "^7.7.4",
+    "@babel/plugin-transform-runtime": "^7.9.6",
     "@babel/preset-env": "^7.7.4",
     "@babel/register": "^7.7.4",
+    "@babel/runtime": "^7.9.6",
     "bufferutil": "^4.0.1",
     "dblapi.js": "^2.4.0",
     "discord.js": "^12.1.1",
