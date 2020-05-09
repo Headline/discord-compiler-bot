@@ -39,7 +39,7 @@ export default class BlacklistCommand extends CompilerCommand {
         const embed = new MessageEmbed()
             .setTitle('Guild Blacklisted')
             .setDescription(`${guild} has been blacklisted`)
-            .setThumbnail('https://imgur.com/KXZqNWq.png')
+            .setThumbnail('https://imgur.com/PVBdOYi.png')
             .setColor(0xFF0000)
             .setFooter(`Requested by: ${msg.message.author.tag}`)
         await msg.dispatch('', embed);
