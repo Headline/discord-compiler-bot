@@ -39,7 +39,7 @@ export default class SupportServer {
                 return;
             
             let user = await this.client.users.fetch(userid);
-                await channel.send(`${user.tag} has just voted for us on top.gg!  :heart:`)
+            await channel.send(`${user.tag} has just voted for us on top.gg!  :heart:`);
         }
         catch (err) {
             log.error(`SupportServer#postVote -> ${err}`);
@@ -64,6 +64,8 @@ export default class SupportServer {
             if (!channel)
                 return;
 
+            guild = await guild.fetch();
+
             const embed = new MessageEmbed()
             .setThumbnail(guild.iconURL)
             .setTitle('Server Joined:')    
@@ -75,7 +77,7 @@ export default class SupportServer {
             .addField("Guild Owner", guild.owner.user.tag, true)
             .addField("Guild Region", guild.region, true)
             .addField("Creation Date", guild.createdAt.toISOString(), true)
-
+            
             await channel.send(embed)
         }
         catch (err) {
@@ -100,6 +102,8 @@ export default class SupportServer {
             let channel = await this.client.channels.fetch(this.client.join_log);
             if (!channel)
                 return;
+
+            guild = await guild.fetch();
 
             const embed = new MessageEmbed()
             .setThumbnail(guild.iconURL)
