@@ -31,6 +31,9 @@ export default class UnBlacklistCommand extends CompilerCommand {
 
         const guild = args[0];
 
+        if (isNaN(guild))
+            return await msg.replyFail('Specified guild is invalid');
+
         if (!this.client.messagerouter.blacklist.isBlacklisted(guild))
             return await msg.replyFail('Specified guild is not blacklisted');
 
