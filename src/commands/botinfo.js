@@ -70,7 +70,7 @@ export default class BotInfoCommand extends CompilerCommand {
      * 
      * @param {Client} client 
      */
-    getShardsMemoryUsage(client) {
+    async getShardsMemoryUsage(client) {
         let counts = await client.shard.broadcastEval('process.memoryUsage().heapUsed / 1024 / 1024');
         return counts.reduce((prev, next) => prev + next, 0);
     }
