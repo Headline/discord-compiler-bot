@@ -25,7 +25,7 @@ export default class BotInfoCommand extends CompilerCommand {
      * @param {CompilerCommandMessage} msg
      */
     async run(msg) {
-        const memusage = this.getShardsMemoryUsage(this.client) // memory in MB
+        const memusage = await this.getShardsMemoryUsage(this.client) // memory in MB
         const cpuusage = os.loadavg()[0];
         const playercount = await this.getUserCount(this.client);
 
@@ -67,8 +67,10 @@ export default class BotInfoCommand extends CompilerCommand {
     }
 
     /**
+     * Grabs the memory usage for every shard process
      * 
      * @param {Client} client 
+     * @returns {Promise<number>}
      */
     async getShardsMemoryUsage(client) {
         let counts = await client.shard.broadcastEval('process.memoryUsage().heapUsed / 1024 / 1024');
