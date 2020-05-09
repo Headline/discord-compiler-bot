@@ -57,14 +57,8 @@ export default class SupportServer {
             if (!this.client.join_log)
                 return;
 
-            /**
-             * @type {Channel}
-             */
-            let channel = await this.client.channels.fetch(this.client.join_log);
-            if (!channel)
-                return;
-
             guild = await guild.fetch();
+            guild.owner.fetch();
 
             const embed = new MessageEmbed()
             .setThumbnail(guild.iconURL)
@@ -78,7 +72,7 @@ export default class SupportServer {
             .addField("Guild Region", guild.region, true)
             .addField("Creation Date", guild.createdAt.toISOString(), true)
             
-            await channel.send(embed)
+            this.dispatch(embed, this.client.join_log)
         }
         catch (err) {
             log.error(`SupportServer#postJoined -> ${err}`);
@@ -96,15 +90,8 @@ export default class SupportServer {
             if (!this.client.join_log)
                 return;
 
-            /**
-             * @type {Channel}
-             */
-            let channel = await this.client.channels.fetch(this.client.join_log);
-            if (!channel)
-                return;
-
             guild = await guild.fetch();
-
+            guild.owner.fetch();
             const embed = new MessageEmbed()
             .setThumbnail(guild.iconURL)
             .setTitle('Server Left:')    
@@ -117,7 +104,7 @@ export default class SupportServer {
             .addField("Guild Region", guild.region, true)
             .addField("Creation Date", guild.createdAt.toISOString(), true)
 
-            await channel.send(embed)
+            this.dispatch(embed, this.client.join_log)
         }
         catch (err) {
             log.error(`SupportServer#postLeft -> ${err}`);
@@ -128,13 +115,6 @@ export default class SupportServer {
         try {
 
             if (!this.client.compile_log)
-                return;
-
-            /**
-             * @type {Channel}
-             */
-            let channel = await this.client.channels.fetch(this.client.compile_log);
-            if (!channel)
                 return;
 
             if (code.length >= 1017) {
@@ -159,10 +139,28 @@ export default class SupportServer {
             if (!success)
                 embed.addField('Compiler Output', `\`\`\`${failoutput}\n\`\`\`\n`);
             
-            await channel.send(embed)
+            this.dispatch(embed, this.client.compile_log)
         }
         catch (err) {
             log.error(`SupportServer#postCompilation -> ${err}`);
         }
+    }
+
+    /**
+     * Dispatch message to support channel
+     * 
+     * @param {MessageEmbed} content 
+     * @param {string} channel channel snowflake
+     */
+    dispatch(content, channel) {
+        this.client.shard.broadcastEval(`
+            (async () => {
+                let channel = await this.channels.fetch(${channel});
+                if (!channel)
+                    return;
+
+                channel.send(${content});
+            })();
+        `);
     }
 }
