@@ -68,6 +68,6 @@ manager.on('shardCreate', shard =>  {
 			this.user.setPresence({activity: {name: 'in ${guildCount} servers | ;invite'}, status: 'online'});
 		
 		if (${shouldTrackStatistics})
-			this.stats.insertServerCount(guildCount);	
+			this.stats.insertServerCount(${guildCount});	
 	`)
 });
