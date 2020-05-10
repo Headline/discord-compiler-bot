@@ -77,12 +77,12 @@ function setupDBL(client) {
 client.commands.registerCommandsIn(join(__dirname, 'commands'));
 
 client.on('guildCreate', async (g) => {
-	const count = client.getTrueServerCount();
+	const count = await client.getTrueServerCount();
 
 	client.updateServerCount(count);
 
 	if (dblapi)
-		await dblapi.postStats(guildCount);
+		await dblapi.postStats(count);
 
 	await client.supportServer.postJoined(g);
 
@@ -91,11 +91,11 @@ client.on('guildCreate', async (g) => {
 	log.info(`Client#guildCreate -> ${g.name}`);
 })
 .on('guildDelete', async (g) => {
-	const count = client.getTrueServerCount();
+	const count = await client.getTrueServerCount();
 	client.updateServerCount(count);
 
 	if (dblapi)
-		await dblapi.postStats(guildCount);
+		await dblapi.postStats(count);
 
 	await client.supportServer.postLeft(g);
 
@@ -113,13 +113,13 @@ client.on('guildCreate', async (g) => {
 	try {
 		dblapi = setupDBL(client);
 		if (dblapi) {
+			let count = await client.getTrueServerCount();
 			dblapi.postStats(count);
-			client.setDblAPI(dblapi)
 		}
 	}
 	catch (error)
 	{
-		log.error(`DBL$dblSetup -> ${error}`);
+		log.error(`DBL#dblSetup -> ${error}`);
 	}
 
 	/**

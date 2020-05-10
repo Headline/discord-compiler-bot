@@ -84,7 +84,7 @@ export default class CompilerClient extends Client {
   /**
    * Queries all shards for guild count & returns the sum
    * 
-   * @return {number}
+   * @return {Promise<number>}
    */
   async getTrueServerCount() {
     let values = await this.shard.fetchClientValues('guilds.cache.size')
