@@ -88,7 +88,6 @@ export default class SupportServer {
             if (!this.client.join_log)
                 return;
 
-
             guild = await guild.fetch();
 
             const embed = new MessageEmbed()
@@ -113,7 +112,6 @@ export default class SupportServer {
 
     async postCompilation(code, lang, url, author, guild, success, failoutput) {
         try {
-
             if (!this.client.compile_log)
                 return;
     

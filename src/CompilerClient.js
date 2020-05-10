@@ -3,9 +3,8 @@ import { Client } from 'discord.js'
 import CommandCollection from './commands/utils/CommandCollection'
 import MessageRouter from './commands/utils/MessageRouter'
 import { Compilers } from './utils/Wandbox'
-import { SupportServer } from './SupportServer'
+import SupportServer from './SupportServer'
 import { StatisticsAPI } from './StatisticsTracking'
-import DBL from 'dblapi.js'
 
 /**
  * discord.js client with added utility for general bot operations
@@ -20,18 +19,11 @@ export default class CompilerClient extends Client {
   constructor(options = {}) {
     super(options);
 
-
-    /**
-     * DBL api
-     * @type {DBL}
-     */
-    this.dblapi = null;
-
     /**
      * Statistics tracking API
      * @type {StatisticsAPI}
      */
-    this.stats = null;
+    this.stats = new StatisticsAPI(this, options.stats_api_link);
 
     /**
      * Collection of commands for lookup
@@ -49,12 +41,18 @@ export default class CompilerClient extends Client {
      * Support server helper tools
      * @type {SupportServer}
      */
-    this.supportServer = null;
+    this.supportServer = new SupportServer(this);
 
     /**
      * Setup compilers cache
      */
     this.compilers = new Compilers(this);
+
+    /**
+     * Determines whether the bot is in maitenance mode
+     * @type {boolean}
+     */
+    this.maitenance = options.maitenance;
 
     /**
      * Environment Variables
@@ -69,23 +67,48 @@ export default class CompilerClient extends Client {
     this.github_link = options.github_link;
     this.stats_link = options.stats_link;
     this.owner_id = options.owner_id;
+    this.stats_api_link = options.stats_api_link;
   }
 
   /**
-   * Sets the support server property
+   * Updates the presence with the updated server count
+   */
+  async updatePresence() {
+    const count = await this.getTrueServerCount();
+    if (this.maitenance)
+		  await this.user.setPresence({activity: {name: `MAINTENENCE MODE`}, status: 'dnd'});
+	  else
+	  	await this.user.setPresence({activity: {name: `in ${count} servers | ${this.prefix}invite`}, status: 'online'});
+  }
+
+  /**
+   * Queries all shards for guild count & returns the sum
    * 
-   * @param {SupportServer} supportServer 
+   * @return {number}
    */
-  setSupportServer(supportServer) {
-    this.supportServer = supportServer;
+  async getTrueServerCount() {
+    let values = await this.shard.fetchClientValues('guilds.cache.size')
+    let guildCount = values.reduce((a, b) => a + b);
+    return guildCount;  
   }
 
   /**
-   * Sets the statistics api
-   * @param {StatisticsAPI} stats 
+   * Pushes the server count to the custom stats api
+   * 
+   * @param {number} guildCount number of guilds
    */
-  setStatsAPI(stats) {
-    this.stats = stats;
+  async updateServerCount(guildCount) {
+    if (this.shouldTrackStats())
+	  	await this.stats.insertServerCount(guildCount);
+  }
+
+  /**
+   * Determines if statistics should be tracked
+   * 
+   * @returns {boolean}
+   */
+  shouldTrackStats() {
+    return (this.maitenance)?false:this.stats_api_link;
   }
   /**
    * Initializes compiler client's resources
@@ -123,7 +146,14 @@ export default class CompilerClient extends Client {
    */
   hook() {
     this.on('message', async (message) => {
-      await this.messagerouter.route(message);
+      this.messagerouter.route(message);
+    })
+    .on('commandExecuted', async (f) => {
+      if (this.shouldTrackStats() && !f.developerOnly)
+      {
+        this.stats.commandExecuted(f.name);
+        this.stats.incrementRequestCount();	
+      }
     });
   }
 }

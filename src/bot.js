@@ -4,13 +4,12 @@ import log from './log'
 import DBL from 'dblapi.js'
 
 import CompilerClient from './CompilerClient'
-import SupportServer from './SupportServer'
-import {StatisticsAPI} from './StatisticsTracking'
 
 dotenv.config();
 
 const client = new CompilerClient({
 	prefix: process.env.BOT_PREFIX,
+
 	loading_emote: process.env.LOADING_EMOTE,
 	join_log: process.env.JOIN_LOG,
 	dbl_log: process.env.DBL_LOG,
@@ -20,41 +19,12 @@ const client = new CompilerClient({
 	github_link: process.env.GITHUB_LINK,
 	stats_link: process.env.STATS_LINK,
 	owner_id: process.env.OWNER_ID,
+	stats_api_link: process.env.STATS_API_LINK,
+
 	ws: {
 		intents: ["GUILDS", "GUILD_MESSAGES", "GUILD_MESSAGE_REACTIONS"]
 	}
 });
-
-/**
- * Sets the bot's presence to 'MAINTENENCE MODE' to alert users of work being done. This also
- * disables statistics tracking
- * @type {string}
- */
-let maintenanceMode = false;
-
-/**
- * API url in the form of https://url.com/
- * @type {string}
- */
-let statisticsAPI = process.env.STATS_API_LINK;
-
-/**
- * Boolean to determine if statistics should be tracked
- * @type {boolean}
- */
-let shouldTrackStatistics = (maintenanceMode)?false:process.env.TRACK_STATISTICS;
-
-/**
- * Support server communication link
- * @type {SupportServer}
- */
-let supportserver = null;
-
-/**
- * Statistics tracking helper class
- * @type {StatisticsAPI}
- */
-let statstracking = null;
 
 /**
  * DBL Api object
@@ -86,7 +56,7 @@ function setupDBL(client) {
 		})
 		.on('vote', async (bot, user) => {
 			let u = await dblapi.getUser(user);
-			await supportserver.postVote(u);
+			await client.supportServer.postVote(u);
 		});
 	}
 	// No webhooks available, lets just set up default stuff
@@ -107,41 +77,29 @@ function setupDBL(client) {
 client.commands.registerCommandsIn(join(__dirname, 'commands'));
 
 client.on('guildCreate', async (g) => {
-	let values = await client.shard.fetchClientValues('guilds.cache.size')
-	let guildCount = values.reduce((a, b) => a + b);
-	
-	if (shouldTrackStatistics)
-		await statstracking.insertServerCount(guildCount);
+	const count = client.getTrueServerCount();
+
+	client.updateServerCount(count);
 
 	if (dblapi)
 		await dblapi.postStats(guildCount);
 
-	await supportserver.postJoined(g);
+	await client.supportServer.postJoined(g);
 
-	if (maintenanceMode)
-		await client.user.setPresence({activity: {name: `MAINTENENCE MODE`}, status: 'dnd'});
-	else
-		await client.user.setPresence({activity: {name: `in ${guildCount} servers | ;invite`}, status: 'online'});
+	client.updatePresence();
 
 	log.info(`Client#guildCreate -> ${g.name}`);
 })
 .on('guildDelete', async (g) => {
-	let values = await client.shard.fetchClientValues('guilds.cache.size')
-	let guildCount = values.reduce((a, b) => a + b);
-
-	if (shouldTrackStatistics)
-		await statstracking.insertServerCount(guildCount);
+	const count = client.getTrueServerCount();
+	client.updateServerCount(count);
 
 	if (dblapi)
 		await dblapi.postStats(guildCount);
 
-	await supportserver.postLeft(g);
+	await client.supportServer.postLeft(g);
 
-	if (maintenanceMode)
-		await client.user.setPresence({activity: {name: `MAINTENENCE MODE`}, status: 'dnd'});
-	else
-		await client.user.setPresence({activity: {name: `in ${guildCount} servers | ;invite`}, status: 'online'});
-
+	client.updatePresence();
 
 	log.info(`Client#guildDelete -> ${g.name}`);
 })
@@ -149,25 +107,13 @@ client.on('guildCreate', async (g) => {
 	log.info('Client#ready');
 	client.hook();
 
-	//Start up all internal tracking
-	statstracking = new StatisticsAPI(client, statisticsAPI);
-	supportserver = new SupportServer(client);
-	
-	client.setSupportServer(supportserver);
+	await client.initialize();	
 
-	if (shouldTrackStatistics)
-		client.setStatsAPI(statstracking);
-
-	await client.initialize();
-	client.shard.send('ready');
-	
 	//Start dblapi tracking
 	try {
 		dblapi = setupDBL(client);
 		if (dblapi) {
-			const guildCounts = await client.shard.fetchClientValues('guilds.cache.size');
-			const guildCount = guildCounts.reduce((a, b) => a + b, 0)
-			dblapi.postStats(guildCount);
+			dblapi.postStats(count);
 			client.setDblAPI(dblapi)
 		}
 	}
@@ -175,9 +121,14 @@ client.on('guildCreate', async (g) => {
 	{
 		log.error(`DBL$dblSetup -> ${error}`);
 	}
+
+	/**
+	 * Tell shard manager that we're good to go.
+	 */
+	client.shard.send('initialized');
 })
 .on('commandRegistered', (command) => {
-	log.info(`Client#commandRegistered -> ${command.name}`);
+	log.debug(`Client#commandRegistered -> ${command.name}`);
 })
 .on('compilersReady', () => {
 	log.info("Compilers#compilersReady");
@@ -186,11 +137,6 @@ client.on('guildCreate', async (g) => {
 	log.warn(`Client#missingPermissions -> Missing permission in ${guild.name} [${guild.id}]`);
 })
 .on('commandExecuted', (f) => {
-	if (shouldTrackStatistics && !f.developerOnly)
-	{
-		statstracking.commandExecuted(f.name);
-		statstracking.incrementRequestCount();	
-	}
 	log.debug(`Client#commandExecuted -> ${f.name} command executed`);
 })
 .on('blacklistFailure', (error) => {
