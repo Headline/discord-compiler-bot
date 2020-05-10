@@ -56,7 +56,7 @@ function setupDBL(client) {
 		})
 		.on('vote', async (bot, user) => {
 			let u = await dblapi.getUser(user);
-			await client.supportServer.postVote(u);
+			client.supportServer.postVote(u);
 		});
 	}
 	// No webhooks available, lets just set up default stuff
@@ -82,9 +82,9 @@ client.on('guildCreate', async (g) => {
 	client.updateServerCount(count);
 
 	if (dblapi)
-		await dblapi.postStats(count);
+		dblapi.postStats(count);
 
-	await client.supportServer.postJoined(g);
+	client.supportServer.postJoined(g);
 
 	client.updatePresence();
 
@@ -95,9 +95,9 @@ client.on('guildCreate', async (g) => {
 	client.updateServerCount(count);
 
 	if (dblapi)
-		await dblapi.postStats(count);
+		dblapi.postStats(count);
 
-	await client.supportServer.postLeft(g);
+	client.supportServer.postLeft(g);
 
 	client.updatePresence();
 
@@ -107,7 +107,7 @@ client.on('guildCreate', async (g) => {
 	log.info('Client#ready');
 	client.hook();
 
-	await client.initialize();	
+	client.initialize();	
 
 	//Start dblapi tracking
 	try {

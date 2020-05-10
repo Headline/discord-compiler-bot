@@ -76,9 +76,9 @@ export default class CompilerClient extends Client {
   async updatePresence() {
     const count = await this.getTrueServerCount();
     if (this.maitenance)
-		  await this.user.setPresence({activity: {name: `MAINTENENCE MODE`}, status: 'dnd'});
+		  this.user.setPresence({activity: {name: `MAINTENENCE MODE`}, status: 'dnd'});
 	  else
-	  	await this.user.setPresence({activity: {name: `in ${count} servers | ${this.prefix}invite`}, status: 'online'});
+	  	this.user.setPresence({activity: {name: `in ${count} servers | ${this.prefix}invite`}, status: 'online'});
   }
 
   /**
@@ -97,9 +97,9 @@ export default class CompilerClient extends Client {
    * 
    * @param {number} guildCount number of guilds
    */
-  async updateServerCount(guildCount) {
+  updateServerCount(guildCount) {
     if (this.shouldTrackStats())
-	  	await this.stats.insertServerCount(guildCount);
+	  	this.stats.insertServerCount(guildCount);
   }
 
   /**
