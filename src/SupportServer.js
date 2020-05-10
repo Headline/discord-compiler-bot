@@ -1,7 +1,9 @@
-import { Client, Guild, MessageEmbed, Channel } from 'discord.js'
+import { Client, Guild, MessageEmbed, Channel, Constants } from 'discord.js'
 import CompilerClient from './CompilerClient'
-import log from './log'
 
+import fetch from 'node-fetch'
+import log from './log'
+import DBL from 'dblapi.js'
 /**
  * A helper class which abstracts all support server information postings. 
  */
@@ -23,23 +25,20 @@ export default class SupportServer {
     /**
      * Posts a notification to the support guild when a user has voted
      * 
-     * @param {string} userid discord user id
+     * @param {DBL.User} user DBL User Info
      */
-    async postVote(userid)
+    async postVote(user)
     {
         try {
             if (!this.client.dbl_log)
                 return;
 
-            /**
-             * @type {Channel}
-             */
-            let channel = await this.client.channels.fetch(this.client.dbl_log);
-            if (!channel)
-                return;
-            
-            let user = await this.client.users.fetch(userid);
-            await channel.send(`${user.tag} has just voted for us on top.gg!  :heart:`);
+            const embed = new MessageEmbed()
+            .setDescription(`${user.username} voted for us on top.gg!  :heart:`);
+            if (user.avatar)
+                embed.setThumbnail(user.avatar)
+
+            this.manualDispatch(this.client.dbl_log, this.client.token, embed, '');
         }
         catch (err) {
             log.error(`SupportServer#postVote -> ${err}`);
@@ -58,7 +57,6 @@ export default class SupportServer {
                 return;
 
             guild = await guild.fetch();
-            guild.owner.fetch();
 
             const embed = new MessageEmbed()
             .setThumbnail(guild.iconURL)
@@ -72,7 +70,7 @@ export default class SupportServer {
             .addField("Guild Region", guild.region, true)
             .addField("Creation Date", guild.createdAt.toISOString(), true)
             
-            this.dispatch(embed, this.client.join_log)
+            this.manualDispatch(this.client.join_log, this.client.token, embed, '');
         }
         catch (err) {
             log.error(`SupportServer#postJoined -> ${err}`);
@@ -90,8 +88,9 @@ export default class SupportServer {
             if (!this.client.join_log)
                 return;
 
+
             guild = await guild.fetch();
-            guild.owner.fetch();
+
             const embed = new MessageEmbed()
             .setThumbnail(guild.iconURL)
             .setTitle('Server Left:')    
@@ -104,7 +103,8 @@ export default class SupportServer {
             .addField("Guild Region", guild.region, true)
             .addField("Creation Date", guild.createdAt.toISOString(), true)
 
-            this.dispatch(embed, this.client.join_log)
+            this.manualDispatch(this.client.join_log, this.client.token, embed, '');
+
         }
         catch (err) {
             log.error(`SupportServer#postLeft -> ${err}`);
@@ -116,7 +116,7 @@ export default class SupportServer {
 
             if (!this.client.compile_log)
                 return;
-
+    
             if (code.length >= 1017) {
                 code = code.substring(0, 1016);
             }
@@ -139,7 +139,7 @@ export default class SupportServer {
             if (!success)
                 embed.addField('Compiler Output', `\`\`\`${failoutput}\n\`\`\`\n`);
             
-            this.dispatch(embed, this.client.compile_log)
+            this.manualDispatch(this.client.compile_log, this.client.token, embed, '');
         }
         catch (err) {
             log.error(`SupportServer#postCompilation -> ${err}`);
@@ -147,20 +147,41 @@ export default class SupportServer {
     }
 
     /**
-     * Dispatch message to support channel
+     * Manually sends a message skipping discord.js shit for sharding
      * 
-     * @param {MessageEmbed} content 
      * @param {string} channel channel snowflake
+     * @param {string} token bot authentication token
+     * @param {MessageEmbed} embed embed to send
+     * @param {string} content message to send
      */
-    dispatch(content, channel) {
-        this.client.shard.broadcastEval(`
-            (async () => {
-                let channel = await this.channels.fetch(${channel});
-                if (!channel)
-                    return;
+    async manualDispatch(channel, token, embed, content) {
 
-                channel.send(${content});
-            })();
-        `);
+        /**
+         * Allow me to write of my pain for a brief moment. 
+         * 
+         * This looks like a simple method, in fact it is. I cannot overlook the hours I've spent scouring
+         * the discord.js codebase trying to send a message manually using their abstractions, while skipping
+         * all of the caching they do. It's not as easy as it used to be. The amount of unnecessary 
+         * abstraction and spaghetti code pathing has given me the realization that discord.js isn't
+         * the beautiful library I once thought it as. Perhaps moving to rust is the answer. Anyway, I'd
+         * like to thank node-fetch for being there whenever I need it
+         */
+        try {
+            await fetch(`https://discordapp.com/api/v6/channels/${channel}/messages`, {
+                method: "POST",
+                body: JSON.stringify({
+                    embed: embed.toJSON(),
+                    tts: false,
+                    content: content
+                }),
+                headers: {
+                    'Authorization': `Bot ${token}`,
+                    'Content-Type': 'application/json'
+                },
+            });
+        }
+        catch (err) {
+            log.error(`SupportServer#manualDispatch -> ${err.message}`);
+        }
     }
 }

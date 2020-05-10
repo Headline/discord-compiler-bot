@@ -5,6 +5,8 @@ import MessageRouter from './commands/utils/MessageRouter'
 import { Compilers } from './utils/Wandbox'
 import { SupportServer } from './SupportServer'
 import { StatisticsAPI } from './StatisticsTracking'
+import DBL from 'dblapi.js'
+
 /**
  * discord.js client with added utility for general bot operations
  */
@@ -17,6 +19,13 @@ export default class CompilerClient extends Client {
    */
   constructor(options = {}) {
     super(options);
+
+
+    /**
+     * DBL api
+     * @type {DBL}
+     */
+    this.dblapi = null;
 
     /**
      * Statistics tracking API

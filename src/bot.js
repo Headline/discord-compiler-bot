@@ -84,8 +84,9 @@ function setupDBL(client) {
 		dblapi.webhook.on('ready', (hook) => {
 			log.info(`DBL#ready -> Webhook running at http://${hook.hostname}:${hook.port}${hook.path}`)
 		})
-		.on('vote', async (vote) => {
-			await supportserver.postVote(vote.user);
+		.on('vote', async (bot, user) => {
+			let u = await dblapi.getUser(user);
+			await supportserver.postVote(u);
 		});
 	}
 	// No webhooks available, lets just set up default stuff
@@ -167,6 +168,7 @@ client.on('guildCreate', async (g) => {
 			const guildCounts = await client.shard.fetchClientValues('guilds.cache.size');
 			const guildCount = guildCounts.reduce((a, b) => a + b, 0)
 			dblapi.postStats(guildCount);
+			client.setDblAPI(dblapi)
 		}
 	}
 	catch (error)

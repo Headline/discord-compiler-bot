@@ -106,9 +106,10 @@ export default class CompileCommand extends CompilerCommand {
             catch (error) {
                 msg.replyFail(`Unable to remove reactions, am I missing permissions?\n${error}`);
             }
-        }
+        }   
 
-		this.client.supportServer.postCompilation(code, lang, json.url, msg.message.author, msg.message.guild, json.status == 0, json.compiler_message);
+        this.client.supportServer.postCompilation(code, lang, json.url, msg.message.author, msg.message.guild, json.status == 0, json.compiler_message);
+
         
         // if we were given a compiler we need to find the langauge
         if (!this.client.compilers.has(lang)) {
