@@ -56,8 +56,6 @@ export default class SupportServer {
             if (!this.client.join_log)
                 return;
 
-            guild = await guild.fetch();
-
             const embed = new MessageEmbed()
             .setThumbnail(guild.iconURL)
             .setTitle('Server Joined:')    
@@ -66,7 +64,7 @@ export default class SupportServer {
             .addField("Guild Id",  guild.id, true)
             .addField("Total Members", guild.memberCount, true)
             .addField("Total Channels", guild.channels.cache.size, true)
-            .addField("Guild Owner", guild.owner.user.tag, true)
+            .addField("Guild Owner", guild.ownerID, true)
             .addField("Guild Region", guild.region, true)
             .addField("Creation Date", guild.createdAt.toISOString(), true)
             
@@ -87,9 +85,7 @@ export default class SupportServer {
         try {
             if (!this.client.join_log)
                 return;
-
-            guild = await guild.fetch();
-
+    
             const embed = new MessageEmbed()
             .setThumbnail(guild.iconURL)
             .setTitle('Server Left:')    
@@ -98,7 +94,7 @@ export default class SupportServer {
             .addField("Guild Id",  guild.id, true)
             .addField("Total Members", guild.memberCount, true)
             .addField("Total Channels", guild.channels.cache.array.length, true)
-            .addField("Guild Owner", guild.owner.user.tag, true)
+            .addField("Guild Owner", guild.ownerID, true)
             .addField("Guild Region", guild.region, true)
             .addField("Creation Date", guild.createdAt.toISOString(), true)
 

@@ -120,7 +120,7 @@ export default class CompileCommand extends CompilerCommand {
             });
         }
 
-        if (this.client.stats)
+        if (this.client.shouldTrackStats())
             this.client.stats.compilationExecuted(lang);
 
         let embed = this.buildResponseEmbed(msg, json);
