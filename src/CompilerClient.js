@@ -103,6 +103,7 @@ export default class CompilerClient extends Client {
   shouldTrackStats() {
     return (this.maitenance)?false:this.stats_api_link;
   }
+
   /**
    * Initializes compiler client's resources
    */

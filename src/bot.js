@@ -1,7 +1,6 @@
 import dotenv from 'dotenv';
 import { join } from 'path'
 import log from './log'
-import DBL from 'dblapi.js'
 
 import CompilerClient from './CompilerClient'
 import SupportServer from './SupportServer'
@@ -27,106 +26,39 @@ const client = new CompilerClient({
 	}
 });
 
-/**
- * DBL Api object
- * @type {DBL}
- */
-let dblapi = null;
-
-/**
- * Sets up Discord Bot List for public server count display,
- * bot info, and webhooks. Should be called after Discord.Client ready event
- * 
- * @param {CompilerClient} client ready client instance
- */
-function setupDBL(client) {
-	if (!process.env.DBL_TOKEN) {
-		return null;
-	}
-
-	// If we have webhook capability
-	if (process.env.DBL_WEBHOOK_PORT && process.env.DBL_WEBHOOK_PASSWORD) {
-		let options = {
-			webhookPort: process.env.DBL_WEBHOOK_PORT, 
-			webhookAuth: process.env.DBL_WEBHOOK_PASSWORD,
-		};
-
-		dblapi = new DBL(process.env.DBL_TOKEN, options, client);
-		dblapi.webhook.on('ready', (hook) => {
-			log.info(`DBL#ready -> Webhook running at http://${hook.hostname}:${hook.port}${hook.path}`)
-		})
-		.on('vote', async (bot, user) => {
-			let u = await dblapi.getUser(user);
-			SupportServer.postVote(u, client.token, client.dbl_log);
-		});
-	}
-	// No webhooks available, lets just set up default stuff
-	else {
-		dblapi = new DBL(process.env.DBL_TOKEN, client);
-	}
-
-	dblapi.on('posted', () => {
-		log.info('DBL#posted -> Server count posted');
-	})
-	.on('error', (e) => {
-		log.warn(`DBL#error -> DBL failure: ${e}`);
-	});
-
-	return dblapi;
-}
-
 client.commands.registerCommandsIn(join(__dirname, 'commands'));
 
 client.on('guildCreate', async (g) => {
 	const count = await client.getTrueServerCount();
-
 	client.updateServerCount(count);
-
-	if (dblapi)
-		dblapi.postStats(count);
 
 	SupportServer.postJoined(g, client.token, client.join_log);
 
 	client.updatePresence();
 
 	log.info(`Client#guildCreate -> ${g.name}`);
+	client.shard.send('updateDBL');
 })
 .on('guildDelete', async (g) => {
 	const count = await client.getTrueServerCount();
 	client.updateServerCount(count);
-
-	if (dblapi)
-		dblapi.postStats(count);
 
 	SupportServer.postLeft(g, client.token, client.join_log);
 
 	client.updatePresence();
 
 	log.info(`Client#guildDelete -> ${g.name}`);
+	client.shard.send('updateDBL');
 })
 .on('ready', async () => {
-	log.info('Client#ready');
 	client.hook();
 
 	client.initialize();	
-
-	//Start dblapi tracking
-	try {
-		dblapi = setupDBL(client);
-		if (dblapi) {
-			let count = await client.getTrueServerCount();
-			dblapi.postStats(count);
-		}
-	}
-	catch (error)
-	{
-		log.error(`DBL#dblSetup -> ${error}`);
-	}
-
 	/**
 	 * Tell shard manager that we're good to go.
 	 */
 	client.shard.send('initialized');
+	log.info('Client#ready');
 })
 .on('commandRegistered', (command) => {
 	log.debug(`Client#commandRegistered -> ${command.name}`);
