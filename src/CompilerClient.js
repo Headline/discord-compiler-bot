@@ -3,7 +3,6 @@ import { Client } from 'discord.js'
 import CommandCollection from './commands/utils/CommandCollection'
 import MessageRouter from './commands/utils/MessageRouter'
 import { Compilers } from './utils/Wandbox'
-import SupportServer from './SupportServer'
 import { StatisticsAPI } from './StatisticsTracking'
 
 /**
@@ -36,12 +35,6 @@ export default class CompilerClient extends Client {
      * @type {MessageRouter}
      */
     this.messagerouter = new MessageRouter(this, options);
-
-    /**
-     * Support server helper tools
-     * @type {SupportServer}
-     */
-    this.supportServer = new SupportServer(this);
 
     /**
      * Setup compilers cache

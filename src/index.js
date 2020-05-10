@@ -1,6 +1,7 @@
 import { ShardingManager } from 'discord.js'
 import log from './log'
 import dotenv from 'dotenv';
+import SupportServer from './SupportServer'
 
 dotenv.config();
 

@@ -1,143 +1,128 @@
-import { Client, Guild, MessageEmbed, Channel, Constants } from 'discord.js'
-import CompilerClient from './CompilerClient'
+import { Guild, MessageEmbed } from 'discord.js'
 
 import fetch from 'node-fetch'
 import log from './log'
 import DBL from 'dblapi.js'
+
 /**
  * A helper class which abstracts all support server information postings. 
  */
 export default class SupportServer {
-    /**
-     * Creates a SupportServer object
-     * 
-     * @param {Client} client 
-     */
-    constructor(client) {
-        /**
-         * Discord client
-         * 
-         * @type {CompilerClient}
-         */
-        this.client = client;
-    }
 
     /**
      * Posts a notification to the support guild when a user has voted
      * 
      * @param {DBL.User} user DBL User Info
+     * @param {string} token bot token
+     * @param {string} channel channel snowflake
      */
-    async postVote(user)
+    static postVote(user, token, channel)
     {
-        try {
-            if (!this.client.dbl_log)
-                return;
+        if (!channel)
+            return;
 
-            const embed = new MessageEmbed()
-            .setDescription(`${user.username} voted for us on top.gg!  :heart:`);
-            if (user.avatar)
-                embed.setThumbnail(user.avatar)
+        const embed = new MessageEmbed()
+        .setDescription(`${user.username} voted for us on top.gg!  :heart:`);
+        if (user.avatar)
+            embed.setThumbnail(user.avatar)
 
-            this.manualDispatch(this.client.dbl_log, this.client.token, embed, '');
-        }
-        catch (err) {
-            log.error(`SupportServer#postVote -> ${err}`);
-        }
+        SupportServer.manualDispatch(channel, token, embed, '');
     }
 
     /**
      * Posts to the join log of the support server when the bot enters a new guild
      * 
      * @param {Guild} guild
+     * @param {string} token bot token
+     * @param {string} channel channel snowflake
      */
-    async postJoined(guild)
+    static postJoined(guild, token, channel)
     {
-        try {
-            if (!this.client.join_log)
-                return;
+        if (!channel)
+            return;
 
-            const embed = new MessageEmbed()
-            .setThumbnail(guild.iconURL)
-            .setTitle('Server Joined:')    
-            .setColor(0x00FF00)
-            .addField("Name", guild.name, true)
-            .addField("Guild Id",  guild.id, true)
-            .addField("Total Members", guild.memberCount, true)
-            .addField("Total Channels", guild.channels.cache.size, true)
-            .addField("Guild Owner", guild.ownerID, true)
-            .addField("Guild Region", guild.region, true)
-            .addField("Creation Date", guild.createdAt.toISOString(), true)
-            
-            this.manualDispatch(this.client.join_log, this.client.token, embed, '');
-        }
-        catch (err) {
-            log.error(`SupportServer#postJoined -> ${err}`);
-        }
+        const embed = new MessageEmbed()
+        .setThumbnail(guild.iconURL)
+        .setTitle('Server Joined:')    
+        .setColor(0x00FF00)
+        .addField("Name", guild.name, true)
+        .addField("Guild Id",  guild.id, true)
+        .addField("Total Members", guild.memberCount, true)
+        .addField("Total Channels", guild.channels.cache.size, true)
+        .addField("Guild Owner", guild.ownerID, true)
+        .addField("Guild Region", guild.region, true)
+        .addField("Creation Date", guild.createdAt.toISOString(), true)
+        
+        SupportServer.manualDispatch(channel, token, embed, '');
     }
 
     /**
      * Posts to the join log of the support server when the bot leaves a guild
      * 
      * @param {Guild} guild
+     * @param {string} token bot token
+     * @param {string} channel channel snowflake
      */
-    async postLeft(guild)
+    static postLeft(guild, token, channel)
     {
-        try {
-            if (!this.client.join_log)
-                return;
-    
-            const embed = new MessageEmbed()
-            .setThumbnail(guild.iconURL)
-            .setTitle('Server Left:')    
-            .setColor(0xFF0000)
-            .addField("Name", guild.name, true)
-            .addField("Guild Id",  guild.id, true)
-            .addField("Total Members", guild.memberCount, true)
-            .addField("Total Channels", guild.channels.cache.array.length, true)
-            .addField("Guild Owner", guild.ownerID, true)
-            .addField("Guild Region", guild.region, true)
-            .addField("Creation Date", guild.createdAt.toISOString(), true)
+        if (!channel)
+            return;
 
-            this.manualDispatch(this.client.join_log, this.client.token, embed, '');
+        const embed = new MessageEmbed()
+        .setThumbnail(guild.iconURL)
+        .setTitle('Server Left:')    
+        .setColor(0xFF0000)
+        .addField("Name", guild.name, true)
+        .addField("Guild Id",  guild.id, true)
+        .addField("Total Members", guild.memberCount, true)
+        .addField("Total Channels", guild.channels.cache.array.length, true)
+        .addField("Guild Owner", guild.ownerID, true)
+        .addField("Guild Region", guild.region, true)
+        .addField("Creation Date", guild.createdAt.toISOString(), true)
 
-        }
-        catch (err) {
-            log.error(`SupportServer#postLeft -> ${err}`);
-        }
+        SupportServer.manualDispatch(channel, token, embed, '');
     }
 
-    async postCompilation(code, lang, url, author, guild, success, failoutput) {
-        try {
-            if (!this.client.compile_log)
-                return;
-    
-            if (code.length >= 1017) {
-                code = code.substring(0, 1016);
-            }
-            if (failoutput) {
-                if (failoutput.length > 1017) {
-                    failoutput = failoutput.substring(0, 1016);
-                }
-            }
+    /**
+     * Posts a compilation notice to the given channel
+     * 
+     * @param {string} code 
+     * @param {string} lang 
+     * @param {string} url 
+     * @param {string} author 
+     * @param {Guild} guild 
+     * @param {boolean} success 
+     * @param {string} failoutput 
+     * @param {string} channel 
+     * @param {string} token 
+     */
+    static postCompilation(code, lang, url, author, guild, success, failoutput, channel, token) {
+        if (!channel)
+            return;
 
-            const embed = new MessageEmbed()
-            .setTitle('Compilation Requested:')    
-            .setColor((success)?0x00FF00:0xFF0000)
-            .addField("Language", lang, true)
-            .addField("URL",  url, true)
-            .addField("User",  author.tag, true)
-            .addField("User ID",  author.id, true)
-            .addField("Guild",  guild.name, true)
-            .addField("Guild ID",  guild.id, true)
-            .addField('Code', `\`\`\`${code}\n\`\`\`\n`);
-            if (!success)
-                embed.addField('Compiler Output', `\`\`\`${failoutput}\n\`\`\`\n`);
-            
-            this.manualDispatch(this.client.compile_log, this.client.token, embed, '');
+        if (code.length >= 1017) {
+            code = code.substring(0, 1016);
         }
-        catch (err) {
-            log.error(`SupportServer#postCompilation -> ${err}`);
+        if (failoutput) {
+            if (failoutput.length > 1017) {
+                failoutput = failoutput.substring(0, 1016);
+            }
         }
+
+        const embed = new MessageEmbed()
+        .setTitle('Compilation Requested:')    
+        .setColor((success)?0x00FF00:0xFF0000)
+        .addField("Language", lang, true)
+        .addField("URL",  url, true)
+        .addField("User",  author.tag, true)
+        .addField("User ID",  author.id, true)
+        .addField("Guild",  guild.name, true)
+        .addField("Guild ID",  guild.id, true)
+        .addField('Code', `\`\`\`${code}\n\`\`\`\n`);
+        if (!success)
+            embed.addField('Compiler Output', `\`\`\`${failoutput}\n\`\`\`\n`);
+        
+        SupportServer.manualDispatch(channel, token, embed, '');
     }
 
     /**
@@ -148,7 +133,7 @@ export default class SupportServer {
      * @param {MessageEmbed} embed embed to send
      * @param {string} content message to send
      */
-    async manualDispatch(channel, token, embed, content) {
+    static async manualDispatch(channel, token, embed, content) {
 
         /**
          * Allow me to write of my pain for a brief moment. 

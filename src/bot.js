@@ -4,6 +4,7 @@ import log from './log'
 import DBL from 'dblapi.js'
 
 import CompilerClient from './CompilerClient'
+import SupportServer from './SupportServer'
 
 dotenv.config();
 
@@ -56,7 +57,7 @@ function setupDBL(client) {
 		})
 		.on('vote', async (bot, user) => {
 			let u = await dblapi.getUser(user);
-			client.supportServer.postVote(u);
+			SupportServer.postVote(u, client.token, client.dbl_log);
 		});
 	}
 	// No webhooks available, lets just set up default stuff
@@ -84,7 +85,7 @@ client.on('guildCreate', async (g) => {
 	if (dblapi)
 		dblapi.postStats(count);
 
-	client.supportServer.postJoined(g);
+	SupportServer.postJoined(g, client.token, client.join_log);
 
 	client.updatePresence();
 
@@ -97,7 +98,7 @@ client.on('guildCreate', async (g) => {
 	if (dblapi)
 		dblapi.postStats(count);
 
-	client.supportServer.postLeft(g);
+	SupportServer.postLeft(g, client.token, client.join_log);
 
 	client.updatePresence();
 

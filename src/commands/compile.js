@@ -7,6 +7,7 @@ import CompilerCommand from './utils/CompilerCommand';
 import CompilerCommandMessage from './utils/CompilerCommandMessage'
 import CompilerClient from '../CompilerClient'
 import { Compiler, CompileSetup } from '../utils/Wandbox';
+import SupportServer from './../SupportServer'
 
 export default class CompileCommand extends CompilerCommand {
     /**
@@ -108,7 +109,7 @@ export default class CompileCommand extends CompilerCommand {
             }
         }   
 
-        this.client.supportServer.postCompilation(code, lang, json.url, msg.message.author, msg.message.guild, json.status == 0, json.compiler_message);
+        SupportServer.postCompilation(code, lang, json.url, msg.message.author, msg.message.guild, json.status == 0, json.compiler_message, this.client.compile_log, this.client.token);
 
         
         // if we were given a compiler we need to find the langauge
