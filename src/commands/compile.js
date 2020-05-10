@@ -7,6 +7,7 @@ import CompilerCommand from './utils/CompilerCommand';
 import CompilerCommandMessage from './utils/CompilerCommandMessage'
 import CompilerClient from '../CompilerClient'
 import { Compiler, CompileSetup } from '../utils/Wandbox';
+import SupportServer from './../SupportServer'
 
 export default class CompileCommand extends CompilerCommand {
     /**
@@ -106,9 +107,10 @@ export default class CompileCommand extends CompilerCommand {
             catch (error) {
                 msg.replyFail(`Unable to remove reactions, am I missing permissions?\n${error}`);
             }
-        }
+        }   
 
-		this.client.supportServer.postCompilation(code, lang, json.url, msg.message.author, msg.message.guild, json.status == 0, json.compiler_message);
+        SupportServer.postCompilation(code, lang, json.url, msg.message.author, msg.message.guild, json.status == 0, json.compiler_message, this.client.compile_log, this.client.token);
+
         
         // if we were given a compiler we need to find the langauge
         if (!this.client.compilers.has(lang)) {
@@ -119,7 +121,7 @@ export default class CompileCommand extends CompilerCommand {
             });
         }
 
-        if (this.client.stats)
+        if (this.client.shouldTrackStats())
             this.client.stats.compilationExecuted(lang);
 
         let embed = this.buildResponseEmbed(msg, json);

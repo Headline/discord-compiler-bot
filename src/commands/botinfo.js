@@ -25,10 +25,13 @@ export default class BotInfoCommand extends CompilerCommand {
      * @param {CompilerCommandMessage} msg
      */
     async run(msg) {
-        const memusage = process.memoryUsage().heapUsed / 1024 / 1024; // memory in MB
+        const memusage = await this.getShardsMemoryUsage(this.client) // memory in MB
         const cpuusage = os.loadavg()[0];
-        const playercount = this.getUserCount(this.client);
-        const guildcount = this.client.guilds.cache.size;
+        const playercount = await this.getUserCount(this.client);
+
+        const guildcounts = await this.client.shard.fetchClientValues('guilds.cache.size');
+        const guildcount = guildcounts.reduce((a, b) => a + b, 0)
+    
         const invitelink = this.client.invite_link;
         const votelink = this.client.discordbots_link;
 		const githublink = this.client.github_link;
@@ -63,7 +66,16 @@ export default class BotInfoCommand extends CompilerCommand {
         await msg.dispatch('', embed);
     }
 
-
+    /**
+     * Grabs the memory usage for every shard process
+     * 
+     * @param {Client} client 
+     * @returns {Promise<number>}
+     */
+    async getShardsMemoryUsage(client) {
+        let counts = await client.shard.broadcastEval('process.memoryUsage().heapUsed / 1024 / 1024');
+        return counts.reduce((prev, next) => prev + next, 0);
+    }
 
     /**
      * Time format
@@ -92,13 +104,11 @@ export default class BotInfoCommand extends CompilerCommand {
      * Gets the amount of total users connected to all guilds.
      * 
      * @param {Client} client 
+     * @returns {Promise<number>} total users
      */
-    getUserCount(client) {
-        let members = 0;
-        client.guilds.cache.forEach(guild => {
-            members += guild.memberCount;
-        });
-        return members;
+    async getUserCount(client) {
+        let counts = await client.shard.broadcastEval('this.guilds.cache.reduce((prev, guild) => prev + guild.memberCount, 0)')
+        return counts.reduce((prev, next) => prev + next, 0);
     }
 
     /**

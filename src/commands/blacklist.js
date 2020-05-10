@@ -31,10 +31,16 @@ export default class BlacklistCommand extends CompilerCommand {
 
         const guild = args[0];
 
+        if (isNaN(guild))
+            return await msg.replyFail('Specified guild is invalid');
+
         if (this.client.messagerouter.blacklist.isBlacklisted(guild))
             return await msg.replyFail('Specified guild is already blacklisted');
 
         await this.client.messagerouter.blacklist.blacklist(guild);
+
+        // lets update all blacklists with our newest blacklist
+        this.client.shard.broadcastEval(`this.messagerouter.blacklist.addToCache('${guild}')`);
 
         const embed = new MessageEmbed()
             .setTitle('Guild Blacklisted')

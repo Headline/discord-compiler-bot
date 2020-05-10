@@ -1,96 +1,49 @@
+import { ShardingManager } from 'discord.js'
 import dotenv from 'dotenv';
-import { join } from 'path'
-import log from './log'
 import DBL from 'dblapi.js'
 
-import CompilerClient from './CompilerClient'
+import log from './log'
 import SupportServer from './SupportServer'
-import {StatisticsAPI} from './StatisticsTracking'
 
 dotenv.config();
 
-const client = new CompilerClient({
-	prefix: process.env.BOT_PREFIX,
-	loading_emote: process.env.LOADING_EMOTE,
-	join_log: process.env.JOIN_LOG,
-	dbl_log: process.env.DBL_LOG,
-	compile_log: process.env.COMPILE_LOG,
-	invite_link: process.env.INVITE_LINK,
-	discordbots_link: process.env.DISCORDBOTS_LINK,
-	github_link: process.env.GITHUB_LINK,
-	stats_link: process.env.STATS_LINK,
-	owner_id: process.env.OWNER_ID,
-	ws: {
-		intents: ["GUILDS", "GUILD_MESSAGES", "GUILD_MESSAGE_REACTIONS"]
-	}
+const manager = new ShardingManager('./build/bot.js', { 
+	token: process.env.BOT_TOKEN,
+	execArgv: ['--async-stack-traces', '--async-stack-traces']
 });
-
-/**
- * Sets the bot's presence to 'MAINTENENCE MODE' to alert users of work being done. This also
- * disables statistics tracking
- * @type {string}
- */
-let maintenanceMode = false;
-
-/**
- * API url in the form of https://url.com/
- * @type {string}
- */
-let statisticsAPI = process.env.STATS_API_LINK;
-
-/**
- * Boolean to determine if statistics should be tracked
- * @type {boolean}
- */
-let shouldTrackStatistics = (maintenanceMode)?false:process.env.TRACK_STATISTICS;
-
-/**
- * Support server communication link
- * @type {SupportServer}
- */
-let supportserver = null;
-
-/**
- * Statistics tracking helper class
- * @type {StatisticsAPI}
- */
-let statstracking = null;
 
 /**
  * DBL Api object
  * @type {DBL}
  */
-let dblapi = null;
+let dbl = null;
 
 /**
  * Sets up Discord Bot List for public server count display,
- * bot info, and webhooks. Should be called after Discord.Client ready event
- * 
- * @param {CompilerClient} client ready client instance
+ * bot info, and webhooks. Should be called after Discord.Client ready events
  */
-function setupDBL(client) {
+function setupDBL() {
 	if (!process.env.DBL_TOKEN) {
 		return null;
 	}
 
-	// If we have webhook capability
-	if (process.env.DBL_WEBHOOK_PORT && process.env.DBL_WEBHOOK_PASSWORD) {
-		let options = {
-			webhookPort: process.env.DBL_WEBHOOK_PORT, 
-			webhookAuth: process.env.DBL_WEBHOOK_PASSWORD,
-		};
+	let options = {};
 
-		dblapi = new DBL(process.env.DBL_TOKEN, options, client);
+	// If we have webhook capability, lets set it up
+	if (process.env.DBL_WEBHOOK_PORT && process.env.DBL_WEBHOOK_PASSWORD) {
+			options.webhookPort = process.env.DBL_WEBHOOK_PORT;
+			options.webhookAuth = process.env.DBL_WEBHOOK_PASSWORD;
+	}
+
+	let dblapi = new DBL(process.env.DBL_TOKEN, options);
+	if (dblapi.webhook) {
 		dblapi.webhook.on('ready', (hook) => {
 			log.info(`DBL#ready -> Webhook running at http://${hook.hostname}:${hook.port}${hook.path}`)
 		})
-		.on('vote', async (vote) => {
-			await supportserver.postVote(vote.user);
+		.on('vote', async (bot, user) => {
+			let u = await dblapi.getUser(user);
+			SupportServer.postVote(u, process.env.BOT_TOKEN, process.env.DBL_LOG);
 		});
-	}
-	// No webhooks available, lets just set up default stuff
-	else {
-		dblapi = new DBL(process.env.DBL_TOKEN, client);
 	}
 
 	dblapi.on('posted', () => {
@@ -103,106 +56,48 @@ function setupDBL(client) {
 	return dblapi;
 }
 
-client.commands.registerCommandsIn(join(__dirname, 'commands'));
+/**
+ * Counter to identify when server count should be reported
+ * @type {number}
+ */
+let shardCount = 0;
 
-client.on('guildCreate', async (g) => {
-	let guildCount = client.guilds.cache.size;
-	if (shouldTrackStatistics)
-		await statstracking.insertServerCount(guildCount);
+manager.on('shardCreate', shard =>  {
+	shard.on('message', async (msg) => {
+		switch (msg) {
+			case 'initialized':
+				if(++shardCount == manager.totalShards) {
+					/**
+					 * Emitted once all shards have completed their ready event
+					 * @event ShardingManager#allShardsReady
+					 * @type {None}
+					 */
+					manager.emit('shardsInitialized');
+				}
+			case 'updateDBL':
+				if (dbl) {
+					let values = await manager.fetchClientValues('guilds.cache.size');
+					dbl.postStats(values);
+				}
+				break;
+		}
+	})
+	.on('error', (error) => log.error(`Shard#error -> ${error.message}`))
+	.on('death', () => log.warn(`Shard#death -> [Shard ${shard.id}] Died `))
+	.on('disconnect', () => log.warn(`Shard#disconnect -> [Shard ${shard.id}] Disconnected`))
+	.on('reconnecting', () => log.warn(`Shard#reconnecting -> [Shard ${shard.id}] Attempting reconnection`));
 
-	if (dblapi)
-		await dblapi.postStats(guildCount);
-
-	await supportserver.postJoined(g);
-
-	if (maintenanceMode)
-		await client.user.setPresence({activity: {name: `MAINTENENCE MODE`}, status: 'dnd'});
-	else
-		await client.user.setPresence({activity: {name: `in ${guildCount} servers | ;invite`}, status: 'online'});
-
-	log.info(`Client#guildCreate -> ${g.name}`);
+	log.info(`ShardingManager#shardCreate -> [Shard ${shard.id}] Created successfully`)
 })
-.on('guildDelete', async (g) => {
-
-	let guildCount = client.guilds.cache.size;
-	if (shouldTrackStatistics)
-		await statstracking.insertServerCount(guildCount);
-
-	if (dblapi)
-		await dblapi.postStats(guildCount);
-
-	await supportserver.postLeft(g);
-
-	if (maintenanceMode)
-		await client.user.setPresence({activity: {name: `MAINTENENCE MODE`}, status: 'dnd'});
-	else
-		await client.user.setPresence({activity: {name: `in ${guildCount} servers | ;invite`}, status: 'online'});
-
-
-	log.info(`Client#guildDelete -> ${g.name}`);
-})
-.on('ready', async () => {
-	log.info('Client#ready');
-	client.hook();
-
-	//Start up all internal tracking
-	statstracking = new StatisticsAPI(client, statisticsAPI);
-	supportserver = new SupportServer(client);
-	
-	client.setSupportServer(supportserver);
-
-	if (shouldTrackStatistics)
-		client.setStatsAPI(statstracking);
-
-	await client.initialize();
-
-	let guildCount = client.guilds.cache.size;
-
-	if (maintenanceMode)
-		await client.user.setPresence({activity: {name: `MAINTENENCE MODE`}, status: 'dnd'});
-	else
-		await client.user.setPresence({activity: {name: `in ${guildCount} servers | ;invite`}, status: 'online'});
-
-
-	if (shouldTrackStatistics)
-		await statstracking.insertServerCount(guildCount);
-	
-	//Start dblapi tracking
-	try {
-		dblapi = setupDBL(client);
-		if (dblapi)
-			dblapi.postStats(guildCount);
-	}
-	catch (error)
-	{
-		log.error(`DBL$dblSetup -> ${error}`);
-	}
-})
-.on('commandRegistered', (command) => {
-	log.info(`Client#commandRegistered -> ${command.name}`);
-})
-.on('compilersReady', () => {
-	log.info("Compilers#compilersReady");
-})
-.on('missingPermissions', (guild) => {
-	log.warn(`Client#missingPermissions -> Missing permission in ${guild.name} [${guild.id}]`);
-})
-.on('commandExecuted', (f) => {
-	if (shouldTrackStatistics && !f.developerOnly)
-	{
-		statstracking.commandExecuted(f.name);
-		statstracking.incrementRequestCount();	
-	}
-	log.debug(`Client#commandExecuted -> ${f.name} command executed`);
-})
-.on('blacklistFailure', (error) => {
-	log.error(`MessageRouter#Blacklist -> blacklist.json write failure (${error.message})`);
-})
-.on('compilersFailure', (error) => {
-	log.error(`Compilers#compilersFailure -> ${error}`);
-})
-.on('commandExecutionError', (name, guild, error) => {
-	log.error(`Client#commandExecutionError -> An error has occured in ${name} command: ${error} in ${guild.name}[${guild.id}]`)
+.once('shardsInitialized', async () => {
+	dbl = setupDBL();
+	manager.broadcastEval(`
+	(async () => {
+		this.updatePresence();
+		let count = await this.getTrueServerCount();
+		this.updateServerCount(count);
+	})();
+	`)
 });
 
-client.login(process.env.BOT_TOKEN);
+manager.spawn();
