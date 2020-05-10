@@ -118,7 +118,9 @@ export default class CompileCommand extends CompilerCommand {
                 }
             });
         }
-        this.client.stats.compilationExecuted(lang);
+
+        if (this.client.stats)
+            this.client.stats.compilationExecuted(lang);
 
         let embed = this.buildResponseEmbed(msg, json);
         let responsemsg = await msg.dispatch('', embed);
