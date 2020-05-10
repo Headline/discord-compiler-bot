@@ -181,18 +181,19 @@ export default class CompileCommand extends CompilerCommand {
         }
 
         if (json.program_message) {
-            if (json.program_message.length >= 1017) {
-                json.program_message = json.program_message.substring(0, 1016);
-            }
-
-            json.program_message = stripAnsi(json.program_message);
-
             /**
              * Annoyingly, people can print '`' chars and ruin the formatting of our
              * program output. To counteract this, we can place a unicode zero-width
              * character to escape it.
              */
             json.program_message = json.program_message.replace(/`/g, "\u200B"+'`');
+
+            if (json.program_message.length >= 1017) {
+                json.program_message = json.program_message.substring(0, 1016);
+            }
+
+            json.program_message = stripAnsi(json.program_message);
+
             embed.addField('Program Output', `\`\`\`\n${json.program_message}\`\`\``);
         }
         return embed;
