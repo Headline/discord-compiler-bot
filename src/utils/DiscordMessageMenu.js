@@ -171,7 +171,10 @@ export default class DiscordMessageMenu {
         try {
             if (!this.message) { // we haven't already sent one, so send()
                 this.message = await this.authormessage.channel.send(embed);
-                await this.handleMessage(this.message);
+               
+                // prevent multi-page elements from displaying for a single paged item
+                if (this.getMaxPage() > 0)
+                    await this.handleMessage(this.message);
             }
             else { // we *did* send one, so edit()
                 await this.message.edit(embed);
