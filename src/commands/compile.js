@@ -43,12 +43,12 @@ export default class CompileCommand extends CompilerCommand {
             return;
         }
 
-        const argsData = this.parseArguments(args);
+        const argsData = CompileCommand.parseArguments(args);
         let code = null;
         // URL request needed to retrieve code
         if (argsData.fileInput.length > 0) {
             try {
-                code = await this.getCodeFromURL(argsData.fileInput);
+                code = await CompileCommand.getCodeFromURL(argsData.fileInput);
             }
             catch (e) {
                 msg.replyFail(`Could not retrieve code from url \n ${e.message}`);
@@ -57,15 +57,15 @@ export default class CompileCommand extends CompilerCommand {
         }
         // Standard ``` <code> ``` request
         else {
-            code = this.getCodeBlockFromText(msg.message.content);
+            code = CompileCommand.getCodeBlockFromText(msg.message.content);
             if (code) {
-                code = this.cleanLanguageSpecifier(code);
+                code = CompileCommand.cleanLanguageSpecifier(code);
             }
             else {
                 msg.replyFail('You must attach codeblocks containing code to your message');
                 return;
             }
-            const stdinblock = this.getStdinBlockFromText(msg.message.content);
+            const stdinblock = CompileCommand.getStdinBlockFromText(msg.message.content);
             if (stdinblock) {
                 argsData.stdin = stdinblock;
             }
@@ -124,7 +124,7 @@ export default class CompileCommand extends CompilerCommand {
         if (this.client.shouldTrackStats())
             this.client.stats.compilationExecuted(lang);
 
-        let embed = this.buildResponseEmbed(msg, json);
+        let embed = CompileCommand.buildResponseEmbed(msg, json);
         let responsemsg = await msg.dispatch('', embed);
         
         try {
@@ -205,7 +205,7 @@ export default class CompileCommand extends CompilerCommand {
      * @param {string} text 
      * @return {string} null if no block found
      */
-    getCodeBlockFromText(text) {
+    static getCodeBlockFromText(text) {
         const regex = /```([\s\S]*?)```/g;
         let match = regex.exec(text);
         if (!match)
@@ -226,7 +226,7 @@ export default class CompileCommand extends CompilerCommand {
      * @param {string} text 
      * @return {string} null if no block found
      */
-    getStdinBlockFromText(text) {
+    static getStdinBlockFromText(text) {
         const regex = /```([\s\S]*?)```/g;
         let match = regex.exec(text);
         if (!match)
@@ -241,7 +241,7 @@ export default class CompileCommand extends CompilerCommand {
             return block1;
     }
 
-    async getCodeFromURL(rawUrl) {
+    static async getCodeFromURL(rawUrl) {
         try {
             let fileInput = url.parse(rawUrl);
 
@@ -268,7 +268,7 @@ export default class CompileCommand extends CompilerCommand {
      * @param {string} code 
      * @return {string} cleaned code string
      */
-    cleanLanguageSpecifier(code) {
+    static cleanLanguageSpecifier(code) {
         const discordLanguages = [ "1c", "abnf", "accesslog", "actionscript", "ada", "apache", "applescript",
         "arduino", "armasm", "asciidoc", "aspectj", "autohotkey", "autoit", "avrasm",
         "awk", "axapta", "bash", "basic", "bnf", "brainfuck", "bf", "c", "cal", "capnproto", "ceylon",
@@ -315,7 +315,7 @@ export default class CompileCommand extends CompilerCommand {
      * 
      * @param {string[]} args 
      */
-    parseArguments(args) {
+    static parseArguments(args) {
         let argsData = {
             options: "",
             fileInput: "",

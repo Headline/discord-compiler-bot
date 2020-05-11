@@ -4,6 +4,7 @@ import CommandCollection from './commands/utils/CommandCollection'
 import MessageRouter from './commands/utils/MessageRouter'
 import { Compilers } from './utils/Wandbox'
 import { StatisticsAPI } from './StatisticsTracking'
+import { GodboltLangs, GodboltSetup } from './utils/Godbolt'
 
 /**
  * discord.js client with added utility for general bot operations
@@ -40,6 +41,11 @@ export default class CompilerClient extends Client {
      * Setup compilers cache
      */
     this.compilers = new Compilers(this);
+
+    /**
+     * Setup godbolt cache
+     */
+    this.godbolt = new GodboltLangs(this);
 
     /**
      * Determines whether the bot is in maitenance mode
@@ -119,6 +125,19 @@ export default class CompilerClient extends Client {
        * @type {Error}
        */
       this.emit('compilersFailure', error);
+    }
+
+    try {
+      await this.godbolt.initialize();
+    }
+    catch (error) {
+      /**
+       * Event that's called when godbolt is unable to initialize
+       * 
+       * @event CompilerClient#godboltFailure
+       * @type {Error}
+       */
+      this.emit('godboltFailure', error);
     }
 
     try {

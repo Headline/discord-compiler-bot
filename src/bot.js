@@ -66,6 +66,9 @@ client.on('guildCreate', async (g) => {
 .on('compilersReady', () => {
 	log.info("Compilers#compilersReady");
 })
+.on('godboltReady', () => {
+	log.info("Godbolt#godboltReady");
+})
 .on('missingPermissions', (guild) => {
 	log.warn(`Client#missingPermissions -> Missing permission in ${guild.name} [${guild.id}]`);
 })
@@ -77,6 +80,9 @@ client.on('guildCreate', async (g) => {
 })
 .on('compilersFailure', (error) => {
 	log.error(`Compilers#compilersFailure -> ${error}`);
+})
+.on('godboltFailure', (error) => {
+	log.error(`Client#godboltFailure -> ${error}`);
 })
 .on('commandExecutionError', (name, guild, error) => {
 	log.error(`Client#commandExecutionError -> An error has occured in ${name} command: ${error} in ${guild.name}[${guild.id}]`)
