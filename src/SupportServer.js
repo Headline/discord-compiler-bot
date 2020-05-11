@@ -22,9 +22,8 @@ export default class SupportServer {
             return;
 
         const embed = new MessageEmbed()
-        .setDescription(`${user.username} voted for us on top.gg!  :heart:`);
-        if (user.avatar)
-            embed.setThumbnail(user.avatar)
+        .setDescription(`${user.username}#${user.discriminator} voted for us on top.gg!`)
+        .setThumbnail('https://i.imgur.com/VXbdwSQ.png');
 
         SupportServer.manualDispatch(channel, token, embed, '');
     }
