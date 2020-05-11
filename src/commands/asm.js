@@ -1,15 +1,13 @@
-import url from 'url';
 import { MessageEmbed } from 'discord.js'
 import stripAnsi from 'strip-ansi';
-import fetch from 'node-fetch';
 
 import CompilerCommand from './utils/CompilerCommand';
 import CompilerCommandMessage from './utils/CompilerCommandMessage'
 import CompilerClient from '../CompilerClient'
-import { Compiler, CompileSetup } from '../utils/Wandbox';
 import SupportServer from './../SupportServer'
 import CompileCommand from './compile'
 import { GodboltSetup } from './../utils/Godbolt'
+import DiscordMessageMenu from './../utils/DiscordMessageMenu'
 
 export default class AsmCommand extends CompilerCommand {
     /**
@@ -32,11 +30,46 @@ export default class AsmCommand extends CompilerCommand {
      */
     async run(msg) {
         const args = msg.getArgs();
-		
+        if (args.length < 1)
+            return this.help(msg);
+
+        if (args[0].toLowerCase() =='compilers') {
+            args.shift();
+
+            if (args.length < 1) {
+                msg.replyFail(`You must input a valid language to view it's compilers \n\nUsage: ${this.client.prefix}asm compilers <language>`);
+                return;
+            }
+
+            const lang = args[0]
+            const language = this.client.godbolt.findLanguageByAlias(lang)
+            if (language)
+            {
+                let lookupName = language.name.toLowerCase();
+                let items = [];
+                this.client.godbolt.compilers.forEach((compiler) => {
+                    if (lookupName == compiler.lang.toLowerCase())
+                        items.push(`${compiler.name}: **${compiler.id}**`);
+                });
+
+                let menu = new DiscordMessageMenu(msg.message, `Valid Godbolt '${lookupName}' compilers:`, 0x00FF00, 15, `Select a bold name on the right to use in place of the language in the ${this.client.prefix}asm command!`);
+                menu.buildMenu(items);
+                
+                try {
+                    await menu.displayPage(0);
+                    return;
+                }
+                catch (error) {
+                    msg.replyFail('Error with menu system, am I missing permissions?\n' + error);
+                    return;
+                }
+            }
+        }
+
 		if (args.length < 1) {
 			return await this.help(msg);
 		}
-		
+
         let lang = args[0].toLowerCase();
         args.shift();
 
@@ -90,7 +123,7 @@ export default class AsmCommand extends CompilerCommand {
             setup = new GodboltSetup(this.client.godbolt, code, lang, argsData.options);
         }
         catch (e) {
-            msg.replyFail(`You must input a valid language or compiler \n\n Usage: ${this.client.prefix}asm <language/compiler> \`\`\`<code>\`\`\``);
+            msg.replyFail(`You must input a valid language or compiler \n\n Usage: ${this.toString()} <language/compiler> \`\`\`<code>\`\`\``);
             return;
         }
 
@@ -99,7 +132,7 @@ export default class AsmCommand extends CompilerCommand {
             [errors, asm] = await setup.dispatch();
         }
         catch (e) {
-            msg.replyFail(`Godbolt request failure \n ${e.message} \nPlease try again later`);
+            msg.replyFail(`Godbolt request failure \n${e.message} \nPlease try again later`);
             return;
         }
 
@@ -112,6 +145,8 @@ export default class AsmCommand extends CompilerCommand {
                 msg.replyFail(`Unable to remove reactions, am I missing permissions?\n${error}`);
             }
         }   
+        
+        SupportServer.postAsm(code, lang, msg.message.author, msg.message.guild, errors==null, errors, this.client.compile_log, this.client.token);
         
         let embed = null;
         if (errors == null) {
@@ -215,6 +250,7 @@ export default class AsmCommand extends CompilerCommand {
             .addField('Compile w/ options', `${this.toString()} <language|compiler> <options> \\\`\\\`\\\`<code>\\\`\\\`\\\``)
             .addField('Compile w/ stdin', `${this.toString()} <language|compiler> | <stdin> \\\`\\\`\\\`<code>\\\`\\\`\\\``)
             .addField('Compile w/ url code', `${this.toString()} <language|compiler> < http://online.file/url`)
+            .addField('Search godbolt compilers', `${this.toString()} compilers <language>`)
             .setThumbnail('https://imgur.com/TNzxfMB.png')
             .setFooter(`Requested by: ${message.message.author.tag}`)
         return await message.dispatch('', embed);

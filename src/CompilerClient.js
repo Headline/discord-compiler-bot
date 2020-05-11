@@ -4,7 +4,7 @@ import CommandCollection from './commands/utils/CommandCollection'
 import MessageRouter from './commands/utils/MessageRouter'
 import { Compilers } from './utils/Wandbox'
 import { StatisticsAPI } from './StatisticsTracking'
-import { GodboltLangs, GodboltSetup } from './utils/Godbolt'
+import { Godbolt } from './utils/Godbolt'
 
 /**
  * discord.js client with added utility for general bot operations
@@ -45,7 +45,7 @@ export default class CompilerClient extends Client {
     /**
      * Setup godbolt cache
      */
-    this.godbolt = new GodboltLangs(this);
+    this.godbolt = new Godbolt(this);
 
     /**
      * Determines whether the bot is in maitenance mode

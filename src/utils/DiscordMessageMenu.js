@@ -15,7 +15,7 @@ export default class DiscordMessageMenu {
      * @param {String} title 
      * @param {Number} color 
      */
-    constructor(authormessage, title, color, displaycount) {
+    constructor(authormessage, title, color, displaycount, description) {
         this.menu = [];
         this.page = 0;
         this.left = '◀';
@@ -30,6 +30,7 @@ export default class DiscordMessageMenu {
         this.numbered = true;
         this.timeout = null;
         this.collector = null;
+        this.description = description;
     }
 
     /**
@@ -160,7 +161,7 @@ export default class DiscordMessageMenu {
         const embed = new MessageEmbed()
             .setTitle(this.title)
             .setColor(this.color)
-            .setDescription(output)
+            .setDescription((this.description)?this.description+"\n\n" + output:output)
             .setFooter("Requested by: " + this.authormessage.author.tag 
             + ' | page: ' + (this.page + 1) + '/' + (this.getMaxPage() + 1));
 

@@ -5,7 +5,7 @@ import { Collection } from 'discord.js'
  * A class designed to fetch & hold the list of valid
  * compilers from godbolt.
  */
-export class GodboltLangs extends Collection {
+export class Godbolt extends Collection {
     /**
      * Creates a Compilers object.
      *
@@ -33,7 +33,6 @@ export class GodboltLangs extends Collection {
 
             this.langs = await response.json();
 
-
             response = await fetch("https://godbolt.org/api/compilers/", {
                 method: 'GET',
                 headers: {
@@ -43,6 +42,7 @@ export class GodboltLangs extends Collection {
             });
 
             this.compilers = await response.json();
+
             // dont emit under testing conditions
             if (this.client)
                 this.client.emit('godboltReady');
@@ -60,16 +60,19 @@ export class GodboltLangs extends Collection {
         }
     }
 
-    getDefaultCompiler(input) {
-        input = input.toLowerCase();
+    findLanguageByAlias(alias) {
+        alias = alias.toLowerCase();
         for (const lang of this.langs) {
-            if (lang.monaco == input
-             || lang.name.toLowerCase() == input
-             || lang.alias.includes(input)) {
-                return lang.defaultCompiler;
+            if (lang.monaco == alias || lang.name.toLowerCase() == alias || lang.alias.includes(alias)) {
+                return lang;
             }
         }
         return null;
+    }
+
+    getDefaultCompiler(input) {
+        let lang = this.findLanguageByAlias(input);
+        return (lang)?lang.defaultCompiler:null;
     }
 }
 
