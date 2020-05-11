@@ -142,7 +142,7 @@ export default class CompileCommand extends CompilerCommand {
      * @param {CompilerCommandMessage} msg 
      * @param {*} json 
      */
-    buildResponseEmbed(msg, json) {
+    static buildResponseEmbed(msg, json) {
         const embed = new MessageEmbed()
         .setTitle('Compilation Results:')
         .setFooter("Requested by: " + msg.message.author.tag + " || Powered by wandbox.org")
