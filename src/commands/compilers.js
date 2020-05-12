@@ -27,6 +27,10 @@ export default class CompilersCommand extends CompilerCommand {
     async run(msg) {
         let args = msg.getArgs();
 
+        if (args.length == 0) {
+            return this.help(msg);
+        }
+
         if (args[0].toLowerCase() =='asm') {
             args.shift();
 
@@ -39,14 +43,10 @@ export default class CompilersCommand extends CompilerCommand {
             const language = this.client.godbolt.findLanguageByAlias(lang)
             if (language)
             {
-                let lookupName = language.name.toLowerCase();
                 let items = [];
-                this.client.godbolt.compilers.forEach((compiler) => {
-                    if (lookupName == compiler.lang.toLowerCase())
-                        items.push(`${compiler.name}: **${compiler.id}**`);
-                });
+                language.forEach((compiler) => items.push(`${compiler.name}: **${compiler.id}**`));
 
-                let menu = new DiscordMessageMenu(msg.message, `Valid Godbolt '${lookupName}' compilers:`, 0x00FF00, 15, `Select a bold name on the right to use in place of the language in the ${this.client.prefix}asm command!`);
+                let menu = new DiscordMessageMenu(msg.message, `Valid Godbolt '${language.name}' compilers:`, 0x00FF00, 15, `Select a bold name on the right to use in place of the language in the ${this.client.prefix}asm command!`);
                 menu.buildMenu(items);
                 
                 try {
@@ -59,10 +59,7 @@ export default class CompilersCommand extends CompilerCommand {
                 }
             }
         }
-        if (args.length != 1) {
-            msg.replyFail('You must supply a language in order view its supported compilers');
-            return;
-        }
+
         let langs = this.client.wandbox.getCompilers(args[0].toLowerCase()); 
         if (!langs) {
             msg.replyFail(`The language *\'${args[0]}\'* is either not supported, or you have accidentially typed in the wrong language.` 

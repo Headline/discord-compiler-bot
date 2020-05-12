@@ -263,6 +263,7 @@ export class GodboltCompiler {
 
 /**
  * A Godbolt language which stores all of it's compilers
+ * @extends {Collection}
  */
 export class GodboltLanguage extends Collection {
     constructor(obj) {
