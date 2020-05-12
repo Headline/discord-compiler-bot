@@ -228,9 +228,9 @@ export default class AsmCommand extends CompilerCommand {
             // This kinda sucks, to show full assembly output we'll need to split our fields into
             // reasonbly-sized chunks. Sanity resumes after this if statement.
             let message = json.program_message;
-            let parts = []
             if (message.length > 1012) {
-                while (message.length > 1012) {
+                let count = 1;
+                while (message.length > 1012 && embed.length+1024< 6000) {
                     let nearest_newline = 0;
                     for(let i = 1012; i > 0; i--) {
                         if (message[i] == '\n') {
@@ -238,23 +238,21 @@ export default class AsmCommand extends CompilerCommand {
                             break;
                         }
                     }
-    
+
                     let substr = message.substring(0, nearest_newline+1);
-                    parts.push(substr);
+                    substr = stripAnsi(substr);
+                    embed.addField(`Assembly Output Pt. ${count++}`, `\`\`\`x86asm\n${substr}\`\`\``);
                     message = message.substring(nearest_newline);
                 }
-                parts.push(message);
-
-                let count = 1;
-                for (const part of parts) {
-                    part = stripAnsi(part);
-                    embed.addField(`Assembly Output Pt. ${count++}`, `\`\`\`x86asm\n${part}\`\`\``);
+                if (embed.length+message.length+13 < 6000) {
+                    message = stripAnsi(message);
+                    embed.addField(`Assembly Output Pt. ${count++}`, `\`\`\`x86asm\n${message}\`\`\``);    
                 }
                 return embed;
             }
             json.program_message = stripAnsi(json.program_message);
 
-            embed.addField('Assembly Output', `\`\`\`x86asm\n${json.program_message}\`\`\``);
+            embed.addField('Assembly Output', `\`\`\`x86asm\n${json.program_message}\`\`\``);    
         }
         return embed;
     }
