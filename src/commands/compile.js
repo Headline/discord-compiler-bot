@@ -1,13 +1,12 @@
-import url from 'url';
 import { MessageEmbed } from 'discord.js'
 import stripAnsi from 'strip-ansi';
-import fetch from 'node-fetch';
 
 import CompilerCommand from './utils/CompilerCommand';
 import CompilerCommandMessage from './utils/CompilerCommandMessage'
 import CompilerClient from '../CompilerClient'
-import { Compiler, CompileSetup } from '../utils/Wandbox';
+import { Compiler, CompileSetup, WandboxSetup } from '../utils/apis/Wandbox';
 import SupportServer from './../SupportServer'
+import CompilationParser from './utils/CompilationParser'
 
 export default class CompileCommand extends CompilerCommand {
     /**
@@ -38,17 +37,19 @@ export default class CompileCommand extends CompilerCommand {
         let lang = args[0].toLowerCase();
         args.shift();
 
-        if (!this.client.compilers.isValidCompiler(lang) && !this.client.compilers.has(lang)) {
+        if (!this.client.wandbox.isValidCompiler(lang) && !this.client.wandbox.has(lang)) {
             msg.replyFail(`You must input a valid language or compiler \n\n Usage: ${this.client.prefix}compile <language/compiler> \`\`\`<code>\`\`\``);
             return;
         }
 
-        const argsData = CompileCommand.parseArguments(args);
+        let parser = new CompilationParser(msg);
+
+        const argsData = parser.parseArguments();
         let code = null;
         // URL request needed to retrieve code
         if (argsData.fileInput.length > 0) {
             try {
-                code = await CompileCommand.getCodeFromURL(argsData.fileInput);
+                code = await parser.getCodeFromURL(argsData.fileInput);
             }
             catch (e) {
                 msg.replyFail(`Could not retrieve code from url \n ${e.message}`);
@@ -57,22 +58,21 @@ export default class CompileCommand extends CompilerCommand {
         }
         // Standard ``` <code> ``` request
         else {
-            code = CompileCommand.getCodeBlockFromText(msg.message.content);
+            code = parser.getCodeBlockFromText();
             if (code) {
-                code = CompileCommand.cleanLanguageSpecifier(code);
+                code = CompilationParser.cleanLanguageSpecifier(code);
             }
             else {
                 msg.replyFail('You must attach codeblocks containing code to your message');
                 return;
             }
-            const stdinblock = CompileCommand.getStdinBlockFromText(msg.message.content);
+            const stdinblock = parser.getStdinBlockFromText();
             if (stdinblock) {
                 argsData.stdin = stdinblock;
             }
         }
 
-        let setup = new CompileSetup(code, lang, argsData.stdin, true, argsData.options, this.client.compilers);
-        let comp = new Compiler(setup);
+        let setup = new WandboxSetup(code, lang, argsData.stdin, true, argsData.options, this.client.wandbox);
 
         let reactionSuccess = false;
         if (this.client.loading_emote)
@@ -88,7 +88,7 @@ export default class CompileCommand extends CompilerCommand {
 
         let json = null;
         try {
-            json = await comp.compile();
+            json = await setup.compile();
         }
         catch (e) {
             msg.replyFail(`Wandbox request failure \n ${e.message} \nPlease try again later`);
@@ -111,15 +111,6 @@ export default class CompileCommand extends CompilerCommand {
 
         SupportServer.postCompilation(code, lang, json.url, msg.message.author, msg.message.guild, json.status == 0, json.compiler_message, this.client.compile_log, this.client.token);
 
-        
-        // if we were given a compiler we need to find the langauge
-        if (!this.client.compilers.has(lang)) {
-            this.client.compilers.forEach((value, key, map) => {
-                if (value.includes(lang)) {
-                    lang = key;
-                }
-            });
-        }
 
         if (this.client.shouldTrackStats())
             this.client.stats.compilationExecuted(lang);
@@ -197,166 +188,6 @@ export default class CompileCommand extends CompilerCommand {
             embed.addField('Program Output', `\`\`\`\n${json.program_message}\`\`\``);
         }
         return embed;
-    }
-
-    /**
-     * Parses the code from the input text
-     * 
-     * @param {string} text 
-     * @return {string} null if no block found
-     */
-    static getCodeBlockFromText(text) {
-        const regex = /```([\s\S]*?)```/g;
-        let match = regex.exec(text);
-        if (!match)
-            return null;
-
-        // If we match again, then our code belongs in the new match
-        let block1 = match[1].trim();
-        match = regex.exec(text);
-        if (!match)
-            return block1;
-        else
-            return match[1].trim();
-    }
-
-    /**
-     * Parses the stdin block from the input text
-     * 
-     * @param {string} text 
-     * @return {string} null if no block found
-     */
-    static getStdinBlockFromText(text) {
-        const regex = /```([\s\S]*?)```/g;
-        let match = regex.exec(text);
-        if (!match)
-            return null;
-
-        // If we match again, our stdin belongs in the first match result
-        let block1 = match[1].trim();
-        match = regex.exec(text);
-        if (!match)
-            return null;
-        else
-            return block1;
-    }
-
-    static async getCodeFromURL(rawUrl) {
-        try {
-            let fileInput = url.parse(rawUrl);
-
-            if (!fileInput.hostname || !fileInput.protocol) {
-                // TODO: error malformed url
-            }
-    
-            let response = await fetch(fileInput.href);
-            let data = await response.text();
-            if (!response.ok) {
-                throw new Error(`Error requesting online code URL - ${response.status}\n ${data}`);
-            }
-
-            return data;
-        }
-        catch (error) {
-            throw (error); // rethrow to higher level
-        }
-    }
-
-    /**
-     * Removes the language specifier from the input string
-     * 
-     * @param {string} code 
-     * @return {string} cleaned code string
-     */
-    static cleanLanguageSpecifier(code) {
-        const discordLanguages = [ "1c", "abnf", "accesslog", "actionscript", "ada", "apache", "applescript",
-        "arduino", "armasm", "asciidoc", "aspectj", "autohotkey", "autoit", "avrasm",
-        "awk", "axapta", "bash", "basic", "bnf", "brainfuck", "bf", "c", "cal", "capnproto", "ceylon",
-        "clean", "clojure-repl", "clojure", "cmake", "coffeescript", "coq", "cos",
-        "cpp", "crmsh", "crystal", "cs", "csharp", "csp", "css", "d", "dart", "delphi", "diff",
-        "django", "dns", "dockerfile", "dos", "dsconfig", "dts", "dust", "ebnf",
-        "elixir", "elm", "erb", "erlang-repl", "erlang", "excel", "fix", "flix", "fortran",
-        "fsharp", "gams", "gauss", "gcode", "gherkin", "glsl", "go", "golo", "gradle", "groovy",
-        "haml", "handlebars", "haskell", "haxe", "hsp", "htmlbars", "http", "hy", "inform7",
-        "ini", "irpf90", "java", "javascript", "jboss-cli", "json", "js", "julia-repl", "julia",
-        "kotlin", "lasso", "ldif", "leaf", "less", "lisp", "livecodeserver", "livescript",
-        "llvm", "lsl", "lua", "makefile", "markdown", "mathematica", "matlab", "maxima",
-        "mel", "mercury", "mipsasm", "mizar", "mojolicious", "monkey", "moonscript", "n1ql",
-        "nginx", "nimrod", "nix", "nsis", "objectivec", "ocaml", "openscad", "oxygene",
-        "parser3", "perl", "pf", "php", "pony", "powershell", "processing", "profile",
-        "prolog", "protobuf", "puppet", "purebasic", "python", "py", "q", "qml", "r", "rib",
-        "roboconf", "routeros", "rsl", "ruby", "ruleslanguage", "rust", "scala", "scheme",
-        "scilab", "scss", "shell", "smali", "smalltalk", "sml", "sqf", "sql", "stan", "stata",
-        "step21", "stylus", "subunit", "swift", "taggerscript", "tap", "tcl", "tex", "thrift",
-        "tp", "twig", "typescript", "vala", "vbnet", "vbscript-html", "vbscript", "verilog",
-        "vhdl", "vim", "x86asm", "xl", "xml", "xquery", "yaml", "zephir"
-        ];
-    
-        let stop = 0;
-        while (code.charAt(stop) != '\n' && code.charAt(stop) != ' ' && stop < code.length) {
-            stop++;
-        }
-    
-        let substr = code.substr(0, stop);
-        for (let i = 0; i < discordLanguages.length; i++) {
-            if (substr.toLowerCase() == discordLanguages[i]) {
-                code = code.replace(substr, '');
-                break;
-            }
-        }
-        return code;
-    }
-
-    /**
-     * Figure out the args passed, it should go in the following order:
-     * compile <language> < http://online.file/url | pipe data here
-     * Both online file input and pipe data are optional. If the redirect input
-     * character happens after pipe character just assume it's not file input
-     * 
-     * @param {string[]} args 
-     */
-    static parseArguments(args) {
-        let argsData = {
-            options: "",
-            fileInput: "",
-            stdin: "",
-        };
-
-        while (args.length > 0) {
-            let current = args[0];
-
-            // we encountered codeblocks, no further parsing necessary
-            if (current.includes('```')) {
-                break;
-            }
-            // accept code input via redirection operator
-            else if (current == '<') {
-                argsData.fileInput = args[1];
-                args.shift();
-            }
-            // pipe operator should be last, everything after it should be stdin
-            else if (current == '|') {
-                do {
-                    args.shift(); // kill previous
-                    current = args[0];
-                    argsData.stdin += current + ' ';
-                } while (args.length > 1 && !args[1].includes('```'));
-                args = []; // stop parsing
-            }
-            // anything else should just be an option
-            else {
-                argsData.options += current + ' ';
-            }
-
-            args.shift();
-        }
-
-        // cleanup whitespace
-        argsData.options = argsData.options.trim();
-        argsData.fileInput = argsData.fileInput.trim();
-        argsData.stdin = argsData.stdin.trim();
-
-        return argsData;
     }
 
     /**

@@ -63,8 +63,8 @@ client.on('guildCreate', async (g) => {
 .on('commandRegistered', (command) => {
 	log.debug(`Client#commandRegistered -> ${command.name}`);
 })
-.on('compilersReady', () => {
-	log.info("Compilers#compilersReady");
+.on('wandboxReady', () => {
+	log.info("Wandbox#wandboxReady");
 })
 .on('godboltReady', () => {
 	log.info("Godbolt#godboltReady");
@@ -78,8 +78,8 @@ client.on('guildCreate', async (g) => {
 .on('blacklistFailure', (error) => {
 	log.error(`MessageRouter#Blacklist -> blacklist.json write failure (${error.message})`);
 })
-.on('compilersFailure', (error) => {
-	log.error(`Compilers#compilersFailure -> ${error}`);
+.on('wandboxFailure', (error) => {
+	log.error(`Compilers#wandboxFailure -> ${error}`);
 })
 .on('godboltFailure', (error) => {
 	log.error(`Client#godboltFailure -> ${error}`);

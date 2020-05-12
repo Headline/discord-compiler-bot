@@ -1,23 +1,23 @@
 import fetch from 'node-fetch';
-import { Collection } from 'discord.js'
+import CompilationService from './CompilationService';
 
 /**
  * A class designed to fetch & hold the list of valid
  * compilers from wandbox.
+ * 
+ * @extends {CompilationService}
  */
-export class Compilers extends Collection {
+export class Wandbox extends CompilationService {
     /**
      * Creates a Compilers object.
      *
      * @param {CompilerClient} client compiler client for events
      */
     constructor(client) {
-        super();
+        super(client);
 
         // List of compilers WandBox has set up incorrectly and need to be ignored to prevent backend environmental setup errors.
         this.brokencompilers = ['ghc-head'];
-
-        this.client = client;
     }
 
     /**
@@ -55,7 +55,7 @@ export class Compilers extends Collection {
 
         // dont emit under testing conditions
         if (this.client)
-            this.client.emit('compilersReady');
+            this.client.emit('wandboxReady');
     }
 
 
@@ -69,6 +69,14 @@ export class Compilers extends Collection {
         return this.get(language);
     }
 
+    /**
+     * Determines if the input language is valid
+     * 
+     * @param {string} language 
+     */
+    isValidLanguage(language) {
+        return this.getCompilers(language) != null;
+    }
 
     /**
      * Determines if the input compiler is a valid compiler in our cache
@@ -77,14 +85,7 @@ export class Compilers extends Collection {
      * @return {boolean}          true upon complier found
      */
     isValidCompiler(compiler) {
-
-        let found = false;
-        this.forEach((value, key, map) => {
-            if (value.includes(compiler))
-                found = true;
-        })
-
-        return found;
+        return this.find((x) => x.includes(compiler)) != null;
     }
 }
 
@@ -92,7 +93,7 @@ export class Compilers extends Collection {
  * Class which represents all the settings and information for a single compilation
  * request. This should be built and used in coordination with Compiler.
  */
-export class CompileSetup {
+export class WandboxSetup {
     /**
      * Creates a compilation setup for usage with the Compiler object.
      * You may pass a language instead of a compiler for the second parameter,
@@ -117,30 +118,16 @@ export class CompileSetup {
         else
             this.compiler = comp;
     }
-}
-
-/**
- * Request sender which creates and sends a CompileSetup
- */
-export class Compiler {
-    /**
-     * Creates a compilation object which compiles code.
-     *
-     * @param {CompileSetup} compilesetup
-     */
-    constructor(compilesetup) {
-        this.compilesetup = compilesetup
-    }
 
     /**
      * Asyncronously sends a request to wandbox servers with the code, language, and compiler.
-     * Note: This can throw
+     * @throws {Error} throws upon invalid response code from Wandbox
      */
     async compile() {
         try {
             const response = await fetch("https://wandbox.org/api/compile.json", {
                 method: "POST",
-                body: JSON.stringify(this.compilesetup).replace('compiler_option_raw', 'compiler-option-raw'),
+                body: JSON.stringify(this).replace('compiler_option_raw', 'compiler-option-raw'),
                 headers: {
                     'Content-Type': 'application/json; charset=utf-8'
                 },

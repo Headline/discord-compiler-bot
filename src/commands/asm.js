@@ -5,9 +5,9 @@ import CompilerCommand from './utils/CompilerCommand';
 import CompilerCommandMessage from './utils/CompilerCommandMessage'
 import CompilerClient from '../CompilerClient'
 import SupportServer from './../SupportServer'
-import CompileCommand from './compile'
-import { GodboltSetup } from './../utils/Godbolt'
+import { GodboltSetup } from './../utils/apis/Godbolt'
 import DiscordMessageMenu from './../utils/DiscordMessageMenu'
+import CompilationParser from './utils/CompilationParser';
 
 export default class AsmCommand extends CompilerCommand {
     /**
@@ -76,17 +76,20 @@ export default class AsmCommand extends CompilerCommand {
         let lang = args[0].toLowerCase();
         args.shift();
 
-        if (!this.client.godbolt.isValidCompiler(lang) && !this.client.godbolt.getDefaultCompiler(lang)) {
-            msg.replyFail(`You must input a valid language or compiler \n\n Usage: ${this.client.prefix}asm <language/compiler> \`\`\`<code>\`\`\``);
+        let godbolt = this.client.godbolt;
+        if (!godbolt.isValidCompiler(lang) && !godbolt.isValidLanguage(lang)) {
+            msg.replyFail(`"${lang}" is not a supported Godbolt language or compiler!`);
             return;
         }
+        
+        let parser = new CompilationParser(msg);
 
-        const argsData = CompileCommand.parseArguments(args);
+        const argsData = parser.parseArguments();
         let code = null;
         // URL request needed to retrieve code
         if (argsData.fileInput.length > 0) {
             try {
-                code = await CompileCommand.getCodeFromURL(argsData.fileInput);
+                code = await CompilationParser.getCodeFromURL(argsData.fileInput);
             }
             catch (e) {
                 msg.replyFail(`Could not retrieve code from url \n ${e.message}`);
@@ -95,15 +98,15 @@ export default class AsmCommand extends CompilerCommand {
         }
         // Standard ``` <code> ``` request
         else {
-            code = CompileCommand.getCodeBlockFromText(msg.message.content);
+            code = parser.getCodeBlockFromText();
             if (code) {
-                code = CompileCommand.cleanLanguageSpecifier(code);
+                code = CompilationParser.cleanLanguageSpecifier(code);
             }
             else {
                 msg.replyFail('You must attach codeblocks containing code to your message');
                 return;
             }
-            const stdinblock = CompileCommand.getStdinBlockFromText(msg.message.content);
+            const stdinblock = parser.getStdinBlockFromText();
             if (stdinblock) {
                 argsData.stdin = stdinblock;
             }

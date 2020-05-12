@@ -1,11 +1,11 @@
 import assert from 'assert'
 import "regenerator-runtime/runtime.js";
 
-import {Compilers, CompileSetup, Compiler} from '../utils/Wandbox'
+import {Wandbox, WandboxSetup} from '../utils/apis/Wandbox'
 
-const compilers = new Compilers(null);
+const compilers = new Wandbox(null);
 
-describe('Wandbox Utils', function () {
+describe('Wandbox', function () {
     this.timeout(10000);
     it('Initialize compilers', async () => {
         return compilers.initialize();
@@ -29,12 +29,11 @@ describe('Wandbox Utils', function () {
         });
     });
     it('Compiler deduction', async () => {
-        let setup = new CompileSetup('', 'c++', '', false, '', compilers);
+        let setup = new WandboxSetup('', 'c++', '', false, '', compilers);
         assert.notEqual(setup.compiler, 'c++');
     });
     it('Compilation dispatch', async () => {
-        let setup = new CompileSetup('int main() {}', 'c++', '', true, '', compilers);
-        let compiler = new Compiler(setup);
-        return compiler.compile();
+        let setup = new WandboxSetup('int main() {}', 'c++', '', true, '', compilers);
+        return setup.compile();
     });
 });

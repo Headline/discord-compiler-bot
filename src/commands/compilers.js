@@ -63,7 +63,7 @@ export default class CompilersCommand extends CompilerCommand {
             msg.replyFail('You must supply a language in order view its supported compilers');
             return;
         }
-        let langs = this.client.compilers.getCompilers(args[0].toLowerCase()); 
+        let langs = this.client.wandbox.getCompilers(args[0].toLowerCase()); 
         if (!langs) {
             msg.replyFail(`The language *\'${args[0]}\'* is either not supported, or you have accidentially typed in the wrong language.` 
             + `Try using the *${this.client.prefix}languages* command to see supported languages!`);
