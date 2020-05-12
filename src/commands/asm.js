@@ -225,10 +225,33 @@ export default class AsmCommand extends CompilerCommand {
              */
             json.program_message = json.program_message.replace(/`/g, "\u200B"+'`');
 
-            if (json.program_message.length >= 1012) {
-                json.program_message = json.program_message.substring(0, 1011);
-            }
+            // This kinda sucks, to show full assembly output we'll need to split our fields into
+            // reasonbly-sized chunks. Sanity resumes after this if statement.
+            let message = json.program_message;
+            let parts = []
+            if (message.length > 1012) {
+                while (message.length > 1012) {
+                    let nearest_newline = 0;
+                    for(let i = 1012; i > 0; i--) {
+                        if (message[i] == '\n') {
+                            nearest_newline = i;
+                            break;
+                        }
+                    }
+    
+                    let substr = message.substring(0, nearest_newline+1);
+                    parts.push(substr);
+                    message = message.substring(nearest_newline);
+                }
+                parts.push(message);
 
+                let count = 1;
+                for (const part of parts) {
+                    part = stripAnsi(part);
+                    embed.addField(`Assembly Output Pt. ${count++}`, `\`\`\`x86asm\n${part}\`\`\``);
+                }
+                return embed;
+            }
             json.program_message = stripAnsi(json.program_message);
 
             embed.addField('Assembly Output', `\`\`\`x86asm\n${json.program_message}\`\`\``);
