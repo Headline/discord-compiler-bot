@@ -225,8 +225,8 @@ export default class AsmCommand extends CompilerCommand {
              */
             json.program_message = json.program_message.replace(/`/g, "\u200B"+'`');
 
-            if (json.program_message.length >= 1017) {
-                json.program_message = json.program_message.substring(0, 1016);
+            if (json.program_message.length >= 1012) {
+                json.program_message = json.program_message.substring(0, 1011);
             }
 
             json.program_message = stripAnsi(json.program_message);
