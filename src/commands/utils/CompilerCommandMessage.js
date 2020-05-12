@@ -75,7 +75,7 @@ export default class CompilerCommandMessage {
              * @event CompilerClient#missingPermissions
              * @type {Guild} guild the permissions error occured in
              */
-            this.message.client.emit('missingPermissions', this.message.guild)
+            this.message.client.emit('missingPermissions', this.message.guild, e.message)
         }
     }
 

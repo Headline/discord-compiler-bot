@@ -69,8 +69,8 @@ client.on('guildCreate', async (g) => {
 .on('godboltReady', () => {
 	log.info("Godbolt#godboltReady");
 })
-.on('missingPermissions', (guild) => {
-	log.warn(`Client#missingPermissions -> Missing permission in ${guild.name} [${guild.id}]`);
+.on('missingPermissions', (guild, err) => {
+	log.warn(`Client#missingPermissions -> Missing permission in ${guild.name} [${guild.id}]: ${err}`);
 })
 .on('commandExecuted', (f) => {
 	log.debug(`Client#commandExecuted -> ${f.name} command executed`);
