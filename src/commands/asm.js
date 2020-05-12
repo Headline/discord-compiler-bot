@@ -36,46 +36,12 @@ export default class AsmCommand extends CompilerCommand {
         if (args[0].toLowerCase() =='compilers') {
             args.shift();
 
-            if (args.length < 1) {
-                msg.replyFail(`You must input a valid language to view it's compilers \n\nUsage: ${this.client.prefix}asm compilers <language>`);
-                return;
-            }
-
-            const lang = args[0]
-            const language = this.client.godbolt.findLanguageByAlias(lang)
-            if (language)
-            {
-                let items = [];
-                language.forEach((compiler) => items.push(`${compiler.name}: **${compiler.id}**`));
-
-                let menu = new DiscordMessageMenu(msg.message, `Valid Godbolt '${language.name}' compilers:`, 0x00FF00, 15, `Select a bold name on the right to use in place of the language in the ${this.client.prefix}asm command!`);
-                menu.buildMenu(items);
-                
-                try {
-                    await menu.displayPage(0);
-                    return;
-                }
-                catch (error) {
-                    msg.replyFail('Error with menu system, am I missing permissions?\n' + error);
-                    return;
-                }
-            }
+            await AsmCommand.handleCompilers(args, msg);
+            return;
         }
-        else if (args[0].toLowerCase().includes('language')) {
-            let items = [];
-            this.client.godbolt.forEach((language) => items.push(`${language.id}`));
-
-            let menu = new DiscordMessageMenu(msg.message, `Valid Godbolt languages:`, 0x00FF00, 15);
-            menu.buildMenu(items);
-            
-            try {
-                await menu.displayPage(0);
-                return;
-            }
-            catch (error) {
-                msg.replyFail('Error with menu system, am I missing permissions?\n' + error);
-                return;
-            }
+        if (args[0].toLowerCase().includes('language')) {
+            await AsmCommand.handleLanguage(msg);
+            return;
         }
 
 		if (args.length < 1) {
@@ -185,6 +151,57 @@ export default class AsmCommand extends CompilerCommand {
         catch (error) {
             msg.replyFail(`Unable to react to message, am I missing permissions?\n${error}`);
             return;
+        }
+    }
+
+    /**
+     * Handles the languages list sub-command
+     * @param {CompilerCommandMessage} msg
+     */
+    static async handleLanguage(msg) {
+        let items = [];
+        msg.message.client.godbolt.forEach((language) => items.push(`${language.id}`));
+
+        let menu = new DiscordMessageMenu(msg.message, `Valid Godbolt languages:`, 0x00FF00, 15);
+        menu.buildMenu(items);
+        
+        try {
+            await menu.displayPage(0);
+        }
+        catch (error) {
+            msg.replyFail('Error with menu system, am I missing permissions?\n' + error);
+        }
+    }
+
+    /**
+     * Handles the compilers list sub-command
+     * @param {string[]} args
+     * @param {CompilerCommandMessage} msg
+     */
+    static async handleCompilers(args, msg) {
+
+        let prefix = msg.message.client.prefix;
+        if (args.length < 1) {
+            msg.replyFail(`You must input a valid language to view it's compilers \n\nUsage: ${prefix}asm compilers <language>`);
+            return;
+        }
+
+        const lang = args[0]
+        const language = msg.message.client.godbolt.findLanguageByAlias(lang)
+        if (language)
+        {
+            let items = [];
+            language.forEach((compiler) => items.push(`${compiler.name}: **${compiler.id}**`));
+
+            let menu = new DiscordMessageMenu(msg.message, `Valid Godbolt '${language.name}' compilers:`, 0x00FF00, 15, `Select a bold name on the right to use in place of the language in the ${prefix}asm command!`);
+            menu.buildMenu(items);
+            
+            try {
+                await menu.displayPage(0);
+            }
+            catch (error) {
+                msg.replyFail('Error with menu system, am I missing permissions?\n' + error);
+            }
         }
     }
 

@@ -4,6 +4,7 @@ import CompilerCommand from './utils/CompilerCommand'
 import CompilerCommandMessage from './utils/CompilerCommandMessage'
 import CompilerClient from '../CompilerClient'
 import DiscordMessageMenu from '../utils/DiscordMessageMenu'
+import AsmCommand from './asm'
 
 export default class CompilersCommand extends CompilerCommand {
     /**
@@ -30,34 +31,11 @@ export default class CompilersCommand extends CompilerCommand {
         if (args.length == 0) {
             return this.help(msg);
         }
-
         if (args[0].toLowerCase() =='asm') {
             args.shift();
 
-            if (args.length < 1) {
-                msg.replyFail(`You must input a valid language to view it's compilers \n\nUsage: ${this.client.prefix}asm compilers <language>`);
-                return;
-            }
-
-            const lang = args[0]
-            const language = this.client.godbolt.findLanguageByAlias(lang)
-            if (language)
-            {
-                let items = [];
-                language.forEach((compiler) => items.push(`${compiler.name}: **${compiler.id}**`));
-
-                let menu = new DiscordMessageMenu(msg.message, `Valid Godbolt '${language.name}' compilers:`, 0x00FF00, 15, `Select a bold name on the right to use in place of the language in the ${this.client.prefix}asm command!`);
-                menu.buildMenu(items);
-                
-                try {
-                    await menu.displayPage(0);
-                    return;
-                }
-                catch (error) {
-                    msg.replyFail('Error with menu system, am I missing permissions?\n' + error);
-                    return;
-                }
-            }
+            await AsmCommand.handleCompilers(args, msg);
+            return;
         }
 
         let langs = this.client.wandbox.getCompilers(args[0].toLowerCase()); 
