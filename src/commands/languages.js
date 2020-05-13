@@ -25,7 +25,7 @@ export default class LanguagesCommand extends CompilerCommand {
      * @param {CompilerCommandMessage} msg
      */
     async run(msg) {
-        let langs = this.client.compilers.keyArray();
+        let langs = this.client.wandbox.keyArray();
         let menu = new DiscordMessageMenu(msg.message, `Supported languages:`, 0x00FF00, 15);
         menu.buildMenu(langs);
 

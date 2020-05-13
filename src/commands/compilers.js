@@ -4,6 +4,7 @@ import CompilerCommand from './utils/CompilerCommand'
 import CompilerCommandMessage from './utils/CompilerCommandMessage'
 import CompilerClient from '../CompilerClient'
 import DiscordMessageMenu from '../utils/DiscordMessageMenu'
+import AsmCommand from './asm'
 
 export default class CompilersCommand extends CompilerCommand {
     /**
@@ -26,11 +27,18 @@ export default class CompilersCommand extends CompilerCommand {
      */
     async run(msg) {
         let args = msg.getArgs();
-        if (args.length != 1) {
-            msg.replyFail('You must supply a language in order view its supported compilers');
+
+        if (args.length == 0) {
+            return this.help(msg);
+        }
+        if (args[0].toLowerCase() =='asm') {
+            args.shift();
+
+            await AsmCommand.handleCompilers(args, msg, this.client.godbolt);
             return;
         }
-        let langs = this.client.compilers.getCompilers(args[0].toLowerCase()); 
+
+        let langs = this.client.wandbox.getCompilers(args[0].toLowerCase()); 
         if (!langs) {
             msg.replyFail(`The language *\'${args[0]}\'* is either not supported, or you have accidentially typed in the wrong language.` 
             + `Try using the *${this.client.prefix}languages* command to see supported languages!`);

@@ -2,8 +2,9 @@ import { Client } from 'discord.js'
 
 import CommandCollection from './commands/utils/CommandCollection'
 import MessageRouter from './commands/utils/MessageRouter'
-import { Compilers } from './utils/Wandbox'
-import { StatisticsAPI } from './StatisticsTracking'
+import { Wandbox } from './utils/apis/Wandbox'
+import { StatisticsAPI } from './utils/apis/StatisticsTracking'
+import { Godbolt } from './utils/apis/Godbolt'
 
 /**
  * discord.js client with added utility for general bot operations
@@ -39,7 +40,12 @@ export default class CompilerClient extends Client {
     /**
      * Setup compilers cache
      */
-    this.compilers = new Compilers(this);
+    this.wandbox = new Wandbox(this);
+
+    /**
+     * Setup godbolt cache
+     */
+    this.godbolt = new Godbolt(this);
 
     /**
      * Determines whether the bot is in maitenance mode
@@ -109,16 +115,29 @@ export default class CompilerClient extends Client {
    */
   async initialize() {
     try {
-      await this.compilers.initialize();
+      await this.wandbox.initialize();
     }
     catch (error) {
       /**
        * Event that's called when the compilers were unable to initialize
        * 
-       * @event CompilerClient#compilersFailure
+       * @event CompilerClient#wandboxFailure
        * @type {Error}
        */
-      this.emit('compilersFailure', error);
+      this.emit('wandboxFailure', error);
+    }
+
+    try {
+      await this.godbolt.initialize();
+    }
+    catch (error) {
+      /**
+       * Event that's called when godbolt is unable to initialize
+       * 
+       * @event CompilerClient#godboltFailure
+       * @type {Error}
+       */
+      this.emit('godboltFailure', error);
     }
 
     try {

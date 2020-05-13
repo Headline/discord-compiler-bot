@@ -4,11 +4,12 @@ import stripAnsi from 'strip-ansi';
 import CompilerCommand from './utils/CompilerCommand';
 import CompilerCommandMessage from './utils/CompilerCommandMessage'
 import CompilerClient from '../CompilerClient'
-import { Compiler, CompileSetup, WandboxSetup } from '../utils/apis/Wandbox';
 import SupportServer from './../SupportServer'
-import CompilationParser from './utils/CompilationParser'
+import { Godbolt, GodboltSetup } from './../utils/apis/Godbolt'
+import DiscordMessageMenu from './../utils/DiscordMessageMenu'
+import CompilationParser from './utils/CompilationParser';
 
-export default class CompileCommand extends CompilerCommand {
+export default class AsmCommand extends CompilerCommand {
     /**
      *  Creates the compile command
      * 
@@ -16,8 +17,8 @@ export default class CompileCommand extends CompilerCommand {
      */    
     constructor(client) {
         super(client, {
-            name: 'compile',
-            description: 'Compiles a script \nNote: This command\'s code input MUST be encapsulated in codeblocks',
+            name: 'asm',
+            description: 'Outputs the assembly for the input code \nNote: This command\'s code input MUST be encapsulated in codeblocks',
             developerOnly: false
         });
     }
@@ -29,19 +30,33 @@ export default class CompileCommand extends CompilerCommand {
      */
     async run(msg) {
         const args = msg.getArgs();
-		
-		if (args.length < 1) {
-			return await this.help(msg);
-		}
-		
-        let lang = args[0].toLowerCase();
-        args.shift();
+        if (args.length < 1)
+            return this.help(msg);
 
-        if (!this.client.wandbox.isValidCompiler(lang) && !this.client.wandbox.has(lang)) {
-            msg.replyFail(`You must input a valid language or compiler \n\n Usage: ${this.client.prefix}compile <language/compiler> \`\`\`<code>\`\`\``);
+        if (args[0].toLowerCase() =='compilers') {
+            args.shift();
+
+            await AsmCommand.handleCompilers(args, msg, this.client.godbolt);
+            return;
+        }
+        if (args[0].toLowerCase().includes('language')) {
+            await AsmCommand.handleLanguage(msg, this.client.godbolt);
             return;
         }
 
+		if (args.length < 1) {
+			return await this.help(msg);
+		}
+
+        let lang = args[0].toLowerCase();
+        args.shift();
+
+        let godbolt = this.client.godbolt;
+        if (!godbolt.isValidCompiler(lang) && !godbolt.isValidLanguage(lang)) {
+            msg.replyFail(`"${lang}" is not a supported Godbolt language or compiler!`);
+            return;
+        }
+        
         let parser = new CompilationParser(msg);
 
         const argsData = parser.parseArguments();
@@ -49,7 +64,7 @@ export default class CompileCommand extends CompilerCommand {
         // URL request needed to retrieve code
         if (argsData.fileInput.length > 0) {
             try {
-                code = await parser.getCodeFromURL(argsData.fileInput);
+                code = await CompilationParser.getCodeFromURL(argsData.fileInput);
             }
             catch (e) {
                 msg.replyFail(`Could not retrieve code from url \n ${e.message}`);
@@ -72,8 +87,6 @@ export default class CompileCommand extends CompilerCommand {
             }
         }
 
-        let setup = new WandboxSetup(code, lang, argsData.stdin, true, argsData.options, this.client.wandbox);
-
         let reactionSuccess = false;
         if (this.client.loading_emote)
         {
@@ -86,16 +99,21 @@ export default class CompileCommand extends CompilerCommand {
             }    
         }
 
-        let json = null;
+        let setup = null;
         try {
-            json = await setup.compile();
+            setup = new GodboltSetup(this.client.godbolt, code, lang, argsData.options);
         }
         catch (e) {
-            msg.replyFail(`Wandbox request failure \n ${e.message} \nPlease try again later`);
+            msg.replyFail(`You must input a valid language or compiler \n\n Usage: ${this.toString()} <language/compiler> \`\`\`<code>\`\`\``);
             return;
         }
-        if (!json) {
-            msg.replyFail(`Invalid Wandbox response \nPlease try again later`);
+
+        let [errors, asm] = [null, null];  
+        try {
+            [errors, asm] = await setup.dispatch();
+        }
+        catch (e) {
+            msg.replyFail(`Godbolt request failure \n${e.message} \nPlease try again later`);
             return;
         }
 
@@ -108,22 +126,85 @@ export default class CompileCommand extends CompilerCommand {
                 msg.replyFail(`Unable to remove reactions, am I missing permissions?\n${error}`);
             }
         }   
-
-        SupportServer.postCompilation(code, lang, json.url, msg.message.author, msg.message.guild, json.status == 0, json.compiler_message, this.client.compile_log, this.client.token);
-
-
-        if (this.client.shouldTrackStats())
-            this.client.stats.compilationExecuted(lang);
-
-        let embed = CompileCommand.buildResponseEmbed(msg, json);
-        let responsemsg = await msg.dispatch('', embed);
         
+        SupportServer.postAsm(code, lang, msg.message.author, msg.message.guild, errors==null, errors, this.client.compile_log, this.client.token);
+        
+        let embed = null;
+        if (errors == null) {
+            // Yeah we're just gonna hack godbolt onto our wandbox response builder
+            embed = AsmCommand.buildResponseEmbed(msg, {
+                status: 0,
+                program_message: asm,
+            });
+        }
+        else {
+            embed = AsmCommand.buildResponseEmbed(msg, {
+                status: 1,
+                compiler_message: errors,
+            });
+        }
+
+        let responsemsg = await msg.dispatch('', embed);
         try {
             responsemsg.react((embed.color == 0xFF0000)?'❌':'✅');
         }
         catch (error) {
             msg.replyFail(`Unable to react to message, am I missing permissions?\n${error}`);
             return;
+        }
+    }
+
+    /**
+     * Handles the languages list sub-command
+     * @param {CompilerCommandMessage} msg
+     * @param {Godbolt} godbolt
+     */
+    static async handleLanguage(msg, godbolt) {
+        let items = [];
+        godbolt.forEach((language) => items.push(`${language.id}`));
+
+        let menu = new DiscordMessageMenu(msg.message, `Valid Godbolt languages:`, 0x00FF00, 15);
+        menu.buildMenu(items);
+        
+        try {
+            await menu.displayPage(0);
+        }
+        catch (error) {
+            msg.replyFail('Error with menu system, am I missing permissions?\n' + error);
+        }
+    }
+
+    /**
+     * Handles the compilers list sub-command
+     * @param {string[]} args
+     * @param {CompilerCommandMessage} msg
+     * @param {Godbolt} godbolt
+     */
+    static async handleCompilers(args, msg, godbolt) {
+        let prefix = msg.message.client.prefix;
+        if (args.length < 1) {
+            msg.replyFail(`You must input a valid language to view it's compilers \n\nUsage: ${prefix}asm compilers <language>`);
+            return;
+        }
+
+        const language = godbolt.findLanguageByAlias(args[0]);
+        if (!language)
+        {
+            msg.replyFail(`"${args[0]}" is not a valid language,  use the \`${prefix}asm languages\` command to select a valid one!`);
+            return;
+        }
+
+        let items = [];
+        language.forEach((compiler) => items.push(`${compiler.name}: **${compiler.id}**`));
+
+        let menu = new DiscordMessageMenu(msg.message, `Valid Godbolt '${language.name}' compilers:`, 0x00FF00, 15, `Select a bold name on the right to use in place of the language in the ${prefix}asm command!`);
+        menu.buildMenu(items);
+        
+        try {
+            await menu.displayPage(0);
+        }
+        catch (error) {
+            msg.replyFail('Error with menu system, am I missing permissions?\n' + error);
         }
     }
 
@@ -135,8 +216,8 @@ export default class CompileCommand extends CompilerCommand {
      */
     static buildResponseEmbed(msg, json) {
         const embed = new MessageEmbed()
-        .setTitle('Compilation Results:')
-        .setFooter("Requested by: " + msg.message.author.tag + " || Powered by wandbox.org")
+        .setTitle('Assembly Results:')
+        .setFooter("Requested by: " + msg.message.author.tag + " || Powered by godbolt.org")
         .setColor(0x00FF00);
 
         if (json.status) {
@@ -179,13 +260,34 @@ export default class CompileCommand extends CompilerCommand {
              */
             json.program_message = json.program_message.replace(/`/g, "\u200B"+'`');
 
-            if (json.program_message.length >= 1016) {
-                json.program_message = json.program_message.substring(0, 1015);
-            }
+            // This kinda sucks, to show full assembly output we'll need to split our fields into
+            // reasonbly-sized chunks. Sanity resumes after this if statement.
+            let message = json.program_message;
+            if (message.length > 1012) {
+                let count = 1;
+                while (message.length > 1012 && embed.length+1024< 6000) {
+                    let nearest_newline = 0;
+                    for(let i = 1012; i > 0; i--) {
+                        if (message[i] == '\n') {
+                            nearest_newline = i;
+                            break;
+                        }
+                    }
 
+                    let substr = message.substring(0, nearest_newline+1);
+                    substr = stripAnsi(substr);
+                    embed.addField(`Assembly Output Pt. ${count++}`, `\`\`\`x86asm\n${substr}\`\`\``);
+                    message = message.substring(nearest_newline);
+                }
+                if (embed.length+message.length+13 < 6000) {
+                    message = stripAnsi(message);
+                    embed.addField(`Assembly Output Pt. ${count++}`, `\`\`\`x86asm\n${message}\`\`\``);    
+                }
+                return embed;
+            }
             json.program_message = stripAnsi(json.program_message);
 
-            embed.addField('Program Output', `\`\`\`\n${json.program_message}\n\`\`\``);
+            embed.addField('Assembly Output', `\`\`\`x86asm\n${json.program_message}\`\`\``);    
         }
         return embed;
     }
@@ -204,9 +306,10 @@ export default class CompileCommand extends CompilerCommand {
             .addField('Compile w/ options', `${this.toString()} <language|compiler> <options> \\\`\\\`\\\`<code>\\\`\\\`\\\``)
             .addField('Compile w/ stdin', `${this.toString()} <language|compiler> | <stdin> \\\`\\\`\\\`<code>\\\`\\\`\\\``)
             .addField('Compile w/ url code', `${this.toString()} <language|compiler> < http://online.file/url`)
+            .addField('Search godbolt compilers', `${this.toString()} compilers <language>`)
+            .addField('Search godbolt languages', `${this.toString()} languages`)
             .setThumbnail('https://imgur.com/TNzxfMB.png')
             .setFooter(`Requested by: ${message.message.author.tag}`)
         return await message.dispatch('', embed);
     }
-
 }

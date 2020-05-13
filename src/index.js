@@ -40,8 +40,8 @@ function setupDBL() {
 		dblapi.webhook.on('ready', (hook) => {
 			log.info(`DBL#ready -> Webhook running at http://${hook.hostname}:${hook.port}${hook.path}`)
 		})
-		.on('vote', async (bot, user) => {
-			let u = await dblapi.getUser(user);
+		.on('vote', async (vote) => {
+			let u = await dblapi.getUser(vote.user);
 			SupportServer.postVote(u, process.env.BOT_TOKEN, process.env.DBL_LOG);
 		});
 	}

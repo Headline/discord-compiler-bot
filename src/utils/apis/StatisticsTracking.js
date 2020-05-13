@@ -1,6 +1,6 @@
 import fetch from 'node-fetch'
-import CompilerClient from './CompilerClient'
-import log from './log'
+import CompilerClient from '../../CompilerClient'
+import log from '../../log'
 
 /**
  * Internal class to handle statistics api requests
@@ -71,6 +71,15 @@ export class StatisticsAPI {
      * @param {string} lang langauge compiled
      */
     async compilationExecuted(lang) {
+        // if we were given a compiler we need to find the langauge
+        if (!this.client.wandbox.has(lang)) {
+            this.client.wandbox.forEach((value, key, map) => {
+                if (value.includes(lang)) {
+                    lang = key;
+                }
+            });
+        }
+
         try {
             let obj = {
                 key: this.key,

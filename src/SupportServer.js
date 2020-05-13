@@ -22,10 +22,37 @@ export default class SupportServer {
             return;
 
         const embed = new MessageEmbed()
-        .setDescription(`${user.username} voted for us on top.gg!  :heart:`);
-        if (user.avatar)
-            embed.setThumbnail(user.avatar)
+        .setDescription(`${user.username}#${user.discriminator} voted for us on top.gg!`)
+        .setThumbnail('https://i.imgur.com/VXbdwSQ.png');
 
+        SupportServer.manualDispatch(channel, token, embed, '');
+    }
+
+    static postAsm(code, lang, author, guild, success, failoutput, channel, token) {
+        if (!channel)
+            return;
+
+        if (code.length >= 1017) {
+            code = code.substring(0, 1016);
+        }
+        if (failoutput) {
+            if (failoutput.length > 1017) {
+                failoutput = failoutput.substring(0, 1016);
+            }
+        }
+
+        const embed = new MessageEmbed()
+        .setTitle('Assembly Requested:')    
+        .setColor((success)?0x00FF00:0xFF0000)
+        .addField("Language", lang, true)
+        .addField("User",  author.tag, true)
+        .addField("User ID",  author.id, true)
+        .addField("Guild",  guild.name, true)
+        .addField("Guild ID",  guild.id, true)
+        .addField('Code', `\`\`\`${code}\n\`\`\`\n`);
+        if (!success)
+            embed.addField('Compiler Output', `\`\`\`${failoutput}\n\`\`\`\n`);
+        
         SupportServer.manualDispatch(channel, token, embed, '');
     }
 

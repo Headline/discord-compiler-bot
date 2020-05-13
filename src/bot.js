@@ -63,11 +63,14 @@ client.on('guildCreate', async (g) => {
 .on('commandRegistered', (command) => {
 	log.debug(`Client#commandRegistered -> ${command.name}`);
 })
-.on('compilersReady', () => {
-	log.info("Compilers#compilersReady");
+.on('wandboxReady', () => {
+	log.info("Wandbox#wandboxReady");
 })
-.on('missingPermissions', (guild) => {
-	log.warn(`Client#missingPermissions -> Missing permission in ${guild.name} [${guild.id}]`);
+.on('godboltReady', () => {
+	log.info("Godbolt#godboltReady");
+})
+.on('missingPermissions', (guild, err) => {
+	log.warn(`Client#missingPermissions -> Missing permission in ${guild.name} [${guild.id}]: ${err}`);
 })
 .on('commandExecuted', (f) => {
 	log.debug(`Client#commandExecuted -> ${f.name} command executed`);
@@ -75,8 +78,11 @@ client.on('guildCreate', async (g) => {
 .on('blacklistFailure', (error) => {
 	log.error(`MessageRouter#Blacklist -> blacklist.json write failure (${error.message})`);
 })
-.on('compilersFailure', (error) => {
-	log.error(`Compilers#compilersFailure -> ${error}`);
+.on('wandboxFailure', (error) => {
+	log.error(`Compilers#wandboxFailure -> ${error}`);
+})
+.on('godboltFailure', (error) => {
+	log.error(`Client#godboltFailure -> ${error}`);
 })
 .on('commandExecutionError', (name, guild, error) => {
 	log.error(`Client#commandExecutionError -> An error has occured in ${name} command: ${error} in ${guild.name}[${guild.id}]`)
