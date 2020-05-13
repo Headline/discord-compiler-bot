@@ -188,20 +188,23 @@ export default class AsmCommand extends CompilerCommand {
 
         const lang = args[0]
         const language = msg.message.client.godbolt.findLanguageByAlias(lang)
-        if (language)
+        if (!language)
         {
-            let items = [];
-            language.forEach((compiler) => items.push(`${compiler.name}: **${compiler.id}**`));
+            msg.replyFail(`"${lang}" is not a valid language,  use the \`${prefix}asm languages\` command to select a valid one!`);
+            return;
+        }
 
-            let menu = new DiscordMessageMenu(msg.message, `Valid Godbolt '${language.name}' compilers:`, 0x00FF00, 15, `Select a bold name on the right to use in place of the language in the ${prefix}asm command!`);
-            menu.buildMenu(items);
-            
-            try {
-                await menu.displayPage(0);
-            }
-            catch (error) {
-                msg.replyFail('Error with menu system, am I missing permissions?\n' + error);
-            }
+        let items = [];
+        language.forEach((compiler) => items.push(`${compiler.name}: **${compiler.id}**`));
+
+        let menu = new DiscordMessageMenu(msg.message, `Valid Godbolt '${language.name}' compilers:`, 0x00FF00, 15, `Select a bold name on the right to use in place of the language in the ${prefix}asm command!`);
+        menu.buildMenu(items);
+        
+        try {
+            await menu.displayPage(0);
+        }
+        catch (error) {
+            msg.replyFail('Error with menu system, am I missing permissions?\n' + error);
         }
     }
 
