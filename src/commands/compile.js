@@ -179,13 +179,13 @@ export default class CompileCommand extends CompilerCommand {
              */
             json.program_message = json.program_message.replace(/`/g, "\u200B"+'`');
 
-            if (json.program_message.length >= 1017) {
-                json.program_message = json.program_message.substring(0, 1016);
+            if (json.program_message.length >= 1016) {
+                json.program_message = json.program_message.substring(0, 1015);
             }
 
             json.program_message = stripAnsi(json.program_message);
 
-            embed.addField('Program Output', `\`\`\`\n${json.program_message}\`\`\``);
+            embed.addField('Program Output', `\`\`\`\n${json.program_message}\n\`\`\``);
         }
         return embed;
     }
