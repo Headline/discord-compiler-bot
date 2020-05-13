@@ -34,7 +34,7 @@ export default class CompilersCommand extends CompilerCommand {
         if (args[0].toLowerCase() =='asm') {
             args.shift();
 
-            await AsmCommand.handleCompilers(args, msg);
+            await AsmCommand.handleCompilers(args, msg, this.client.godbolt);
             return;
         }
 

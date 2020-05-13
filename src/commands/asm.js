@@ -5,7 +5,7 @@ import CompilerCommand from './utils/CompilerCommand';
 import CompilerCommandMessage from './utils/CompilerCommandMessage'
 import CompilerClient from '../CompilerClient'
 import SupportServer from './../SupportServer'
-import { GodboltSetup } from './../utils/apis/Godbolt'
+import { Godbolt, GodboltSetup } from './../utils/apis/Godbolt'
 import DiscordMessageMenu from './../utils/DiscordMessageMenu'
 import CompilationParser from './utils/CompilationParser';
 
@@ -36,11 +36,11 @@ export default class AsmCommand extends CompilerCommand {
         if (args[0].toLowerCase() =='compilers') {
             args.shift();
 
-            await AsmCommand.handleCompilers(args, msg);
+            await AsmCommand.handleCompilers(args, msg, this.client.godbolt);
             return;
         }
         if (args[0].toLowerCase().includes('language')) {
-            await AsmCommand.handleLanguage(msg);
+            await AsmCommand.handleLanguage(msg, this.client.godbolt);
             return;
         }
 
@@ -157,10 +157,11 @@ export default class AsmCommand extends CompilerCommand {
     /**
      * Handles the languages list sub-command
      * @param {CompilerCommandMessage} msg
+     * @param {Godbolt} godbolt
      */
-    static async handleLanguage(msg) {
+    static async handleLanguage(msg, godbolt) {
         let items = [];
-        msg.message.client.godbolt.forEach((language) => items.push(`${language.id}`));
+        godbolt.forEach((language) => items.push(`${language.id}`));
 
         let menu = new DiscordMessageMenu(msg.message, `Valid Godbolt languages:`, 0x00FF00, 15);
         menu.buildMenu(items);
@@ -177,20 +178,19 @@ export default class AsmCommand extends CompilerCommand {
      * Handles the compilers list sub-command
      * @param {string[]} args
      * @param {CompilerCommandMessage} msg
+     * @param {Godbolt} godbolt
      */
-    static async handleCompilers(args, msg) {
-
+    static async handleCompilers(args, msg, godbolt) {
         let prefix = msg.message.client.prefix;
         if (args.length < 1) {
             msg.replyFail(`You must input a valid language to view it's compilers \n\nUsage: ${prefix}asm compilers <language>`);
             return;
         }
 
-        const lang = args[0]
-        const language = msg.message.client.godbolt.findLanguageByAlias(lang)
+        const language = godbolt.findLanguageByAlias(args[0]);
         if (!language)
         {
-            msg.replyFail(`"${lang}" is not a valid language,  use the \`${prefix}asm languages\` command to select a valid one!`);
+            msg.replyFail(`"${args[0]}" is not a valid language,  use the \`${prefix}asm languages\` command to select a valid one!`);
             return;
         }
 
