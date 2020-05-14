@@ -4,7 +4,7 @@ import stripAnsi from 'strip-ansi';
 import CompilerCommand from './utils/CompilerCommand';
 import CompilerCommandMessage from './utils/CompilerCommandMessage'
 import CompilerClient from '../CompilerClient'
-import { Compiler, CompileSetup, WandboxSetup } from '../utils/apis/Wandbox';
+import { WandboxSetup } from '../utils/apis/Wandbox';
 import SupportServer from './../SupportServer'
 import CompilationParser from './utils/CompilationParser'
 

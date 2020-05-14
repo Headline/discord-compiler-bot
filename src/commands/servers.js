@@ -1,6 +1,3 @@
-import os from 'os'
-import { MessageEmbed, Client} from 'discord.js'
-
 import CompilerCommand from './utils/CompilerCommand'
 import CompilerCommandMessage from './utils/CompilerCommandMessage'
 import CompilerClient from '../CompilerClient'
