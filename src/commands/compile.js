@@ -49,7 +49,7 @@ export default class CompileCommand extends CompilerCommand {
         // URL request needed to retrieve code
         if (argsData.fileInput.length > 0) {
             try {
-                code = await parser.getCodeFromURL(argsData.fileInput);
+                code = await CompilationParser.getCodeFromURL(argsData.fileInput);
             }
             catch (e) {
                 msg.replyFail(`Could not retrieve code from url \n ${e.message}`);
