@@ -263,11 +263,11 @@ export default class AsmCommand extends CompilerCommand {
             // This kinda sucks, to show full assembly output we'll need to split our fields into
             // reasonbly-sized chunks. Sanity resumes after this if statement.
             let message = json.program_message;
-            if (message.length > 1012) {
+            if (message.length > 1011) {
                 let count = 1;
-                while (message.length > 1012 && embed.length+1024< 6000) {
+                while (message.length > 1011 && embed.length+1024< 6000) {
                     let nearest_newline = 0;
-                    for(let i = 1012; i > 0; i--) {
+                    for(let i = 1011; i > 0; i--) {
                         if (message[i] == '\n') {
                             nearest_newline = i;
                             break;
