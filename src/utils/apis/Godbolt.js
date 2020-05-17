@@ -180,7 +180,7 @@ export class GodboltSetup {
      * Dispatches a request for godbolt using the given compiler
      * 
      * @throws {Error} throws if godbolt doesn't respond with 200
-     * @returns {string[]} first element of this array are the errors, if any. Second is the assembly
+     * @returns {Promise<string[]>} first element of this array are the errors, if any. Second is the assembly
      */
     async dispatch() {
         try {
