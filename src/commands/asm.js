@@ -145,6 +145,16 @@ export default class AsmCommand extends CompilerCommand {
         }
 
         let responsemsg = await msg.dispatch('', embed);
+        if (!responsemsg) {
+            if (this.client.github_link) {
+                msg.replyFail(`Message dispatch failure, I am either missing permissions or the response message was unable to be sent.\n\nIf you believe this is an error, please create a bug report [here](${this.client.github_link}/issues)`);
+                return;    
+            }
+            else {
+                msg.replyFail(`Message dispatch failure, I am either missing permissions or the response message was unable to be sent.`);
+                return;    
+            }
+        }
         try {
             responsemsg.react((embed.color == 0xFF0000)?'❌':'✅');
         }
