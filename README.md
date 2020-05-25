@@ -1,4 +1,4 @@
-# 👩🏽‍💻 Discord Compiler
+# 👩‍💻 Discord Compiler
 A Discord bot which can compile code, display the output of the compiler, and run the program. This bot is great for prototyping ideas, or testing concepts on-the-fly with very little effort. It supports almost every programing language you could name (c++, c, java, python, ruby, javascript, go, php, lua, & more!). 
 
 ## 🔗 Links
