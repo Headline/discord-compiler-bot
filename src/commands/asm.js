@@ -126,12 +126,10 @@ export default class AsmCommand extends CompilerCommand {
                 msg.replyFail(`Unable to remove reactions, am I missing permissions?\n${error}`);
             }
         }   
-        
-        SupportServer.postAsm(code, lang, msg.message.author, msg.message.guild, errors==null, errors, this.client.compile_log, this.client.token);
-        
+                
         let embed = null;
         if (errors == null) {
-            // Yeah we're just gonna hack godbolt onto our wandbox response builder
+            // Yeah we're just gonna hack godbolt onto our wandbox-style response builder
             embed = AsmCommand.buildResponseEmbed(msg, {
                 status: 0,
                 program_message: asm,
@@ -143,6 +141,8 @@ export default class AsmCommand extends CompilerCommand {
                 compiler_message: errors,
             });
         }
+
+        SupportServer.postAsm(code, lang, msg.message.author, msg.message.guild, errors==null, errors, this.client.compile_log, this.client.token);
 
         let responsemsg = await msg.dispatch('', embed);
         if (!responsemsg) {
