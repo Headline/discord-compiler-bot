@@ -69,8 +69,9 @@ export class StatisticsAPI {
      * Informs the API which language has just been compiled
      * 
      * @param {string} lang langauge compiled
+     * @param {boolean} failure indicates whether it was a failed compilation
      */
-    async compilationExecuted(lang) {
+    async compilationExecuted(lang, failure) {
         // if we were given a compiler we need to find the langauge
         if (!this.client.wandbox.has(lang)) {
             this.client.wandbox.forEach((value, key, map) => {
@@ -83,7 +84,8 @@ export class StatisticsAPI {
         try {
             let obj = {
                 key: this.key,
-                language: lang
+                language: lang,
+                fail: failure
             };
 
             const response = await fetch(this.url + 'insert/language', {
