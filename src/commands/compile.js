@@ -111,13 +111,12 @@ export default class CompileCommand extends CompilerCommand {
 
         SupportServer.postCompilation(code, lang, json.url, msg.message.author, msg.message.guild, json.status == 0, json.compiler_message, this.client.compile_log, this.client.token);
 
-
-        if (this.client.shouldTrackStats())
-            this.client.stats.compilationExecuted(lang);
-
         let embed = CompileCommand.buildResponseEmbed(msg, json);
         let responsemsg = await msg.dispatch('', embed);
         
+        if (this.client.shouldTrackStats())
+            this.client.stats.compilationExecuted(lang, embed.color == 0xFF0000);
+
         try {
             responsemsg.react((embed.color == 0xFF0000)?'❌':'✅');
         }
