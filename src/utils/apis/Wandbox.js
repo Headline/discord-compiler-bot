@@ -1,5 +1,6 @@
 import fetch from 'node-fetch';
 import CompilationService from './CompilationService';
+import {CompilationFixer, FixerEntry} from '../CompilationFixer'
 
 /**
  * A class designed to fetch & hold the list of valid
@@ -18,6 +19,7 @@ export class Wandbox extends CompilationService {
 
         // List of compilers WandBox has set up incorrectly and need to be ignored to prevent backend environmental setup errors.
         this.brokencompilers = ['ghc-head'];
+
     }
 
     /**
@@ -104,19 +106,51 @@ export class WandboxSetup {
      * @param {String} stdin
      * @param {Boolean} save
      * @param {string} compiler_option_raw
-     * @param {Compilers} compilers
+     * @param {Wandbox} compilers
      */
     constructor(code, compiler, stdin, save, compiler_option_raw, compilers) {
         this.code = code;
         this.stdin = stdin;
         this.save = save;
         this.compiler_option_raw = compiler_option_raw.split(' ').join('\n'); // joined by comma per doc spec
+        this.lang = null;
 
         let comp = compiler.toLowerCase();
-        if (compilers.has(comp)) // if lang instead of raw compiler
+        if (compilers.has(comp)) { // if lang instead of raw compiler
             this.compiler = compilers.get(comp)[0];
-        else
+            this.lang = comp;
+        } else {
+            let foundLang = null;
+            compilers.find((value, key) => {
+                if (value.includes(comp)) {
+                    foundLang = key;
+                    return true;
+                }
+                return false;
+            });
+            this.lang = foundLang;
             this.compiler = comp;
+        }
+    }
+
+    /**
+     * Fixes common code mistakes unique to our environment
+     * @param {CompilationFixer} fixer 
+     */
+    fix(fixer) {
+        if (!this.lang) {
+            return;
+        }
+
+        if (fixer.has(this.lang)) {
+            /**
+             * @type {Array<FixerEntry>}
+             */
+            const arr = fixer.get(this.lang);
+            for (let i = 0; i < arr.length; ++i) {
+                this.code = arr[i].fix(this.code);
+            }
+        }
     }
 
     /**

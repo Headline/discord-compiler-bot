@@ -5,6 +5,7 @@ import MessageRouter from './commands/utils/MessageRouter'
 import { Wandbox } from './utils/apis/Wandbox'
 import { StatisticsAPI } from './utils/apis/StatisticsTracking'
 import { Godbolt } from './utils/apis/Godbolt'
+import { CompilationFixer } from './utils/CompilationFixer'
 
 /**
  * discord.js client with added utility for general bot operations
@@ -39,13 +40,21 @@ export default class CompilerClient extends Client {
 
     /**
      * Setup compilers cache
+     * @type {Wandbox}
      */
     this.wandbox = new Wandbox(this);
 
     /**
      * Setup godbolt cache
+     * @type {Godbolt}
      */
     this.godbolt = new Godbolt(this);
+
+    /**
+     * Setup automated code fixer
+     * @type {CompilationFixer}
+     */
+    this.fixer = new CompilationFixer();
 
     /**
      * Determines whether the bot is in maitenance mode

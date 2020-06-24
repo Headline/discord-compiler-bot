@@ -73,6 +73,7 @@ export default class CompileCommand extends CompilerCommand {
         }
 
         let setup = new WandboxSetup(code, lang, argsData.stdin, true, argsData.options, this.client.wandbox);
+        setup.fix(this.client.fixer); // can we recover a failed compilation?
 
         let reactionSuccess = false;
         if (this.client.loading_emote)
