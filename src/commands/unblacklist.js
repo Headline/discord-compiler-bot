@@ -27,15 +27,15 @@ export default class UnBlacklistCommand extends CompilerCommand {
         const args = msg.getArgs();
 
         if (args.length != 1)
-            return await msg.replyFail('You must supply a guild to unblacklist!');
+            return await msg.replyFail('You must supply a guild or user to unblacklist!');
 
         const guild = args[0];
 
         if (isNaN(guild))
-            return await msg.replyFail('Specified guild is invalid');
+            return await msg.replyFail('Specified snowflake is invalid');
 
         if (!this.client.messagerouter.blacklist.isBlacklisted(guild))
-            return await msg.replyFail('Specified guild is not blacklisted');
+            return await msg.replyFail('Specified snowflake is not blacklisted');
 
         await this.client.messagerouter.blacklist.unblacklist(guild);
 
@@ -43,7 +43,7 @@ export default class UnBlacklistCommand extends CompilerCommand {
         this.client.shard.broadcastEval(`this.messagerouter.blacklist.removeFromCache('${guild}')`);
 
         const embed = new MessageEmbed()
-            .setTitle('Guild Unblacklisted')
+            .setTitle('Snowflake Unblacklisted')
             .setDescription(`${guild} has been unblacklisted`)
             .setThumbnail('https://imgur.com/PVBdOYi.png')
             .setColor(0x99CCFF)

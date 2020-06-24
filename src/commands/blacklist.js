@@ -13,7 +13,7 @@ export default class BlacklistCommand extends CompilerCommand {
     constructor(client) {
         super(client, {
             name: 'blacklist',
-            description: 'Blacklists a guild from sending requests',
+            description: 'Blacklists a guild or a user from sending requests',
             developerOnly: true,
         });
     }
@@ -27,15 +27,15 @@ export default class BlacklistCommand extends CompilerCommand {
         const args = msg.getArgs();
 
         if (args.length != 1)
-            return await msg.replyFail('You must supply a guild to blacklist!');
+            return await msg.replyFail('You must supply a guild or user to blacklist!');
 
         const guild = args[0];
 
         if (isNaN(guild))
-            return await msg.replyFail('Specified guild is invalid');
+            return await msg.replyFail('Specified snowflake is invalid');
 
         if (this.client.messagerouter.blacklist.isBlacklisted(guild))
-            return await msg.replyFail('Specified guild is already blacklisted');
+            return await msg.replyFail('Specified snowflake is already blacklisted');
 
         await this.client.messagerouter.blacklist.blacklist(guild);
 
@@ -43,7 +43,7 @@ export default class BlacklistCommand extends CompilerCommand {
         this.client.shard.broadcastEval(`this.messagerouter.blacklist.addToCache('${guild}')`);
 
         const embed = new MessageEmbed()
-            .setTitle('Guild Blacklisted')
+            .setTitle('Snowflake Blacklisted')
             .setDescription(`${guild} has been blacklisted`)
             .setThumbnail('https://imgur.com/PVBdOYi.png')
             .setColor(0xFF0000)
