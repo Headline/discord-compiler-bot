@@ -153,6 +153,30 @@ export default class SupportServer {
     }
 
     /**
+     * Posts that a blacklisted user or guild has attempted to use the bot
+     * 
+     * @param {string} author 
+     * @param {Guild} guild 
+     * @param {string} channel channel snowflake
+     * @param {boolean} isAuthorBanned 
+     */
+    static postBlacklistAttempt(author, guild, channel, token, isAuthorBanned) {
+        if (!channel)
+            return;
+
+        const embed = new MessageEmbed()
+        .setTitle('Blocked Request:')    
+        .setColor(0xFF4500)
+        .addField("User",  author.tag, true)
+        .addField("User ID",  author.id, true)
+        .addField("Guild",  guild.name, true)
+        .addField("Guild ID",  guild.id, true)
+        .addField("Ban Type", (isAuthorBanned)?"Author":"Server", true);
+        
+        SupportServer.manualDispatch(channel, token, embed, '');
+    }
+
+    /**
      * Manually sends a message skipping discord.js shit for sharding
      * 
      * @param {string} channel channel snowflake

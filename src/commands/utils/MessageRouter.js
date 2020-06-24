@@ -4,6 +4,7 @@ import { Message, Guild } from 'discord.js'
 
 import CompilerClient from '../../CompilerClient'
 import CompilerCommandMessage from './CompilerCommandMessage'
+import SupportServer from '../../SupportServer'
 
 export default class MessageRouter {
 
@@ -59,6 +60,7 @@ export default class MessageRouter {
       await msg.replyFail('This guild has been blacklisted from executing commands.'
         + '\nThis may have happened due to abuse, spam, or other reasons.'
         + '\nIf you feel that this has been done in error, request an unban in the support server.');
+        SupportServer.postBlacklistAttempt(message.author, message.guild, this.client.compile_log, this.client.token, false);
       return;
     }
     if (this.blacklist.isBlacklisted(message.author.id)) {
@@ -66,6 +68,7 @@ export default class MessageRouter {
       await msg.replyFail('Your user account has been blacklisted from executing commands.'
         + '\nThis may have happened due to abuse, spam, or other reasons.'
         + '\nIf you feel that this has been done in error, request an unban in the support server.');
+        SupportServer.postBlacklistAttempt(message.author, message.guild, this.client.compile_log, this.client.token, true);
       return;
     }
 
