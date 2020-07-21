@@ -26,7 +26,6 @@ export default class HelpCommand extends CompilerCommand {
     async run(msg) {
         let args = msg.getArgs();
 
-        this.help()
         // Lookup command by name if we got a name
         if (args.length > 0) {
             const command = args[0].toLowerCase();
