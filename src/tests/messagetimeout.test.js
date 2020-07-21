@@ -1,4 +1,3 @@
-import assert from 'assert'
 import "regenerator-runtime/runtime.js";
 
 import MessageTimeout from '../utils/MessageTimeout'

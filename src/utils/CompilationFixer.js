@@ -1,4 +1,4 @@
-import { Client, Collection } from 'discord.js'
+import { Collection } from 'discord.js'
 
 
 /**

@@ -44,10 +44,6 @@ export default class AsmCommand extends CompilerCommand {
             return;
         }
 
-		if (args.length < 1) {
-			return await this.help(msg);
-		}
-
         let lang = args[0].toLowerCase();
         args.shift();
 
