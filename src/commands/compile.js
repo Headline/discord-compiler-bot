@@ -35,6 +35,8 @@ export default class CompileCommand extends CompilerCommand {
 		}
 		
         let lang = args[0].toLowerCase();
+        let index = lang.search("`");
+        lang = (index < 0) ? lang : lang.slice(0, index);
         args.shift();
 
         if (!this.client.wandbox.isValidCompiler(lang) && !this.client.wandbox.has(lang)) {
