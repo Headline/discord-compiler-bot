@@ -39,7 +39,7 @@ export class Godbolt extends CompilationService {
      */
     async initialize() {
         try {
-            let response = await fetch("https://godbolt.org/api/languages", {
+            let response = await fetch("https://godbolt.org/api/languages?fields=id,name,monaco,extensions,alias,example,defaultCompiler", {
                 method: 'GET',
                 headers: {
                     'Content-Type': 'application/json',
@@ -53,7 +53,7 @@ export class Godbolt extends CompilationService {
                 this.set(tmp.id, tmp);
             }
 
-            response = await fetch("https://godbolt.org/api/compilers/", {
+            response = await fetch("https://godbolt.org/api/compilers?fields=id,name,lang,alias", {
                 method: 'GET',
                 headers: {
                     'Content-Type': 'application/json',
@@ -288,11 +288,13 @@ export class GodboltLanguage extends Collection {
          * @type {string[]}
          */
         this.alias = [];
+
         /**
          * Godbolt id used for requests formatting
          * @type {string}
          */
         this.id = '';
+
         /**
          * Example string used for default display on Godbolt site
          * @type {string}

@@ -84,7 +84,7 @@ client.on('guildCreate', async (g) => {
 	log.error(`Compilers#wandboxFailure -> ${error}`);
 })
 .on('godboltFailure', (error) => {
-	log.error(`Client#godboltFailure -> ${error}`);
+	log.error(`Client#godboltFailure -> ${error.stack}`);
 })
 .on('commandExecutionError', (name, guild, error) => {
 	log.error(`Client#commandExecutionError -> An error has occured in ${name} command: ${error} in ${guild.name}[${guild.id}]`)
