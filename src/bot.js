@@ -21,6 +21,7 @@ const client = new CompilerClient({
 	owner_id: process.env.OWNER_ID,
 	stats_api_link: process.env.STATS_API_LINK,
 	finished_emote: process.env.FINISHED_EMOTE,
+	maintenance: false,
 
 	ws: {
 		intents: ["GUILDS", "GUILD_MESSAGES", "GUILD_MESSAGE_REACTIONS"]

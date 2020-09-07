@@ -57,10 +57,10 @@ export default class CompilerClient extends Client {
     this.fixer = new CompilationFixer();
 
     /**
-     * Determines whether the bot is in maitenance mode
+     * Determines whether the bot is in maintenance mode
      * @type {boolean}
      */
-    this.maitenance = options.maitenance;
+    this.maintenance = options.maintenance;
 
     /**
      * Environment Variables
@@ -84,7 +84,7 @@ export default class CompilerClient extends Client {
    */
   async updatePresence() {
     const count = await this.getTrueServerCount();
-    if (this.maitenance)
+    if (this.maintenance)
 		  this.user.setPresence({activity: {name: `MAINTENENCE MODE`}, status: 'dnd'});
 	  else
 	  	this.user.setPresence({activity: {name: `in ${count} servers | ${this.prefix}invite`}, status: 'online'});
