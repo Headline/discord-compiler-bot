@@ -1,4 +1,4 @@
-import { Client } from 'discord.js'
+import { GuildEmoji, Client, Guild } from 'discord.js'
 
 import CommandCollection from './commands/utils/CommandCollection'
 import MessageRouter from './commands/utils/MessageRouter'
@@ -99,6 +99,34 @@ export default class CompilerClient extends Client {
     let values = await this.shard.fetchClientValues('guilds.cache.size')
     let guildCount = values.reduce((a, b) => a + b);
     return guildCount;  
+  }
+
+  /**
+   * Finds an emoji and copies it's object
+   * 
+   * @param {string} snowflake emoji snowflake
+   */
+  findEmoji(snowflake) {
+    const temp = this.emojis.cache.get(snowflake);
+    if (!temp) return false;
+
+    const emoji = Object.assign({}, temp);
+    if (emoji.guild) emoji.guild = emoji.guild.id;
+    emoji.require_colons = emoji.requiresColons;
+
+    return emoji; 
+  }
+  /**
+   * Returns the emoji object from all shards
+   * @param {string} snowflake emoji id
+   */
+  async getEmojiFromShard(snowflake) {
+    const emojis = await this.shard.broadcastEval(`(${this.findEmoji}).call(this, '${snowflake}')`);
+    const emoji = emojis.find(emoji => emoji);
+
+    const raw = await this.api.guilds(emoji.guild).get();
+    const guild = new Guild(this, raw);
+    return new GuildEmoji(this, emoji, guild);
   }
 
   /**

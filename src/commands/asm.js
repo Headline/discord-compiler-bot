@@ -87,7 +87,7 @@ export default class AsmCommand extends CompilerCommand {
         if (this.client.loading_emote)
         {
             try {
-                await msg.message.react(this.client.loading_emote);
+                await msg.message.react(await this.client.getEmojiFromShard(this.client.loading_emote));
                 reactionSuccess = true;
             }
             catch (e) {
@@ -152,7 +152,13 @@ export default class AsmCommand extends CompilerCommand {
             }
         }
         try {
-            responsemsg.react((embed.color == 0xFF0000)?'❌':'✅');
+            if (this.client.finished_emote) {
+                const emote = await this.client.getEmojiFromShard(this.client.finished_emote);
+                responsemsg.react((embed.color == 0x660404)?'❌':emote);
+            }
+            else {
+                responsemsg.react((embed.color == 0x660404)?'❌': '✅');
+            }
         }
         catch (error) {
             msg.replyFail(`Unable to react to message, am I missing permissions?\n${error}`);
@@ -228,7 +234,7 @@ export default class AsmCommand extends CompilerCommand {
 
         if (json.status) {
             if (json.status != 0) {
-                embed.setColor((0xFF0000));
+                embed.setColor((0x660404));
             }
             else {
                 embed.setColor(0x046604);
