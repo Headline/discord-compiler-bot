@@ -74,7 +74,6 @@ export default class CompileCommand extends CompilerCommand {
 
         let setup = new WandboxSetup(code, lang, argsData.stdin, true, argsData.options, this.client.wandbox);
         setup.fix(this.client.fixer); // can we recover a failed compilation?
-
         let reactionSuccess = false;
         if (this.client.loading_emote)
         {
@@ -119,7 +118,7 @@ export default class CompileCommand extends CompilerCommand {
             this.client.stats.compilationExecuted(lang, embed.color == 0xFF0000);
 
         try {
-            responsemsg.react((embed.color == 0xFF0000)?'❌':'✅');
+            responsemsg.react((embed.color == 0x660404)?'❌': this.client.finished_emote || '✅');
         }
         catch (error) {
             msg.replyFail(`Unable to react to message, am I missing permissions?\n${error}`);
@@ -135,17 +134,16 @@ export default class CompileCommand extends CompilerCommand {
      */
     static buildResponseEmbed(msg, json) {
         const embed = new MessageEmbed()
-        .setTitle('Compilation Results:')
+        .setTitle('Compilation Results')
         .setFooter("Requested by: " + msg.message.author.tag + " || Powered by wandbox.org")
-        .setColor(0x00FF00);
 
         if (json.status) {
             if (json.status != 0) {
-                embed.setColor((0xFF0000));
+                embed.setColor((0x660404));
             }
             else {
-                embed.setColor(0x00FF00);
-                embed.addField('Status code', `Finished with exit code: ${json.status}`);    
+                embed.setColor(0x046604);
+                embed.addField('Status Code', `Finished with exit code: ${json.status}`);    
             }
         }
 
@@ -154,7 +152,7 @@ export default class CompileCommand extends CompilerCommand {
         }
 
         if (json.url) {
-            embed.addField('URL', `Link: ${json.url}`);
+            embed.addField('URL', `[Click me](${json.url})`);
         }
 
         if (json.compiler_message) {
@@ -199,7 +197,7 @@ export default class CompileCommand extends CompilerCommand {
         const embed = new MessageEmbed()
             .setTitle('Command Usage')
             .setDescription(`*${this.description}*`)
-            .setColor(0x00FF00)
+            .setColor(0x046604)
             .addField('Standard compile', `${this.toString()} <language|compiler> \\\`\\\`\\\`<code>\\\`\\\`\\\``)
             .addField('Compile w/ options', `${this.toString()} <language|compiler> <options> \\\`\\\`\\\`<code>\\\`\\\`\\\``)
             .addField('Compile w/ stdin', `${this.toString()} <language|compiler> | <stdin> \\\`\\\`\\\`<code>\\\`\\\`\\\``)

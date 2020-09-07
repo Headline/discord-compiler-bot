@@ -34,7 +34,7 @@ export default class CompilerCommandMessage {
         .setDescription(message)
         .setThumbnail('https://imgur.com/LxxYrFj.png')
         .setFooter("Requested by: " + this.message.author.tag)
-        .setColor(0xFF0000);
+        .setColor(0x660404);
 
         try {
             await this.dispatch('', {embed: embed});

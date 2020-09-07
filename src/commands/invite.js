@@ -29,7 +29,7 @@ export default class InviteCommand extends CompilerCommand {
             .setDescription(`Click the link below to invite me to your server!\n\n` 
             + `[Invite me!](${this.client.invite_link})`)
             .setThumbnail('https://i.imgur.com/CZFt69d.png')
-            .setColor(0x00FF00)
+            .setColor(0x046604)
             .setFooter(`Requested by: ${msg.message.author.tag}`)
         await msg.dispatch('', embed);
     }
@@ -43,7 +43,7 @@ export default class InviteCommand extends CompilerCommand {
         const embed = new MessageEmbed()
             .setTitle('Command Usage')
             .setDescription(`*${this.description}*`)
-            .setColor(0x00FF00)
+            .setColor(0x046604)
             .addField('Get invite link', `${this.toString()}`)
             .setThumbnail('https://imgur.com/TNzxfMB.png')
             .setFooter(`Requested by: ${message.message.author.tag}`)

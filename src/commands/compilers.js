@@ -64,7 +64,7 @@ export default class CompilersCommand extends CompilerCommand {
         const embed = new MessageEmbed()
             .setTitle('Command Usage')
             .setDescription(`*${this.description}*`)
-            .setColor(0x00FF00)
+            .setColor(0x046604)
             .addField('Show compiler list', `${this.toString()} <language>`)
             .setThumbnail('https://imgur.com/TNzxfMB.png')
             .setFooter(`Requested by: ${message.message.author.tag}`)

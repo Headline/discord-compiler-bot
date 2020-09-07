@@ -49,7 +49,7 @@ export default class BotInfoCommand extends CompilerCommand {
                 + "\n[Statistics Tracker](" + statslink + ")"
                 + "\n==============================\n")
 
-            .setColor(0x00FF00)
+            .setColor(0x046604)
 
             .addField("Total Users", this.formatNumber(playercount), true)
             .addField("Total Servers", this.formatNumber(guildcount), true)
@@ -120,7 +120,7 @@ export default class BotInfoCommand extends CompilerCommand {
         const embed = new MessageEmbed()
             .setTitle('Command Usage')
             .setDescription(`*${this.description}*`)
-            .setColor(0x00FF00)
+            .setColor(0x046604)
             .addField('View bot info', `${this.toString()}`)
             .setThumbnail('https://imgur.com/TNzxfMB.png')
             .setFooter(`Requested by: ${message.message.author.tag}`)

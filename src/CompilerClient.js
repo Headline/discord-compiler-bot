@@ -66,6 +66,7 @@ export default class CompilerClient extends Client {
      * Environment Variables
      */
     this.loading_emote = options.loading_emote;
+    this.finished_emote = options.finished_emote;
     this.prefix = options.prefix;
     this.invite_link = options.invite_link;
     this.discordbots_link = options.discordbots_link;

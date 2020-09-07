@@ -47,7 +47,7 @@ export default class HelpCommand extends CompilerCommand {
                 .setDescription(`**For more information on how to use a command, try \ntyping ${this.client.prefix}help <command name>**\n\n Struggling? Check out our wiki: https://github.com/Headline/discord-compiler-bot/wiki`)
                 .setTitle('Command list')
                 .setFooter(`Requested by: ${msg.message.author.tag}`)
-                .setColor(0x00FF00)
+                .setColor(0x046604)
                 .setThumbnail('https://imgur.com/TNzxfMB.png')
                 .setFooter(`Requested by: ${msg.message.author.tag}`)
 
@@ -72,7 +72,7 @@ export default class HelpCommand extends CompilerCommand {
         const embed = new MessageEmbed()
             .setTitle('Command Usage')
             .setDescription(`*${this.description}*`)
-            .setColor(0x00FF00)
+            .setColor(0x046604)
             .addField('Command-based help', `${this.toString()} <command name>`)
             .setThumbnail('https://imgur.com/TNzxfMB.png')
             .setFooter(`Requested by: ${message.message.author.tag}`)

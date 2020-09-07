@@ -222,16 +222,16 @@ export default class AsmCommand extends CompilerCommand {
      */
     static buildResponseEmbed(msg, json) {
         const embed = new MessageEmbed()
-        .setTitle('Assembly Results:')
+        .setTitle('Assembly Results')
         .setFooter("Requested by: " + msg.message.author.tag + " || Powered by godbolt.org")
-        .setColor(0x00FF00);
+        .setColor(0x046604);
 
         if (json.status) {
             if (json.status != 0) {
                 embed.setColor((0xFF0000));
             }
             else {
-                embed.setColor(0x00FF00);
+                embed.setColor(0x046604);
                 embed.addField('Status code', `Finished with exit code: ${json.status}`);    
             }
         }
@@ -307,7 +307,7 @@ export default class AsmCommand extends CompilerCommand {
         const embed = new MessageEmbed()
             .setTitle('Command Usage')
             .setDescription(`*${this.description}*`)
-            .setColor(0x00FF00)
+            .setColor(0x046604)
             .addField('Standard compile', `${this.toString()} <language|compiler> \\\`\\\`\\\`<code>\\\`\\\`\\\``)
             .addField('Compile w/ options', `${this.toString()} <language|compiler> <options> \\\`\\\`\\\`<code>\\\`\\\`\\\``)
             .addField('Compile w/ stdin', `${this.toString()} <language|compiler> | <stdin> \\\`\\\`\\\`<code>\\\`\\\`\\\``)
