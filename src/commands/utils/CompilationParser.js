@@ -31,7 +31,21 @@ export default class CompilationParser {
      */
     parseArguments() {
         let args = this.message.getArgs();
+        
+        // allows non-delimited compiler/code-block parsing (Ex: ;compile lang```lang ...)
+        let index = args[0].search('`');
+        if (index > 0) {
+            // if this situation occurs, we need to split up arg[0] into the lang and code-block manually
+            let lang = args[0].slice(0, index);
+            
+            // put the first half of the code-block and lang back into the arguments
+            args.splice(1, 0, args[0].slice(index, args[0].length));
+            args[0] = lang;
+        }
+        
+        // we don't handle language parsing here so get rid of it (for now)
         args.shift();
+        
         let argsData = {
             options: "",
             fileInput: "",
