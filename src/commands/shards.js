@@ -38,6 +38,7 @@ export default class ShardsCommand extends CompilerCommand {
             let str = '';
             str += `Shard ID: ${shard[3][0]}\n`;
             str += `Shard Ping: ${shard[1]}ms\n`;
+            str += `Shard Guild Count: ${shard[0]}\n`;
             str += `Shard Status: ${this.statusToString(shard[2])}`
             items.push(str);
         }
