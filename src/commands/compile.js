@@ -34,19 +34,16 @@ export default class CompileCommand extends CompilerCommand {
 			return await this.help(msg);
 		}
 		
-        let lang = args[0].toLowerCase();
-        let index = lang.search("`");
-        lang = (index < 0) ? lang : lang.slice(0, index);
-        args.shift();
+        let parser = new CompilationParser(msg);
+        const argsData = parser.parseArguments();
+        
+        const lang = argsData.lang;
 
         if (!this.client.wandbox.isValidCompiler(lang) && !this.client.wandbox.has(lang)) {
             msg.replyFail(`You must input a valid language or compiler \n\n Usage: ${this.client.prefix}compile <language/compiler> \`\`\`<code>\`\`\``);
             return;
         }
 
-        let parser = new CompilationParser(msg);
-
-        const argsData = parser.parseArguments();
         let code = null;
         // URL request needed to retrieve code
         if (argsData.fileInput.length > 0) {

@@ -59,6 +59,20 @@ describe('Compile Command', function() {
         const code = parser.getCodeBlockFromText();
         assert.equal(code, 'cpp\nint main() {}');
     });
+    it('Parse no trailing space', () => {
+        let options = '-O3 -std=c++11 -fake-flag1 -fake-flag2';
+        fakeMessage.content = `;compile c++ ${options}\`\`\`cpp int main() {} \`\`\``
+        let argsData = parser.parseArguments();
+
+        assert.equal(argsData.options, options)
+        assert.equal(argsData.lang, 'c++');
+    });
+    it('Parse no trailing space (no options)', () => {
+        fakeMessage.content = `;compile c++\`\`\`cpp int main() {} \`\`\``
+        let argsData = parser.parseArguments();
+
+        assert.equal(argsData.lang, 'c++');
+    });
     it('Clean language specifier', () => {
         fakeMessage.content = '```cpp\nint main() {}\n```';
         let code = parser.getCodeBlockFromText();

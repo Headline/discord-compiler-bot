@@ -32,25 +32,28 @@ export default class CompilationParser {
     parseArguments() {
         let args = this.message.getArgs();
         
-        // allows non-delimited compiler/code-block parsing (Ex: ;compile lang```lang ...)
-        let index = args[0].search('`');
-        if (index > 0) {
-            // if this situation occurs, we need to split up arg[0] into the lang and code-block manually
-            let lang = args[0].slice(0, index);
-            
-            // put the first half of the code-block and lang back into the arguments
-            args.splice(1, 0, args[0].slice(index, args[0].length));
-            args[0] = lang;
+        // Removes codeblocks from argument parsing, and also
+        // corrects lack of spaced command input like the following
+        // ;compile c++ -O3```cpp int main() {} ```
+        for (let i = 0; i < args.length; i++) {
+            const index = args[i].search('`');
+            if (index > 0) {
+                let first = args[i].slice(0, index);
+                let second = args[i].slice(index);
+                args[i] = second;
+                args.splice(i, 0, first);
+            }
         }
-        
-        // we don't handle language parsing here so get rid of it (for now)
-        args.shift();
-        
+
         let argsData = {
+            lang: args[0],
             options: "",
             fileInput: "",
             stdin: "",
         };
+
+        // we don't handle language parsing here so get rid of it
+        args.shift();
 
         while (args.length > 0) {
             let current = args[0];
@@ -85,6 +88,7 @@ export default class CompilationParser {
         argsData.options = argsData.options.trim();
         argsData.fileInput = argsData.fileInput.trim();
         argsData.stdin = argsData.stdin.trim();
+        argsData.lang = argsData.lang.trim();
 
         return argsData;
     }
