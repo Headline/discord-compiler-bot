@@ -46,7 +46,7 @@ export default class UnBlacklistCommand extends CompilerCommand {
             .setTitle('Snowflake Unblacklisted')
             .setDescription(`${guild} has been unblacklisted`)
             .setThumbnail('https://imgur.com/PVBdOYi.png')
-            .setColor(0x99CCFF)
+            .setColor(0x046604)
             .setFooter(`Requested by: ${msg.message.author.tag}`)
         await msg.dispatch('', embed);
 

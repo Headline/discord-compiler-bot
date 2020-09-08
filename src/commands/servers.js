@@ -40,7 +40,7 @@ export default class BotInfoCommand extends CompilerCommand {
             list.push(`${g.name} - ${g.memberCount} members`);
         });
 
-        let menu = new DiscordMessageMenu(msg.message, 'Server list', 0x00FF00, 15);
+        let menu = new DiscordMessageMenu(msg.message, 'Server list', 0x046604, 15);
         menu.buildMenu(list);
 
         try {

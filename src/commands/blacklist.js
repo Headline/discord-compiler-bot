@@ -46,7 +46,7 @@ export default class BlacklistCommand extends CompilerCommand {
             .setTitle('Snowflake Blacklisted')
             .setDescription(`${guild} has been blacklisted`)
             .setThumbnail('https://imgur.com/PVBdOYi.png')
-            .setColor(0x660404)
+            .setColor(0x046604)
             .setFooter(`Requested by: ${msg.message.author.tag}`)
         await msg.dispatch('', embed);
 

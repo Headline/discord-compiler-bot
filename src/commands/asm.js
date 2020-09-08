@@ -1,4 +1,4 @@
-import { MessageEmbed } from 'discord.js'
+import { MessageEmbed, Constants } from 'discord.js'
 import stripAnsi from 'strip-ansi';
 
 import CompilerCommand from './utils/CompilerCommand';
@@ -175,7 +175,7 @@ export default class AsmCommand extends CompilerCommand {
         let items = [];
         godbolt.forEach((language) => items.push(`${language.id}`));
 
-        let menu = new DiscordMessageMenu(msg.message, `Valid Godbolt languages:`, 0x00FF00, 15);
+        let menu = new DiscordMessageMenu(msg.message, `Valid Godbolt languages:`, 0x046604, 15);
         menu.buildMenu(items);
         
         try {
@@ -209,7 +209,7 @@ export default class AsmCommand extends CompilerCommand {
         let items = [];
         language.forEach((compiler) => items.push(`${compiler.name}: **${compiler.id}**`));
 
-        let menu = new DiscordMessageMenu(msg.message, `Valid Godbolt '${language.name}' compilers:`, 0x00FF00, 15, `Select a bold name on the right to use in place of the language in the ${prefix}asm command!`);
+        let menu = new DiscordMessageMenu(msg.message, `Valid Godbolt '${language.name}' compilers:`, 0x046604, 15, `Select a bold name on the right to use in place of the language in the ${prefix}asm command!`);
         menu.buildMenu(items);
         
         try {
