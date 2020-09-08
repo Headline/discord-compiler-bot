@@ -1,4 +1,4 @@
-import { MessageEmbed, Constants } from 'discord.js'
+import { MessageEmbed } from 'discord.js'
 import stripAnsi from 'strip-ansi';
 
 import CompilerCommand from './utils/CompilerCommand';
