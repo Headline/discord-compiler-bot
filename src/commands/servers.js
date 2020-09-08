@@ -23,10 +23,19 @@ export default class BotInfoCommand extends CompilerCommand {
      * @param {CompilerCommandMessage} msg
      */
     async run(msg) {
-        let list = [];
-        let collection = this.client.guilds.cache.sort((g1, g2) => {
+        let guildsArrays = await this.client.shard.broadcastEval(`
+            this.guilds.cache.array();
+        `);
+
+        // Join each guildsArrays (per shard guild list) into a single array
+        // containing a list of all guilds the bot is in
+        let servers = [].concat.apply([], guildsArrays);
+
+        let collection = servers.sort((g1, g2) => {
             return g2.memberCount - g1.memberCount;
         });
+
+        let list = [];
         collection.forEach((g) => {
             list.push(`${g.name} - ${g.memberCount} members`);
         });
