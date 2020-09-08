@@ -78,7 +78,7 @@ describe('Compile Command', function() {
 
         let embed = CompileCommand.buildResponseEmbed(msg, json);
 
-        assert.equal(embed.color, 0x00FF00);
+        assert.equal(embed.color, 0x046604);
         assert.equal(embed.fields.length, 2);
     });
 });
