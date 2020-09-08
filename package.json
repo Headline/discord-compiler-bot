@@ -1,6 +1,6 @@
 {
   "name": "discord-compiler",
-  "version": "2.1.0",
+  "version": "2.1.1",
   "description": "A Discord bot that compiles your spaghetti",
   "main": "index.js",
   "scripts": {
@@ -26,22 +26,22 @@
   },
   "homepage": "https://github.com/headline/discord-compiler#readme",
   "dependencies": {
-    "@babel/cli": "^7.10.3",
-    "@babel/core": "^7.10.3",
-    "@babel/plugin-transform-runtime": "^7.10.3",
-    "@babel/preset-env": "^7.10.3",
-    "@babel/register": "^7.10.3",
-    "@babel/runtime": "^7.10.3",
+    "@babel/cli": "^7.11.6",
+    "@babel/core": "^7.11.6",
+    "@babel/plugin-transform-runtime": "^7.11.5",
+    "@babel/preset-env": "^7.11.5",
+    "@babel/register": "^7.11.5",
+    "@babel/runtime": "^7.11.2",
     "bufferutil": "^4.0.1",
-    "dblapi.js": "^2.4.0",
-    "discord.js": "^12.2.0",
+    "dblapi.js": "^2.4.1",
+    "discord.js": "^12.3.1",
     "dotenv": "^8.2.0",
     "erlpack": "^0.1.3",
-    "mocha": "^8.0.1",
+    "mocha": "^8.1.3",
     "strip-ansi": "^6.0.0",
     "winston": "^3.3.3"
   },
   "devDependencies": {
-    "regenerator-runtime": "^0.13.5"
+    "regenerator-runtime": "^0.13.7"
   }
 }
