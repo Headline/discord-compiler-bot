@@ -73,6 +73,12 @@ describe('Compile Command', function() {
 
         assert.equal(argsData.lang, 'c++');
     });
+    it('Ignore language casing', () => {
+        fakeMessage.content = `;compile C++\n\`\`\`cpp int main() {} \`\`\``
+        let argsData = parser.parseArguments();
+
+        assert.equal(argsData.lang, 'c++');
+    });
     it('Clean language specifier', () => {
         fakeMessage.content = '```cpp\nint main() {}\n```';
         let code = parser.getCodeBlockFromText();

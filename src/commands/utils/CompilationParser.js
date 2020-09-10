@@ -46,7 +46,7 @@ export default class CompilationParser {
         }
 
         let argsData = {
-            lang: args[0],
+            lang: args[0].toLowerCase(),
             options: "",
             fileInput: "",
             stdin: "",
