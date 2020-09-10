@@ -32,22 +32,26 @@ client.commands.registerCommandsIn(join(__dirname, 'commands'));
 
 client.on('guildCreate', async (g) => {
 	const count = await client.getTrueServerCount();
-	client.updateServerCount(count);
 
 	SupportServer.postJoined(g, client.token, client.join_log);
 
-	client.updatePresence();
+	client.shard.broadcastEval(`
+		this.updateServerCount(${count});
+		this.updatePresence();
+	`);
 
 	log.info(`Client#guildCreate -> ${g.name}`);
 	client.shard.send('updateDBL');
 })
 .on('guildDelete', async (g) => {
 	const count = await client.getTrueServerCount();
-	client.updateServerCount(count);
 
 	SupportServer.postLeft(g, client.token, client.join_log);
 
-	client.updatePresence();
+	client.shard.broadcastEval(`
+		this.updateServerCount(${count});
+		this.updatePresence();
+	`);
 
 	log.info(`Client#guildDelete -> ${g.name}`);
 	client.shard.send('updateDBL');
