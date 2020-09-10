@@ -73,7 +73,13 @@ export default class CompileCommand extends CompilerCommand {
 
         let setup = new WandboxSetup(code, lang, argsData.stdin, true, argsData.options, this.client.wandbox);
         setup.fix(this.client.fixer); // can we recover a failed compilation?
+
+        /**
+         * To prevent errors removing a reaction that doesn't exist, we need
+         * to save whether or not the reaction was actually successful
+         */
         let reactionSuccess = false;
+
         if (this.client.loading_emote)
         {
             try {
@@ -91,22 +97,19 @@ export default class CompileCommand extends CompilerCommand {
         }
         catch (e) {
             msg.replyFail(`Wandbox request failure \n ${e.message} \nPlease try again later`);
+            this.removeLoadingReact(msg);
             return;
         }
         if (!json) {
             msg.replyFail(`Invalid Wandbox response \nPlease try again later`);
+            this.removeLoadingReact(msg);
             return;
         }
 
         //remove our react
         if (reactionSuccess && this.client.loading_emote) {
-            try {
-                await msg.message.reactions.resolve(this.client.loading_emote).users.remove(this.client.user);
-            }
-            catch (error) {
-                msg.replyFail(`Unable to remove reactions, am I missing permissions?\n${error}`);
-            }
-        }   
+            this.removeLoadingReact(msg);
+        }
 
         SupportServer.postCompilation(code, lang, json.url, msg.message.author, msg.message.guild, json.status == 0, json.compiler_message, this.client.compile_log, this.client.token);
 
@@ -131,6 +134,20 @@ export default class CompileCommand extends CompilerCommand {
         }
     }
 
+    /**
+     * Removes the loading react from the user's compilation request.
+     * Outputs an error to the channel if an error occured.
+     * 
+     * @param {CompilerCommandMessage} msg message to remove our reaction from
+     */
+    async removeLoadingReact(msg) {
+        try {
+            await msg.message.reactions.resolve(this.client.loading_emote).users.remove(this.client.user);
+        }
+        catch (error) {
+            msg.replyFail(`Unable to remove reactions, am I missing permissions?\n${error}`);
+        }
+    }
     /**
      * Builds a compilation response embed
      * 
