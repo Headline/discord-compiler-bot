@@ -20,6 +20,8 @@ export class Wandbox extends CompilationService {
         // List of compilers WandBox has set up incorrectly and need to be ignored to prevent backend environmental setup errors.
         this.brokencompilers = ['ghc-head'];
 
+        // Cpp isn't broken - but people confuse this for c++ so lets just omit it entirely
+        this.brokenlanguages = ['cpp'];
     }
 
     /**
@@ -40,6 +42,11 @@ export class Wandbox extends CompilationService {
         compilers.forEach((obj) => {
             const lang = obj.language.toLowerCase();
             const compiler = obj.name;
+
+            // Skip broken languages
+            if (this.brokenlanguages.includes(lang)) {
+                return;
+            }
 
             // Skip any broken compilers on WandBox so users cannot accidentally use them.
             if (this.brokencompilers.includes(compiler)) {

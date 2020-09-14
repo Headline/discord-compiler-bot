@@ -45,8 +45,18 @@ export default class CompilationParser {
             }
         }
 
+        // I hate this - I think it'd be cool to allow people to isolate
+        // the c pre-processor, but everyone and their dog confuses this
+        // for c++ so lets limit our on functionality in favor of
+        // usability :(
+        let lang = args[0].toLowerCase();
+        if (lang == 'cpp') {
+            lang = 'c++';
+        }
+
+
         let argsData = {
-            lang: args[0].toLowerCase(),
+            lang: lang,
             options: "",
             fileInput: "",
             stdin: "",
