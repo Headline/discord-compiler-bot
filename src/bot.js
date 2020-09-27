@@ -94,4 +94,8 @@ client.on('guildCreate', async (g) => {
 	log.error(`Client#commandExecutionError -> An error has occured in ${name} command: ${error} in ${guild.name}[${guild.id}]`)
 });
 
+process.on('unhandledRejection', (reason, p) => {
+	log.error(`Process#unhandledRejection -> ${reason.stack} ${p}`);
+});
+
 client.login(process.env.BOT_TOKEN);
