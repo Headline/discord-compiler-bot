@@ -40,11 +40,11 @@ export default class CompilersCommand extends CompilerCommand {
 
         let langs = this.client.wandbox.getCompilers(args[0].toLowerCase()); 
         if (!langs) {
-            msg.replyFail(`The language *\'${args[0]}\'* is either not supported, or you have accidentially typed in the wrong language.` 
+            msg.replyFail(`The language *'${args[0]}'* is either not supported, or you have accidentially typed in the wrong language.` 
             + `Try using the *${this.client.prefix}languages* command to see supported languages!`);
             return;
         }
-        let menu = new DiscordMessageMenu(msg.message, `Supported \'${args[0].toLowerCase()}\' compilers:`, 0x00FF00, 15);
+        let menu = new DiscordMessageMenu(msg.message, `Supported '${args[0].toLowerCase()}' compilers:`, 0x00FF00, 15);
         menu.buildMenu(langs);
 
         try {

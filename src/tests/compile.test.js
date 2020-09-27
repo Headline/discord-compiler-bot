@@ -86,7 +86,7 @@ describe('Compile Command', function() {
         assert.equal(code, '\nint main() {}');
     });
     it('Compilation Embed', async () => {
-        let json = JSON.parse('{ \"permlink\": \"98AbZMTsa5f9MwDd\", \"status\": \"0\", \"url\": \"https://someurl.com\"}')
+        let json = JSON.parse('{ "permlink": "98AbZMTsa5f9MwDd", "status": "0", "url": "https://someurl.com"}')
         
         let msg = {
             message : {

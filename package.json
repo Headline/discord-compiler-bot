@@ -42,6 +42,7 @@
     "winston": "^3.3.3"
   },
   "devDependencies": {
+    "eslint": "^7.10.0",
     "regenerator-runtime": "^0.13.7"
   }
 }

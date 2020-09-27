@@ -22,7 +22,7 @@ export class FixerEntry {
     fix(string) {
         return string.replace(this.regex, this.replace);
     }
-};
+}
 
 /**
  * Helper class to try and catch common compilation errors unique to this environment

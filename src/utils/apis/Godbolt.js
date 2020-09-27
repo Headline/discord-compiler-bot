@@ -113,7 +113,7 @@ export class Godbolt extends CompilationService {
             lang = lang.id;
         }
 
-        return this.findLanguageByAlias(lang) != null;;
+        return this.findLanguageByAlias(lang) != null;
     }
 
     /**
