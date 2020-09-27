@@ -15,7 +15,7 @@ class testobj {
     }
     stop() {
         this.done();
-    };
+    }
 }
 describe('MessageTimeout', function () {
     this.timeout(6000)
