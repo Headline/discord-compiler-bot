@@ -17,7 +17,7 @@ describe('Compile Command', function() {
         let url = 'http://michaelwflaherty.com/files/conversation.txt';
         fakeMessage.content = ';compile c++ < ' + url;
         let argsData = parser.parseArguments();
-        assert.equal(argsData.fileInput, url);
+        assert.strictEqual(argsData.fileInput, url);
     });
     it('Parse options', () => {
         let args = ['-O3', '-std=c++11', '-fake-flag1', '-fake-flag2'];
@@ -26,7 +26,7 @@ describe('Compile Command', function() {
         fakeMessage.content = ';compile c++ ' + expected;
         let argsData = parser.parseArguments();
 
-        assert.equal(argsData.options, expected.trim());
+        assert.strictEqual(argsData.options, expected.trim());
     });
     it('Parse all url', () => {
         let url = 'http://michaelwflaherty.com/files/conversation.txt';
@@ -35,9 +35,9 @@ describe('Compile Command', function() {
         fakeMessage.content = `;compile c++ ${options} < ${url} | ${stdin}`
         let argsData = parser.parseArguments();
 
-        assert.equal(argsData.options, options);
-        assert.equal(argsData.fileInput, url);
-        assert.equal(argsData.stdin, 'testing 1 2 3');
+        assert.strictEqual(argsData.options, options);
+        assert.strictEqual(argsData.fileInput, url);
+        assert.strictEqual(argsData.stdin, 'testing 1 2 3');
     });
     it('Parse all standard', () => {
         let stdin = 'testing 1 2 3';
@@ -45,45 +45,56 @@ describe('Compile Command', function() {
         fakeMessage.content = `;compile c++ ${options} | ${stdin}`
         let argsData = parser.parseArguments();
 
-        assert.equal(argsData.options, options);
-        assert.equal(argsData.stdin, 'testing 1 2 3');
+        assert.strictEqual(argsData.options, options);
+        assert.strictEqual(argsData.stdin, 'testing 1 2 3');
     });
     it('Parse stdin block from text', () => {
         fakeMessage.content = '```\ntesting 1 2 3\n```\n```cpp\nint main() {}\n```'
         const stdin = parser.getStdinBlockFromText();
-        assert.equal(stdin, 'testing 1 2 3');
+        assert.strictEqual(stdin, 'testing 1 2 3');
     });
+    it('Parser stop on newln', () => {
+        fakeMessage.content = ';compile c++\n int main() {}'
 
+        try {
+            //parseArguments() should throw with the given input
+            const out = parser.parseArguments();
+            assert(false);
+        }
+        catch (e) {
+            assert(true);
+        }
+    });
     it('Parse code from text', () => {
         fakeMessage.content = '```\ntesting 1 2 3\n```\n```cpp\nint main() {}\n```'
         const code = parser.getCodeBlockFromText();
-        assert.equal(code, 'cpp\nint main() {}');
+        assert.strictEqual(code, 'cpp\nint main() {}');
     });
     it('Parse no trailing space', () => {
         let options = '-O3 -std=c++11 -fake-flag1 -fake-flag2';
         fakeMessage.content = `;compile c++ ${options}\`\`\`cpp int main() {} \`\`\``
         let argsData = parser.parseArguments();
 
-        assert.equal(argsData.options, options)
-        assert.equal(argsData.lang, 'c++');
+        assert.strictEqual(argsData.options, options)
+        assert.strictEqual(argsData.lang, 'c++');
     });
     it('Parse no trailing space (no options)', () => {
         fakeMessage.content = `;compile c++\`\`\`cpp int main() {} \`\`\``
         let argsData = parser.parseArguments();
 
-        assert.equal(argsData.lang, 'c++');
+        assert.strictEqual(argsData.lang, 'c++');
     });
     it('Ignore language casing', () => {
         fakeMessage.content = `;compile C++\n\`\`\`cpp int main() {} \`\`\``
         let argsData = parser.parseArguments();
 
-        assert.equal(argsData.lang, 'c++');
+        assert.strictEqual(argsData.lang, 'c++');
     });
     it('Clean language specifier', () => {
         fakeMessage.content = '```cpp\nint main() {}\n```';
         let code = parser.getCodeBlockFromText();
         code = CompilationParser.cleanLanguageSpecifier(code);
-        assert.equal(code, '\nint main() {}');
+        assert.strictEqual(code, '\nint main() {}');
     });
     it('Compilation Embed', async () => {
         let json = JSON.parse('{ "permlink": "98AbZMTsa5f9MwDd", "status": "0", "url": "https://someurl.com"}')
@@ -98,7 +109,7 @@ describe('Compile Command', function() {
 
         let embed = CompileCommand.buildResponseEmbed(msg, json);
 
-        assert.equal(embed.color, 0x046604);
-        assert.equal(embed.fields.length, 2);
+        assert.strictEqual(embed.color, 0x046604);
+        assert.strictEqual(embed.fields.length, 2);
     });
 });
