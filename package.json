@@ -37,6 +37,7 @@
     "discord.js": "^12.3.1",
     "dotenv": "^8.2.0",
     "erlpack": "^0.1.3",
+    "heapdump": "^0.3.15",
     "mocha": "^8.1.3",
     "strip-ansi": "^6.0.0",
     "winston": "^3.3.3"
