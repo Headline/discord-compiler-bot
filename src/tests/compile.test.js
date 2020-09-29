@@ -53,7 +53,18 @@ describe('Compile Command', function() {
         const stdin = parser.getStdinBlockFromText();
         assert.strictEqual(stdin, 'testing 1 2 3');
     });
+    it('Parser stop on newln', () => {
+        fakeMessage.content = ';compile c++\n int main() {}'
 
+        try {
+            //parseArguments() should throw with the given input
+            const out = parser.parseArguments();
+            assert(false);
+        }
+        catch (e) {
+            assert(true);
+        }
+    });
     it('Parse code from text', () => {
         fakeMessage.content = '```\ntesting 1 2 3\n```\n```cpp\nint main() {}\n```'
         const code = parser.getCodeBlockFromText();
