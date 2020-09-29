@@ -117,7 +117,9 @@ export default class CompilerCommandMessage {
      * @return {string[]}
      */
     getArgs() {
-        let args = this.message.content.match(/(?:[^\s"]+|"[^"]*")+/g)
+        let newln = this.message.content.indexOf('\n');
+
+        let args = this.message.content.substr(0, newln).match(/(?:[^\s"]+|"[^"]*")+/g)
 
         args.shift()
 
