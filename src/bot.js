@@ -25,7 +25,9 @@ const client = new CompilerClient({
 
 	ws: {
 		intents: ["GUILDS", "GUILD_MESSAGES", "GUILD_MESSAGE_REACTIONS"]
-	}
+	},
+
+	messageCacheMaxSize: 25
 });
 
 client.commands.registerCommandsIn(join(__dirname, 'commands'));
