@@ -74,7 +74,7 @@ export class StatisticsAPI {
     async compilationExecuted(lang, failure) {
         // if we were given a compiler we need to find the langauge
         if (!this.client.wandbox.has(lang)) {
-            this.client.wandbox.forEach((value, key, map) => {
+            this.client.wandbox.forEach((value, key) => {
                 if (value.includes(lang)) {
                     lang = key;
                 }

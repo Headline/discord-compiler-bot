@@ -4,6 +4,7 @@ import { MessageEmbed, Client} from 'discord.js'
 import CompilerCommand from './utils/CompilerCommand'
 import CompilerCommandMessage from './utils/CompilerCommandMessage'
 import CompilerClient from '../CompilerClient'
+import log from '../log'
 
 export default class BotInfoCommand extends CompilerCommand {
     /**
@@ -29,7 +30,14 @@ export default class BotInfoCommand extends CompilerCommand {
         const cpuusage = os.loadavg()[0];
         const playercount = await this.getUserCount(this.client);
 
-        const guildcounts = await this.client.shard.fetchClientValues('guilds.cache.size');
+        let guildcounts = [0, 0];
+        try {
+            guildcounts = await this.client.shard.fetchClientValues('guilds.cache.size')
+        }
+        catch (e) {
+            log.warn(`BotInfoCommand#run -> ${e}`)
+        }
+
         const guildcount = guildcounts.reduce((a, b) => a + b, 0)
     
         const invitelink = this.client.invite_link;
@@ -73,8 +81,13 @@ export default class BotInfoCommand extends CompilerCommand {
      * @returns {Promise<number>}
      */
     async getShardsMemoryUsage(client) {
-        let counts = await client.shard.broadcastEval('process.memoryUsage().heapUsed / 1024 / 1024');
-        return counts.reduce((prev, next) => prev + next, 0);
+        try {
+            let counts = await client.shard.broadcastEval('process.memoryUsage().heapUsed / 1024 / 1024');
+            return counts.reduce((prev, next) => prev + next, 0);    
+        }
+        catch (e) {
+            log.warn(`BotInfoCommand#getShardsMemoryUsage -> ${e}`)
+        }
     }
 
     /**
@@ -107,8 +120,14 @@ export default class BotInfoCommand extends CompilerCommand {
      * @returns {Promise<number>} total users
      */
     async getUserCount(client) {
-        let counts = await client.shard.broadcastEval('this.guilds.cache.reduce((prev, guild) => prev + guild.memberCount, 0)')
-        return counts.reduce((prev, next) => prev + next, 0);
+        try {
+            let counts = await client.shard.broadcastEval('this.guilds.cache.reduce((prev, guild) => prev + guild.memberCount, 0)')
+            return counts.reduce((prev, next) => prev + next, 0);
+        }
+        catch (e) {
+            log.warn(`BotInfoCommand#getShardsMemoryUsage -> ${e}`);
+            return 0;
+        }
     }
 
     /**

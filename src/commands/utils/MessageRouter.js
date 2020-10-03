@@ -190,12 +190,12 @@ class GuildBlacklist {
       this.data = JSON.parse(data);
     }
     catch (error) {
-      log.warn('MessageRouter#Blacklist -> blacklist.json not found, creating...');
+      log.warn('MessageRouter#initialize -> blacklist.json not found, creating...');
       try {
         await this.writeFile();
       }
-      catch (error) {
-        throw (error);
+      catch (e) {
+        log.warn(`MessageRouter#initialize -> ${e}`);
       }
     }
   }
@@ -205,7 +205,7 @@ class GuildBlacklist {
    * 
    * @return {Promise}
    */
-  async writeFile() {
+  writeFile() {
     return new Promise((resolve, reject) => {
       fs.writeFile('blacklist.json', JSON.stringify(this.data), 'utf8', (err) => {
         if (err) {
@@ -221,7 +221,7 @@ class GuildBlacklist {
    * 
    * @return {Promise}
    */
-  async readFile() {
+  readFile() {
     return new Promise((resolve, reject) => {
       fs.readFile('blacklist.json', 'utf8', function (err, data) {
         if (err) {

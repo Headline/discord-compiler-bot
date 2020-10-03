@@ -44,6 +44,7 @@
   },
   "devDependencies": {
     "eslint": "^7.10.0",
+    "eslint-plugin-promise": "^4.2.1",
     "regenerator-runtime": "^0.13.7"
   }
 }

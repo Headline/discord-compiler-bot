@@ -1,18 +1,19 @@
 {
     "env": {
-        "es2021": true,
+        "es6": true,
         "node": true,
 	"mocha": true
     },
     "extends": ["plugin:promise/recommended", "eslint:recommended"],
     "parserOptions": {
-        "ecmaVersion": 12,
+        "ecmaVersion": 2017,
         "sourceType": "module"
     },
     "rules": {
-	"no-unused-vars": "off",
-    	"no-useless-catch": "off",
-	"no-fallthrough": "off"
+	    "no-unused-vars": "off",
+        "no-useless-catch": "off",
+        "require-await": "warn",
+	    "no-fallthrough": "off"
     },
     "plugins": ["promise"]
 }

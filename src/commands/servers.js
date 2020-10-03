@@ -2,6 +2,7 @@ import CompilerCommand from './utils/CompilerCommand'
 import CompilerCommandMessage from './utils/CompilerCommandMessage'
 import CompilerClient from '../CompilerClient'
 import DiscordMessageMenu from '../utils/DiscordMessageMenu'
+import log from '../log'
 
 export default class BotInfoCommand extends CompilerCommand {
     /**
@@ -23,9 +24,15 @@ export default class BotInfoCommand extends CompilerCommand {
      * @param {CompilerCommandMessage} msg
      */
     async run(msg) {
-        let guildsArrays = await this.client.shard.broadcastEval(`
-            this.guilds.cache.array();
-        `);
+        let guildsArrays = [];
+        try {
+            guildsArrays = await this.client.shard.broadcastEval(`
+                this.guilds.cache.array();
+            `);
+        }
+        catch (e) {
+            log.warn(`ServersCommand#run -> ${e}`);
+        }
 
         // Join each guildsArrays (per shard guild list) into a single array
         // containing a list of all guilds the bot is in

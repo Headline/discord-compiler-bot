@@ -7,33 +7,33 @@ const compilers = new Wandbox(null);
 
 describe('Wandbox', function () {
     this.timeout(10000);
-    it('Initialize compilers', async () => {
+    it('Initialize compilers', () => {
         return compilers.initialize();
     });
-    it('Check invalid compiler', async () => {
+    it('Check invalid compiler', () => {
         assert.ok(!compilers.isValidCompiler('c++'));
     });
-    it('Check valid compiler', async () => {
+    it('Check valid compiler', () => {
         assert.ok(compilers.isValidCompiler('clang-3.9.1'));
     });
-    it('Check valid language', async () => {
+    it('Check valid language', () => {
         assert.ok(compilers.has('c++'));
     });
-    it('Check invalid language', async () => {
+    it('Check invalid language', () => {
         assert.ok(!compilers.has('c--'));
     });
-    it('Compiler blacklist', async () => {
+    it('Compiler blacklist', () => {
         let blacklist = compilers.brokencompilers;
         blacklist.forEach(compiler => {
             assert.ok(!compilers.isValidCompiler(compiler));
         });
     });
-    it('Compiler deduction', async () => {
+    it('Compiler deduction', () => {
         let setup = new WandboxSetup('', 'c++', '', false, '', compilers);
         assert.notEqual(setup.compiler, 'c++');
     });
     it('Compilation dispatch', async () => {
         let setup = new WandboxSetup('int main() {}', 'c++', '', true, '', compilers);
-        return setup.compile();
+        return await setup.compile();
     });
 });

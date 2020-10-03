@@ -55,7 +55,7 @@ export default class CommandCollection extends Collection {
      *
      * @param {string} path
      */
-    async registerCommandsIn(path) {
+    registerCommandsIn(path) {
         readdir(path, (err, files) => {
             if (err) {
                 throw new Error(err);

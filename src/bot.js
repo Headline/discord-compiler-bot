@@ -7,6 +7,9 @@ import SupportServer from './SupportServer'
 
 dotenv.config();
 
+// setup unhandled promise catching
+process.on('unhandledRejection', (reason) => { throw reason });
+
 const client = new CompilerClient({
 	prefix: process.env.BOT_PREFIX,
 
@@ -58,7 +61,7 @@ client.on('guildCreate', async (g) => {
 	log.info(`Client#guildDelete -> ${g.name}`);
 	client.shard.send('updateDBL');
 })
-.on('ready', async () => {
+.on('ready', () => {
 	client.hook();
 
 	client.initialize();	

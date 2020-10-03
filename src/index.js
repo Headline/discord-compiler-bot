@@ -9,7 +9,8 @@ dotenv.config();
 
 const manager = new ShardingManager('./build/bot.js', { 
 	token: process.env.BOT_TOKEN,
-	execArgv: ['--async-stack-traces', '--max-old-space-size=256']
+	respawn: true,
+	execArgv: ['--async-stack-traces', '--max-old-space-size=1024']
 });
 
 /**
@@ -89,7 +90,7 @@ manager.on('shardCreate', shard =>  {
 
 	log.info(`ShardingManager#shardCreate -> [Shard ${shard.id}] Created successfully`)
 })
-.once('shardsInitialized', async () => {
+.once('shardsInitialized', () => {
 	dbl = setupDBL();
 	manager.broadcastEval(`
 	(async () => {

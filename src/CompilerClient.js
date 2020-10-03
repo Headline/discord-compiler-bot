@@ -6,6 +6,7 @@ import { Wandbox } from './utils/apis/Wandbox'
 import { StatisticsAPI } from './utils/apis/StatisticsTracking'
 import { Godbolt } from './utils/apis/Godbolt'
 import { CompilationFixer } from './utils/CompilationFixer'
+import log from './log'
 
 /**
  * discord.js client with added utility for general bot operations
@@ -83,11 +84,16 @@ export default class CompilerClient extends Client {
    * Updates the presence with the updated server count
    */
   async updatePresence() {
-    const count = await this.getTrueServerCount();
-    if (this.maintenance)
-      this.user.setPresence({activity: {name: `MAINTENENCE MODE`}, status: 'dnd'});
-    else
-      this.user.setPresence({activity: {name: `in ${count} servers | ${this.prefix}invite`}, status: 'online'});
+    try {
+      const count = await this.getTrueServerCount();
+      if (this.maintenance)
+        this.user.setPresence({activity: {name: `MAINTENENCE MODE`}, status: 'dnd'});
+      else
+        this.user.setPresence({activity: {name: `in ${count} servers | ${this.prefix}invite`}, status: 'online'});  
+    }
+    catch (e) {
+      log.warn(`CompilerClient#updatePresence -> ${e}`)
+    }
   }
 
   /**
@@ -196,10 +202,10 @@ export default class CompilerClient extends Client {
    * hook - Hooks command routing to discord.js client
    */
   hook() {
-    this.on('message', async (message) => {
+    this.on('message', (message) => {
       this.messagerouter.route(message);
     })
-    .on('commandExecuted', async (f) => {
+    .on('commandExecuted', (f) => {
       if (this.shouldTrackStats() && !f.developerOnly)
       {
         this.stats.commandExecuted(f.name);

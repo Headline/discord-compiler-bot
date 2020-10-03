@@ -3,6 +3,7 @@ import CompilerCommandMessage from './utils/CompilerCommandMessage'
 import CompilerClient from '../CompilerClient'
 import DiscordMessageMenu from '../utils/DiscordMessageMenu'
 import { Constants } from 'discord.js';
+import log from '../log'
 
 export default class ShardsCommand extends CompilerCommand {
     /**
@@ -32,16 +33,21 @@ export default class ShardsCommand extends CompilerCommand {
                     this.shard.ids,
                 ];
         `);
-
         let items = [];
-        for (const shard of shardStats) {
-            let str = '';
-            str += `Shard ID: ${shard[3][0]}\n`;
-            str += `Shard Ping: ${shard[1]}ms\n`;
-            str += `Shard Guild Count: ${shard[0]}\n`;
-            str += `Shard Status: ${this.statusToString(shard[2])}`
-            items.push(str);
+        try {
+            for (const shard of shardStats) {
+                let str = '';
+                str += `Shard ID: ${shard[3][0]}\n`;
+                str += `Shard Ping: ${shard[1]}ms\n`;
+                str += `Shard Guild Count: ${shard[0]}\n`;
+                str += `Shard Status: ${this.statusToString(shard[2])}`
+                items.push(str);
+            }    
         }
+        catch (e) {
+            log.warn("ShardsCommand#run -> " + e)
+        }
+
         let menu = new DiscordMessageMenu(msg.message, 'Shard List', 0x046604, 1);
         menu.setNumbered(false);
         menu.buildMenu(items);

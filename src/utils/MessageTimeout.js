@@ -37,7 +37,7 @@ export default class MessageTimeout {
      * @param {Message} message 
      * @param {ReactionCollector} collector 
      */
-    async run(message, collector) {
+    run(message, collector) {
         message.reactions.cache.forEach(async (reaction) => {
             try {
                 await reaction.remove(message.author);

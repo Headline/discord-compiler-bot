@@ -30,7 +30,7 @@ export class FixerEntry {
  * @extends {Collection}
  */
 export class CompilationFixer extends Collection {
-    constructor(client) {
+    constructor() {
         super();
 
         let fixer = new FixerEntry(/public (class)/g, '$1');

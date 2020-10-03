@@ -26,7 +26,6 @@ export default class HeapdumpCommand extends CompilerCommand {
      * @param {CompilerCommandMessage} msg
      */
     async run(msg) {
-        
         heapdump.writeSnapshot((err, string) => {
             if (err) {
                 msg.dispatch(err.message);

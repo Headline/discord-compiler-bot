@@ -74,68 +74,65 @@ export default class DiscordMessageMenu {
      * @param {Message} result 
      */
     async handleMessage(result) {
-        try {
-            if (!result.reactions.resolve(this.stop)) {
-                await result.react(this.left);
-                await result.react(this.stop);
-                await result.react(this.right);
-            }
+        if (!result.reactions.resolve(this.stop)) {
+            await result.react(this.left);
+            await result.react(this.stop);
+            await result.react(this.right);
+        }
 
-            // used after creation of collector to determine whether or not
-            // this is the first call to handleMessage()
-            let first = this.collector == null;
+        // used after creation of collector to determine whether or not
+        // this is the first call to handleMessage()
+        let first = this.collector == null;
 
-            // Reactions
-            this.collector = result.createReactionCollector((reaction, user) => {
-                if (this.targetid == user.id
-                    && (reaction.emoji.name === this.left
-                        || reaction.emoji.name == this.stop
-                        || reaction.emoji.name == this.right)) {
-                    this.collectionuser = user;
-                    return true;
-                }
-                return false;
+        // Reactions
+        this.collector = result.createReactionCollector((reaction, user) => {
+            if (this.targetid == user.id
+                && (reaction.emoji.name === this.left
+                    || reaction.emoji.name == this.stop
+                    || reaction.emoji.name == this.right)) {
+                this.collectionuser = user;
+                return true;
             }
-            ).once("collect", async (reaction) => {
-                try {
-                    const chosen = reaction.emoji.name;
-                    if (chosen == this.left) {
-                        if (this.page > 0)
-                            this.displayPage(--this.page)
-                        else
-                            this.displayPage(this.page)
-                    }
-                    else if (chosen == this.right) {
-                        if (this.page + 1 > this.getMaxPage())
-                            this.displayPage(this.page)
-                        else
-                            this.displayPage(++this.page);
-                    }
-                    else if (chosen == this.stop) {
-                        await result.reactions.removeAll();
-    
-                        this.collector.stop();
-                        this.timeout.stop();
-                        return;
-                    }
-                    this.timeout.restart();
-                    await reaction.users.remove(this.collectionuser);    
+            return false;
+        }, {
+            time: 60000 // lets set a decently long timeout just in case...
+        }
+        ).once("collect", async (reaction) => {
+            try {
+                const chosen = reaction.emoji.name;
+                if (chosen == this.left) {
+                    if (this.page > 0)
+                        this.displayPage(--this.page)
+                    else
+                        this.displayPage(this.page)
                 }
-                catch(err) {
-                    let msg = new CompilerCommandMessage(this.message);
-                    msg.replyFail(`Menu failure: ${err.message}\nAm I missing the "Manage Messages" permission?`);
+                else if (chosen == this.right) {
+                    if (this.page + 1 > this.getMaxPage())
+                        this.displayPage(this.page)
+                    else
+                        this.displayPage(++this.page);
+                }
+                else if (chosen == this.stop) {
+                    await result.reactions.removeAll();
+
                     this.collector.stop();
                     this.timeout.stop();
+                    return;
                 }
-            });
-
-            if (first) {
-                this.timeout = new MessageTimeout(result, this.collector, 30);
-                this.timeout.start();
+                this.timeout.restart();
+                await reaction.users.remove(this.collectionuser);    
             }
-        }
-        catch (error) {
-            throw (error); // throw to higher level
+            catch(err) {
+                let msg = new CompilerCommandMessage(this.message);
+                msg.replyFail(`Menu failure: ${err.message}\nAm I missing the "Manage Messages" permission?`);
+                this.collector.stop();
+                this.timeout.stop();
+            }
+        });
+
+        if (first) {
+            this.timeout = new MessageTimeout(result, this.collector, 30);
+            this.timeout.start();
         }
     }
 
