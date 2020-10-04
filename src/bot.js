@@ -97,6 +97,9 @@ client.on('guildCreate', async (g) => {
 })
 .on('commandExecutionError', (name, guild, error) => {
 	log.error(`Client#commandExecutionError -> An error has occured in ${name} command: ${error} in ${guild.name}[${guild.id}]`)
+})
+.on('memorySweeped', (num) => {
+	log.warn(`Client#memorySweeped -> MemorySweeper sweeped ${num} objects`);
 });
 
 process.on('unhandledRejection', (reason, p) => {

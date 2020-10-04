@@ -34,7 +34,6 @@ describe('Godbolt', function() {
         let compiler = godbolt.findLanguageByAlias('c++').getDefaultCompiler();
         assert.ok(godbolt.isValidCompiler(compiler.id));
     });
-
     it ('Godbolt setup by object', () => {
         let compiler = godbolt.findLanguageByAlias('c++')
         new GodboltSetup(godbolt, 'int sum(int a,int b){return a+b;}', compiler, '-O3');
@@ -45,7 +44,6 @@ describe('Godbolt', function() {
     it ('Godbolt setup by compiler.id', () => {
         new GodboltSetup(godbolt, 'int sum(int a,int b){return a+b;}', 'g101', '-O3');
     });
-
     it ('Godbolt raw dispatch', async () => {
         let setup = new GodboltSetup(godbolt, 'int sum(int a,int b){return a+b;}', 'g101', '-O3');
         return setup.dispatch();
