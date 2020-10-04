@@ -62,7 +62,7 @@ export default class CompilerClient extends Client {
      * Sweeps discord.js caches & deallocates memory
      * @type {MemorySweeper}
      */
-    this.sweeper = new MemorySweeper(this, 30);
+    this.sweeper = new MemorySweeper(this, 60);
 
     /**
      * Determines whether the bot is in maintenance mode

@@ -23,14 +23,7 @@ export default class MemorySweeper {
      * Starts the message timeout timer
      */
     start() {
-        this.timeout = setTimeout(this.run, this.delay * 1000, this.client);
-    }
-
-    /**
-     * Stops the message timeout timer
-     */
-    stop() {
-        clearTimeout(this.timeout);
+        this.timeout = setInterval(this.run, this.delay * 1000, this.client);
     }
 
     /**
@@ -39,8 +32,8 @@ export default class MemorySweeper {
      * @param {CompilerClient} client 
      */
     run(client) {
-        // 30 min ago
-        const comparisonDate = Date.now() - 1000 * 60 * 30;
+        // 1hr ago
+        const comparisonDate = Date.now() - 1000 * 60 * 60;
 
         let deleted = 0;
         deleted = client.users.cache.sweep((usr) => {
@@ -57,11 +50,5 @@ export default class MemorySweeper {
        * @type {number} number of objects sweeped
        */
         client.emit('memorySweeped', deleted);
-        this.restart();
-    }
-
-    restart() {
-        clearTimeout(this.timeout);
-        this.start();
     }
 }
