@@ -85,7 +85,6 @@ export default class CompileCommand extends CompilerCommand {
             try {
                 await msg.message.react(await this.client.getEmojiFromShard(this.client.loading_emote));
                 reactionSuccess = true;
-                return;
             }
             catch (e) {
                 msg.replyFail(`Failed to react to message, am I missing permissions?\n${e}`);
