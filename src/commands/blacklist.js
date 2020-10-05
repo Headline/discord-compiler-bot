@@ -26,16 +26,22 @@ export default class BlacklistCommand extends CompilerCommand {
     async run(msg) {
         const args = msg.getArgs();
 
-        if (args.length != 1)
-            return await msg.replyFail('You must supply a guild or user to blacklist!');
+        if (args.length != 1) {
+            msg.replyFail('You must supply a guild or user to blacklist!');
+            return;
+        }
 
         const guild = args[0];
 
-        if (isNaN(guild))
-            return await msg.replyFail('Specified snowflake is invalid');
+        if (isNaN(guild)) {
+            msg.replyFail('Specified snowflake is invalid');
+            return;
+        }
 
-        if (this.client.messagerouter.blacklist.isBlacklisted(guild))
-            return await msg.replyFail('Specified snowflake is already blacklisted');
+        if (this.client.messagerouter.blacklist.isBlacklisted(guild)) {
+            msg.replyFail('Specified snowflake is already blacklisted');
+            return;
+        }
 
         await this.client.messagerouter.blacklist.blacklist(guild);
 

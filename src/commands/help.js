@@ -31,12 +31,14 @@ export default class HelpCommand extends CompilerCommand {
             const command = args[0].toLowerCase();
 
             if (!this.client.commands.has(command)) {
-                return await msg.replyFail(`Command: ${command} not found!`);
+                msg.replyFail(`Command: ${command} not found!`);
+                return;
             }
 
             let cmd = this.client.commands.get(command);
             if (cmd.developerOnly) {
-                return await msg.replyFail(`Command: ${command} not found!`);
+                msg.replyFail(`Command: ${command} not found!`);
+                return;
             }
 
             await cmd.help(msg);
