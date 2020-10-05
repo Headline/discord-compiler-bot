@@ -85,9 +85,11 @@ export default class CompileCommand extends CompilerCommand {
             try {
                 await msg.message.react(await this.client.getEmojiFromShard(this.client.loading_emote));
                 reactionSuccess = true;
+                return;
             }
             catch (e) {
                 msg.replyFail(`Failed to react to message, am I missing permissions?\n${e}`);
+                return;
             }    
         }
 
@@ -122,10 +124,10 @@ export default class CompileCommand extends CompilerCommand {
         try {
             if (this.client.finished_emote) {
                 const emote = await this.client.getEmojiFromShard(this.client.finished_emote);
-                responsemsg.react((embed.color == 0x660404)?'❌':emote);
+                await responsemsg.react((embed.color == 0x660404)?'❌':emote);
             }
             else {
-                responsemsg.react((embed.color == 0x660404)?'❌': '✅');
+                await responsemsg.react((embed.color == 0x660404)?'❌': '✅');
             }
         }
         catch (error) {

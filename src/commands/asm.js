@@ -92,6 +92,7 @@ export default class AsmCommand extends CompilerCommand {
             }
             catch (e) {
                 msg.replyFail(`Failed to react to message, am I missing permissions?\n${e}`);
+                return;
             }    
         }
 
@@ -120,6 +121,7 @@ export default class AsmCommand extends CompilerCommand {
             }
             catch (error) {
                 msg.replyFail(`Unable to remove reactions, am I missing permissions?\n${error}`);
+                return;
             }
         }   
                 
@@ -154,10 +156,10 @@ export default class AsmCommand extends CompilerCommand {
         try {
             if (this.client.finished_emote) {
                 const emote = await this.client.getEmojiFromShard(this.client.finished_emote);
-                responsemsg.react((embed.color == 0x660404)?'❌':emote);
+                await responsemsg.react((embed.color == 0x660404)?'❌':emote);
             }
             else {
-                responsemsg.react((embed.color == 0x660404)?'❌': '✅');
+                await responsemsg.react((embed.color == 0x660404)?'❌': '✅');
             }
         }
         catch (error) {
