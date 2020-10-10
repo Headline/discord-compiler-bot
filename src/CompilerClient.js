@@ -7,7 +7,6 @@ import { StatisticsAPI } from './utils/apis/StatisticsTracking'
 import { Godbolt } from './utils/apis/Godbolt'
 import { CompilationFixer } from './utils/CompilationFixer'
 import log from './log'
-import MemorySweeper from './utils/MemorySweeper'
 
 /**
  * discord.js client with added utility for general bot operations
@@ -57,12 +56,6 @@ export default class CompilerClient extends Client {
      * @type {CompilationFixer}
      */
     this.fixer = new CompilationFixer();
-
-    /**
-     * Sweeps discord.js caches & deallocates memory
-     * @type {MemorySweeper}
-     */
-    this.sweeper = new MemorySweeper(this, 60);
 
     /**
      * Determines whether the bot is in maintenance mode

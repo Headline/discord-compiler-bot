@@ -10,7 +10,7 @@ dotenv.config();
 const manager = new ShardingManager('./build/bot.js', { 
 	token: process.env.BOT_TOKEN,
 	respawn: true,
-	execArgv: ['--async-stack-traces', '--max-old-space-size=1024']
+	execArgv: ['--async-stack-traces']
 });
 
 /**
