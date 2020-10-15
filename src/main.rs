@@ -33,7 +33,6 @@ use crate::commands::{
     asm::hide::*
 };
 use crate::apis::dbl::BotsListAPI;
-use crate::cache::CacheFiller;
 
 #[group]
 #[commands(botinfo,compile,languages,compilers,ping,help,asm)]
@@ -80,7 +79,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
         .event_handler(events::Handler)
         .await?;
 
-    CacheFiller::fill(client.data.clone(), &prefix).await?;
+    cache::fill(client.data.clone(), &prefix).await?;
 
     let dbl = BotsListAPI::new();
     if dbl.should_spawn() {
