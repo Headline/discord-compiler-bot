@@ -1,0 +1,37 @@
+[package]
+name = "discord-compiler-bot"
+description = "Discord bot to compile your spaghetti code."
+version = "0.1.0"
+authors = ["Michael Flaherty (Headline#9999)"]
+edition = "2018"
+
+[dependencies]
+tokio = { version = "0.2", features = ["full"] }
+reqwest = { version = "0.10" }
+dotenv = "0.15.0"
+regex = "1"
+serenity_utils = "0.5.0"
+log = "0.4"
+pretty_env_logger = "0.3"
+#sysinfo = "0.3.19"
+strip-ansi-escapes = "0.1.0"
+
+#dbl
+dbl-rs = "0.2"
+futures-util = "0.3.6"
+warp = "0.2"
+
+[dependencies.serenity]
+#git = "https://github.com/serenity-rs/serenity"
+#branch = "current"
+#default-features = false
+features = ["framework", "standard_framework", "rustls_backend", "collector", "utils", "gateway"]
+
+version = "0.9.0-rc.2"
+
+[dependencies.wandbox]
+version = "0.1"
+#path = "../wandbox-rs"
+
+[dependencies.godbolt]
+path = "../godbolt"
