@@ -57,7 +57,7 @@ impl EventHandler for Handler {
         info!("Resumed");
     }
 
-    async fn guild_create(&self, ctx: Context, guild: Guild, is_new : bool) {
+    async fn guild_create(&self, ctx: Context, _guild: Guild, is_new : bool) {
         if is_new {
             let data = ctx.data.write().await;
             let mut stats = data.get::<Stats>().unwrap().lock().await;

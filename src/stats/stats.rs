@@ -25,22 +25,32 @@ impl StatsManager {
         return !self.url.is_empty() && !self.pass.is_empty();
     }
 
+    pub async fn compilation(&self, language : &str, fail : bool) {
+        let mut cmd = LanguageRequest::new(language, fail);
+        self.send_request::<LanguageRequest>(&mut cmd).await;
+    }
+
+    pub async fn command_executed(&self, command : &str) {
+        let mut cmd = CommandRequest::new(command);
+        self.send_request::<CommandRequest>(&mut cmd).await;
+    }
+
     pub async fn post_servers(&mut self, amount : usize) {
         self.servers = amount;
-        let mut lang = LegacyRequest::new(Some(amount));
-        self.send_request::<LegacyRequest>(&mut lang).await;
+        let mut legacy = LegacyRequest::new(Some(amount));
+        self.send_request::<LegacyRequest>(&mut legacy).await;
     }
 
     pub async fn new_server(&mut self) {
         self.servers += 1;
-        let mut lang = LegacyRequest::new(Some(self.servers));
-        self.send_request::<LegacyRequest>(&mut lang).await;
+        let mut legacy = LegacyRequest::new(Some(self.servers));
+        self.send_request::<LegacyRequest>(&mut legacy).await;
     }
 
     pub async fn leave_server(&mut self) {
         self.servers -= 1;
-        let mut lang = LegacyRequest::new(Some(self.servers));
-        self.send_request::<LegacyRequest>(&mut lang).await;
+        let mut legacy = LegacyRequest::new(Some(self.servers));
+        self.send_request::<LegacyRequest>(&mut legacy).await;
     }
 
     async fn send_request<T : Sendable + std::marker::Sync>(&self, sendable : & mut T) {

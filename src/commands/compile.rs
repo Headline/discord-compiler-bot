@@ -2,12 +2,11 @@ use serenity::prelude::*;
 use serenity::model::prelude::*;
 use serenity::framework::standard::{Args, CommandResult, macros::command, CommandError};
 
-use crate::cache::{WandboxInfo, BotInfo};
+use crate::cache::{WandboxInfo, BotInfo, Stats};
 use wandbox::*;
 
 use crate::utls::parser::{Parser, ParserResult};
 use crate::utls::discordhelpers::*;
-use serenity::futures::io::ErrorKind;
 
 #[command]
 pub async fn compile(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
@@ -98,6 +97,13 @@ pub async fn compile(ctx: &Context, msg: &Message, _args: Args) -> CommandResult
         reaction = ReactionType::Unicode(String::from("❌"));
     }
     compilation_embed.react(&ctx.http, reaction).await?;
+
+
+    let data = ctx.data.read().await;
+    let stats = data.get::<Stats>().unwrap().lock().await;
+    if stats.should_track() {
+        stats.compilation(&builder.lang, result.status == "1").await;
+    }
     debug!("Command executed");
     Ok(())
 }

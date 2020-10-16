@@ -1895,9 +1895,9 @@ dependencies = [
 
 [[package]]
 name = "wandbox"
-version = "0.1.0"
+version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "775112a94b95b425d169c376e469a1eae9ba771e71bd7f6f3925fd9ba07628c0"
+checksum = "a5e7259f1d57ac29f0afce0f758f073bad9aa665e3f032aa34f7f0eaa394bc6b"
 dependencies = [
  "reqwest",
  "serde",

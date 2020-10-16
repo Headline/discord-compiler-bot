@@ -37,7 +37,6 @@ use crate::apis::dbl::BotsListAPI;
 use serenity::client::Context;
 use serenity::model::channel::Message;
 use serenity::framework::standard::CommandResult;
-use crate::utls::discordhelpers::DiscordHelpers;
 
 #[group]
 #[commands(botinfo,compile,languages,compilers,ping,help,asm)]
@@ -102,12 +101,19 @@ async fn main() -> Result<(), Box<dyn Error>> {
 #[hook]
 async fn after(ctx: &Context, msg: &Message, command_name: &str, command_result: CommandResult) {
     use crate::utls::discordhelpers::DiscordHelpers;
-
+    use crate::cache::{Stats, BotInfo};
     if let Err(e) = command_result {
         let emb = DiscordHelpers::build_fail_embed( &msg.author, &format!("{}", e));
         let mut emb_msg = DiscordHelpers::embed_message(emb);
         if let Err(_) = msg.channel_id.send_message(&ctx.http, |_| &mut emb_msg).await {
             // missing permissions, just ignore...
         }
+    }
+
+    let data = ctx.data.read().await;
+    let stats = data.get::<Stats>().unwrap().lock().await;
+    if stats.should_track() {
+        let info = data.get::<BotInfo>().unwrap().read().await;
+        stats.command_executed(&format!("{}{}", info.get("BOT_PREFIX").expect("No bot prefix?"), command_name)).await;
     }
 }
