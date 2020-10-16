@@ -22,16 +22,11 @@ futures-util = "0.3.6"
 warp = "0.2"
 
 [dependencies.serenity]
-#git = "https://github.com/serenity-rs/serenity"
-#branch = "current"
-#default-features = false
 features = ["framework", "standard_framework", "rustls_backend", "collector", "utils", "gateway"]
-
 version = "0.9.0-rc.2"
 
 [dependencies.wandbox]
 version = "0.1"
-#path = "../wandbox-rs"
 
 [dependencies.godbolt]
 path = "../godbolt"

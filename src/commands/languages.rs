@@ -7,6 +7,7 @@ use serenity::framework::standard::{
 use crate::cache::{WandboxInfo, BotInfo};
 use crate::utls::discordhelpers::DiscordHelpers;
 use serenity_utils::menu::*;
+use serenity::framework::standard::CommandError;
 
 #[command]
 pub async fn languages(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
@@ -14,12 +15,7 @@ pub async fn languages(ctx: &Context, msg: &Message, _args: Args) -> CommandResu
     let wandbox_lock = match data_read.get::<WandboxInfo>() {
         Some(l) => l,
         None => {
-
-            let emb = DiscordHelpers::build_fail_embed( &msg.author,"Internal request failure\nWandbox cache is uninitialized, please file a bug.");
-            let mut emb_msg = DiscordHelpers::embed_message(emb);
-            msg.channel_id.send_message(&ctx.http, |_| &mut emb_msg).await?;
-
-            return Ok(());
+            return Err(CommandError::from("Internal request failure\nWandbox cache is uninitialized, please file a bug."));
         }
     };
     let wbox = wandbox_lock.read().await;
@@ -62,14 +58,7 @@ pub async fn languages(ctx: &Context, msg: &Message, _args: Args) -> CommandResu
                 return Ok(())
             }
 
-            let awd = DiscordHelpers::build_fail_embed( &msg.author, &format!("Failed to build languages menu\n{}", e));
-            msg.channel_id.send_message(&ctx.http, |m| {
-                m.embed(|mut e| {
-                    e.0 = awd.0;
-                    e
-                })
-            }).await?;
-            return Ok(());
+            return Err(CommandError::from(format!("Failed to build languages menu\n{}", e)));
         }
     };
 

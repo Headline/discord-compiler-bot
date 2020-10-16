@@ -133,6 +133,7 @@ use serenity_utils::menu::Menu;
 use crate::cache::{GodboltInfo, BotInfo};
 use crate::utls::discordhelpers::*;
 use crate::utls::constants::*;
+use serenity::framework::standard::CommandError;
 
 #[command]
 async fn compilers(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
@@ -140,24 +141,17 @@ async fn compilers(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
     let godbolt_lock = match data_read.get::<GodboltInfo>() {
         Some(l) => l,
         None => {
-            let emb = DiscordHelpers::build_fail_embed( &msg.author, "Internal request failure\nGodbolt cache is uninitialized, please file a bug.");
-            let mut emb_msg = DiscordHelpers::embed_message(emb);
-            msg.channel_id.send_message(&ctx.http, |_| &mut emb_msg).await?;
-
-            return Ok(());
+            return Err(CommandError::from("Internal request failure\nGodbolt cache is uninitialized, please file a bug."));
         }
     };
 
     if args.is_empty() {
-        let emb = DiscordHelpers::build_fail_embed( &msg.author, "Unable to find language '', did you mean to supply one?");
-        let mut emb_msg = DiscordHelpers::embed_message(emb);
-        msg.channel_id.send_message(&ctx.http, |_| &mut emb_msg).await?;
-        return Ok(());
+        return Err(CommandError::from("No language specified, did you mean to supply one?"));
     }
-    let godbolt = godbolt_lock.read().await;
 
     let language = args.parse::<String>().unwrap();
 
+    let godbolt = godbolt_lock.read().await;
     let mut vec : Vec<String> = Vec::new();
     for cache_entry in &godbolt.cache {
         if cache_entry.language.id == language {
@@ -197,11 +191,7 @@ async fn compilers(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
                 return Ok(())
             }
 
-            let emb = DiscordHelpers::build_fail_embed( &msg.author, &format!("Failed to build asm compilers menu\n{}", e));
-            let mut emb_msg = DiscordHelpers::embed_message(emb);
-            msg.channel_id.send_message(&ctx.http, |_| &mut emb_msg).await?;
-
-            return Ok(());
+            return Err(CommandError::from(format!("Failed to build asm compilers menu\n{}", e)));
         }
     };
 
@@ -216,11 +206,7 @@ async fn languages(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
     let godbolt_lock = match data_read.get::<GodboltInfo>() {
         Some(l) => l,
         None => {
-            let emb = DiscordHelpers::build_fail_embed( &msg.author, "Internal request failure\nGodbolt cache is uninitialized, please file a bug.");
-            let mut emb_msg = DiscordHelpers::embed_message(emb);
-            msg.channel_id.send_message(&ctx.http, |_| &mut emb_msg).await?;
-
-            return Ok(());
+            return Err(CommandError::from("Internal request failure\nGodbolt cache is uninitialized, please file a bug."));
         }
     };
 
@@ -262,11 +248,7 @@ async fn languages(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
                 return Ok(())
             }
 
-            let emb = DiscordHelpers::build_fail_embed( &msg.author, &format!("Failed to build asm compilers menu\n{}", e));
-            let mut emb_msg = DiscordHelpers::embed_message(emb);
-            msg.channel_id.send_message(&ctx.http, |_| &mut emb_msg).await?;
-
-            return Ok(());
+            return Err(CommandError::from(format!("Failed to build asm compilers menu\n{}", e)));
         }
     };
 

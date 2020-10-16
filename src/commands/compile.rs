@@ -1,15 +1,13 @@
 use serenity::prelude::*;
 use serenity::model::prelude::*;
-use serenity::framework::standard::{
-    Args, CommandResult,
-    macros::command,
-};
+use serenity::framework::standard::{Args, CommandResult, macros::command, CommandError};
 
 use crate::cache::{WandboxInfo, BotInfo};
 use wandbox::*;
 
 use crate::utls::parser::{Parser, ParserResult};
 use crate::utls::discordhelpers::*;
+use serenity::futures::io::ErrorKind;
 
 #[command]
 pub async fn compile(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
@@ -29,16 +27,8 @@ pub async fn compile(ctx: &Context, msg: &Message, _args: Args) -> CommandResult
     }
 
     // parse user input
-    let result : ParserResult = match Parser::get_components(&msg.content).await {
-        Ok(r) => r,
-        Err(e) => {
-            let emb = DiscordHelpers::build_fail_embed( &msg.author, &format!("{}", e));
-            let mut emb_msg = DiscordHelpers::embed_message(emb);
-            msg.channel_id.send_message(&ctx.http, |_| &mut emb_msg).await?;
+    let result : ParserResult = Parser::get_components(&msg.content).await?;
 
-            return Ok(());
-        }
-    };
 
     // build user input
     let mut builder = CompilationBuilder::new();
@@ -54,11 +44,7 @@ pub async fn compile(ctx: &Context, msg: &Message, _args: Args) -> CommandResult
     let wandbox_lock = match data_read.get::<WandboxInfo>() {
         Some(l) => l,
         None => {
-            let emb = DiscordHelpers::build_fail_embed( &msg.author, "Internal request failure\nWandbox cache is uninitialized, please file a bug.");
-            let mut emb_msg = DiscordHelpers::embed_message(emb);
-            msg.channel_id.send_message(&ctx.http, |_| &mut emb_msg).await?;
-
-            return Ok(());
+            return Err(CommandError::from("Internal request failure\nWandbox cache is uninitialized, please file a bug."));
         }
     };
     let wbox = wandbox_lock.read().await;
@@ -67,11 +53,7 @@ pub async fn compile(ctx: &Context, msg: &Message, _args: Args) -> CommandResult
     match builder.build(&wbox) {
         Ok(()) => (),
         Err(e) => {
-            let emb = DiscordHelpers::build_fail_embed( &msg.author, &format!("An internal error has occurred while building request.\n{}", e));
-            let mut emb_msg = DiscordHelpers::embed_message(emb);
-            msg.channel_id.send_message(&ctx.http, |_| &mut emb_msg).await?;
-
-            return Ok(());
+            return Err(CommandError::from(format!("An internal error has occurred while building request.\n{}", e)));
         }
     };
 
@@ -79,11 +61,7 @@ pub async fn compile(ctx: &Context, msg: &Message, _args: Args) -> CommandResult
     let reaction = match msg.react(&ctx.http, DiscordHelpers::build_reaction(loading_id, &loading_name)).await {
         Ok(r) => r,
         Err(e) => {
-            let emb = DiscordHelpers::build_fail_embed( &msg.author, &format!(" Unable to react to message, am I missing permissions?\n{}", e));
-            let mut emb_msg = DiscordHelpers::embed_message(emb);
-            msg.channel_id.send_message(&ctx.http, |_| &mut emb_msg).await?;
-
-            return Ok(());
+            return Err(CommandError::from(format!(" Unable to react to message, am I missing permissions?\n{}", e)));
         }
     };
 
@@ -91,14 +69,10 @@ pub async fn compile(ctx: &Context, msg: &Message, _args: Args) -> CommandResult
     let result = match builder.dispatch().await {
         Ok(r) => r,
         Err(e) => {
-
-            let emb = DiscordHelpers::build_fail_embed( &msg.author, &format!("{}", e));
-            let mut emb_msg = DiscordHelpers::embed_message(emb);
-            msg.channel_id.send_message(&ctx.http, |_| &mut emb_msg).await?;
-
             // we failed, lets remove the loading react so it doesn't seem like we're still processing
             msg.delete_reaction_emoji(&ctx.http, reaction.emoji.clone()).await?;
-            return Ok(());
+
+            return Err(CommandError::from(format!("{}", e)));
         }
     };
 
@@ -106,9 +80,7 @@ pub async fn compile(ctx: &Context, msg: &Message, _args: Args) -> CommandResult
     match msg.delete_reaction_emoji(&ctx.http, reaction.emoji.clone()).await {
         Ok(()) => (),
         Err(_e) => {
-            let emb = DiscordHelpers::build_fail_embed( &msg.author, "Unable to remove reactions!\nAm I missing permission to manage messages?");
-            let mut emb_msg = DiscordHelpers::embed_message(emb);
-            msg.channel_id.send_message(&ctx.http, |_| &mut emb_msg).await?;
+            return Err(CommandError::from("Unable to remove reactions!\nAm I missing permission to manage messages?"));
         }
     }
 
@@ -117,6 +89,7 @@ pub async fn compile(ctx: &Context, msg: &Message, _args: Args) -> CommandResult
     let mut emb_msg = DiscordHelpers::embed_message(emb);
     let compilation_embed = msg.channel_id.send_message(&ctx.http, |_| &mut emb_msg).await?;
 
+    // Success/fail react
     let reaction;
     if result.status == "0" {
         reaction = DiscordHelpers::build_reaction(success_id, &success_name);

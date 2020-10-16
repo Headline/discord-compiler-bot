@@ -7,6 +7,7 @@ use serenity::framework::standard::{
 use crate::cache::{WandboxInfo, BotInfo};
 use crate::utls::discordhelpers::DiscordHelpers;
 use serenity_utils::menu::*;
+use serenity::framework::standard::CommandError;
 
 #[command]
 pub async fn compilers(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
@@ -14,11 +15,7 @@ pub async fn compilers(ctx: &Context, msg: &Message, _args: Args) -> CommandResu
     let language = match _args.parse::<String>() {
         Ok(s) => s,
         Err(_e) => {
-            let emb = DiscordHelpers::build_fail_embed( &msg.author, "No language specified!\nPlease try giving me a language to search");
-            let mut emb_msg = DiscordHelpers::embed_message(emb);
-            msg.channel_id.send_message(&ctx.http, |_| &mut emb_msg).await?;
-
-            return Ok(())
+            return Err(CommandError::from("No language specified!\nPlease try giving me a language to search"));
         }
     };
 
@@ -28,12 +25,7 @@ pub async fn compilers(ctx: &Context, msg: &Message, _args: Args) -> CommandResu
     let wandbox_lock = match data_read.get::<WandboxInfo>() {
         Some(l) => l,
         None => {
-            // no lock :(
-            let emb = DiscordHelpers::build_fail_embed( &msg.author, "Internal request failure.\nWandbox cache is uninitialized, please file a bug if this error persists");
-            let mut emb_msg = DiscordHelpers::embed_message(emb);
-            msg.channel_id.send_message(&ctx.http, |_| &mut emb_msg).await?;
-
-            return Ok(());
+            return Err(CommandError::from("Internal request failure.\nWandbox cache is uninitialized, please file a bug if this error persists"));
         }
     };
 
@@ -42,11 +34,7 @@ pub async fn compilers(ctx: &Context, msg: &Message, _args: Args) -> CommandResu
     let lang = match wbox.get_compilers(&language) {
         Some(s) => s,
         None => {
-            let emb = DiscordHelpers::build_fail_embed( &msg.author, &format!("Could not find language '{}'", &language));
-            let mut emb_msg = DiscordHelpers::embed_message(emb);
-            msg.channel_id.send_message(&ctx.http, |_| &mut emb_msg).await?;
-
-            return Ok(())
+            return Err(CommandError::from(format!("Could not find language '{}'", &language)));
         }
     };
 
@@ -88,11 +76,7 @@ pub async fn compilers(ctx: &Context, msg: &Message, _args: Args) -> CommandResu
                 return Ok(())
             }
 
-            let emb = DiscordHelpers::build_fail_embed( &msg.author, &format!("Failed to build languages menu\n{}", e));
-            let mut emb_msg = DiscordHelpers::embed_message(emb);
-            msg.channel_id.send_message(&ctx.http, |_| &mut emb_msg).await?;
-
-            return Ok(());
+            return Err(CommandError::from(format!("Failed to build languages menu\n{}", e)));
         }
     };
 

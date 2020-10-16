@@ -14,7 +14,7 @@ use std::{
 use serenity::{
     framework::{
         StandardFramework,
-        standard::macros::group,
+        standard::macros::{group, hook},
     },
     http::Http,
 };
@@ -34,6 +34,10 @@ use crate::commands::{
     asm::hide::*
 };
 use crate::apis::dbl::BotsListAPI;
+use serenity::client::Context;
+use serenity::model::channel::Message;
+use serenity::framework::standard::CommandResult;
+use crate::utls::discordhelpers::DiscordHelpers;
 
 #[group]
 #[commands(botinfo,compile,languages,compilers,ping,help,asm)]
@@ -74,6 +78,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
         .configure(|c| c
         .owners(owners)
         .prefix(&prefix))
+        .after(after)
         .group(&GENERAL_GROUP);
     let mut client = serenity::Client::new(token)
         .framework(framework)
@@ -92,4 +97,20 @@ async fn main() -> Result<(), Box<dyn Error>> {
     }
 
     Ok(())
+}
+
+#[hook]
+async fn after(ctx: &Context, msg: &Message, command_name: &str, command_result: CommandResult) {
+    use crate::utls::discordhelpers::DiscordHelpers;
+
+    match command_result {
+        Ok(()) => println!("Processed command '{}'", command_name),
+        Err(e) => {
+            let emb = DiscordHelpers::build_fail_embed( &msg.author, &format!("{}", e));
+            let mut emb_msg = DiscordHelpers::embed_message(emb);
+            if let Err(_) = msg.channel_id.send_message(&ctx.http, |_| &mut emb_msg).await {
+                // missing permissions, just ignore...
+            }
+        },
+    }
 }
