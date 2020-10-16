@@ -117,7 +117,6 @@ async fn after(ctx: &Context, msg: &Message, command_name: &str, command_result:
     let data = ctx.data.read().await;
     let stats = data.get::<Stats>().unwrap().lock().await;
     if stats.should_track() {
-        let info = data.get::<BotInfo>().unwrap().read().await;
-        stats.command_executed(&format!("{}{}", info.get("BOT_PREFIX").expect("No bot prefix?"), command_name)).await;
+        stats.command_executed(command_name).await;
     }
 }
