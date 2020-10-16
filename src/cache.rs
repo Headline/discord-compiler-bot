@@ -8,6 +8,7 @@ use wandbox::Wandbox;
 use godbolt::Godbolt;
 use serenity::futures::lock::Mutex;
 use std::error::Error;
+use crate::stats::stats::StatsManager;
 
 /** Caching **/
 pub struct BotInfo;
@@ -32,6 +33,11 @@ impl TypeMapKey for DBLApi {
 pub struct ShardServers;
 impl TypeMapKey for ShardServers {
     type Value = Arc<Mutex<Vec<usize>>>;
+}
+
+pub struct Stats;
+impl TypeMapKey for Stats {
+    type Value = Arc<Mutex<StatsManager>>;
 }
 
 pub async fn fill(data : Arc<RwLock<TypeMap>>, prefix : &str) -> Result<(), Box<dyn Error>>{
@@ -63,5 +69,13 @@ pub async fn fill(data : Arc<RwLock<TypeMap>>, prefix : &str) -> Result<(), Box<
 
     // DBL
     data.insert::<ShardServers>(Arc::new(Mutex::new(Vec::new())));
+
+    // Stats tracking
+    let stats = StatsManager::new();
+    if stats.should_track() {
+        info!("Statistics tracking enabled");
+    }
+    data.insert::<Stats>(Arc::new(Mutex::new(stats)));
+
     Ok(())
 }

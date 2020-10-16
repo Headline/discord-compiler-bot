@@ -13,8 +13,8 @@ regex = "1"
 serenity_utils = "0.5.0"
 log = "0.4"
 pretty_env_logger = "0.3"
-#sysinfo = "0.3.19"
 strip-ansi-escapes = "0.1.0"
+serde = { version = "1.0.*", features = ["derive"] }
 
 #dbl
 dbl-rs = "0.2"

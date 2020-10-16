@@ -3,6 +3,7 @@ mod apis;
 mod commands;
 mod cache;
 mod events;
+mod stats;
 
 use std::{
     collections::HashSet,
