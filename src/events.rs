@@ -73,10 +73,13 @@ impl EventHandler for Handler {
                     DiscordHelpers::manual_dispatch(ctx.http, id, emb).await;
                 }
             }
+            info!("Joining {}", guild.name);
         }
     }
 
     async fn guild_delete(&self, ctx: Context, incomplete: PartialGuild, _full: Option<Guild>) {
+        info!("Leaving {}", incomplete.name);
+
         let data = ctx.data.write().await;
         let mut stats = data.get::<Stats>().unwrap().lock().await;
         if stats.should_track() {
@@ -89,7 +92,6 @@ impl EventHandler for Handler {
                 DiscordHelpers::manual_dispatch(ctx.http, id, emb).await;
             }
         }
-
     }
 
 }

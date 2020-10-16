@@ -224,6 +224,7 @@ impl DiscordHelpers {
 
     pub fn build_join_embed(guild : &Guild) -> CreateEmbed {
         let mut embed = CreateEmbed::default();
+        embed.title("Guild joined");
         embed.color(COLOR_OKAY);
         embed.field("Name", guild.name.clone(), true);
         embed.field("Members", guild.member_count, true);
@@ -238,12 +239,34 @@ impl DiscordHelpers {
 
     pub fn build_leave_embed(guild : &PartialGuild) -> CreateEmbed {
         let mut embed = CreateEmbed::default();
+        embed.title("Guild left");
         embed.color(COLOR_FAIL);
         embed.field("Name", guild.name.clone(), true);
         if let Some(icon) = guild.icon_url() {
             embed.thumbnail(icon);
         }
         embed.field("Region", guild.region.clone(), true);
+        embed
+    }
+
+    pub fn build_complog_embed(success : bool, input_code : &str, lang : &str, tag : &str, guild : &str) -> CreateEmbed {
+        let mut embed = CreateEmbed::default();
+        if success {
+            embed.color(COLOR_FAIL);
+
+        } else {
+            embed.color(COLOR_OKAY);
+        }
+        embed.title("Compilation requested");
+        embed.field("Language", lang, true);
+        embed.field("Author", tag, true);
+        embed.field("Guild", guild, true);
+        let mut code = String::from(input_code);
+        if code.len() > 800 {
+            code = code[..800].to_owned();
+        }
+        embed.field("Code", format!("```{}\n{}\n```", lang, code), false);
+
         embed
     }
 

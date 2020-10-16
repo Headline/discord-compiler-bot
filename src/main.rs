@@ -37,6 +37,7 @@ use crate::apis::dbl::BotsListAPI;
 use serenity::client::Context;
 use serenity::model::channel::Message;
 use serenity::framework::standard::CommandResult;
+use serenity::client::bridge::gateway::GatewayIntents;
 
 #[group]
 #[commands(botinfo,compile,languages,compilers,ping,help,asm)]
@@ -82,6 +83,9 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let mut client = serenity::Client::new(token)
         .framework(framework)
         .event_handler(events::Handler)
+        .add_intent(GatewayIntents::GUILDS)
+        .add_intent(GatewayIntents::GUILD_MESSAGES)
+        .add_intent(GatewayIntents::GUILD_MESSAGE_REACTIONS)
         .await?;
 
     cache::fill(client.data.clone(), &prefix).await?;

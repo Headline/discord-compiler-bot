@@ -7,6 +7,7 @@ use wandbox::*;
 
 use crate::utls::parser::{Parser, ParserResult};
 use crate::utls::discordhelpers::*;
+use std::env;
 
 #[command]
 pub async fn compile(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
@@ -26,16 +27,16 @@ pub async fn compile(ctx: &Context, msg: &Message, _args: Args) -> CommandResult
     }
 
     // parse user input
-    let result : ParserResult = Parser::get_components(&msg.content).await?;
+    let parse_result : ParserResult = Parser::get_components(&msg.content).await?;
 
 
     // build user input
     let mut builder = CompilationBuilder::new();
-    builder.code(&result.code);
-    builder.target(&result.target);
-    builder.stdin(&result.stdin);
+    builder.code(&parse_result.code);
+    builder.target(&parse_result.target);
+    builder.stdin(&parse_result.stdin);
     builder.save(true);
-    builder.options(result.options);
+    builder.options(parse_result.options);
 
 
     // aquire lock to our wandbox cache
@@ -104,6 +105,19 @@ pub async fn compile(ctx: &Context, msg: &Message, _args: Args) -> CommandResult
     if stats.should_track() {
         stats.compilation(&builder.lang, result.status == "1").await;
     }
+
+    let mut guild = String::from("<unknown>");
+    if let Some(g) = msg.guild_id {
+        guild = g.to_string()
+    }
+    if let Ok(log) = env::var("COMPILE_LOG") {
+        if let Ok(id) = log.parse::<u64>() {
+            let emb = DiscordHelpers::build_complog_embed(result.status == "1",
+        &parse_result.code, &builder.lang, &msg.author.tag(), &guild);
+            DiscordHelpers::manual_dispatch(ctx.http.clone(), id, emb).await;
+        }
+    }
+
     debug!("Command executed");
     Ok(())
 }
