@@ -38,6 +38,7 @@ use serenity::client::Context;
 use serenity::model::channel::Message;
 use serenity::framework::standard::CommandResult;
 use serenity::client::bridge::gateway::GatewayIntents;
+use serenity::model::id::UserId;
 
 #[group]
 #[commands(botinfo,compile,languages,compilers,ping,help,asm)]
@@ -53,8 +54,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     let token = env::var("BOT_TOKEN")?;
     let http = Http::new_with_token(&token);
-
-    let (owners, _bot_id) = match http.get_current_application_info().await {
+    let (owners, bot_id) = match http.get_current_application_info().await {
         Ok(info) => {
             let mut owners = HashSet::new();
 
@@ -88,7 +88,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
         .add_intent(GatewayIntents::GUILD_MESSAGE_REACTIONS)
         .await?;
 
-    cache::fill(client.data.clone(), &prefix).await?;
+    cache::fill(client.data.clone(), &prefix, &bot_id).await?;
 
     let dbl = BotsListAPI::new();
     if dbl.should_spawn() {

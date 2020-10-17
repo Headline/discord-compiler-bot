@@ -9,6 +9,7 @@ use godbolt::Godbolt;
 use serenity::futures::lock::Mutex;
 use std::error::Error;
 use crate::stats::stats::StatsManager;
+use serenity::model::id::UserId;
 
 /** Caching **/
 pub struct BotInfo;
@@ -40,7 +41,7 @@ impl TypeMapKey for Stats {
     type Value = Arc<Mutex<StatsManager>>;
 }
 
-pub async fn fill(data : Arc<RwLock<TypeMap>>, prefix : &str) -> Result<(), Box<dyn Error>>{
+pub async fn fill(data : Arc<RwLock<TypeMap>>, prefix : &str, id : &UserId) -> Result<(), Box<dyn Error>>{
     let mut data = data.write().await;
 
     // Lets map some common things in BotInfo
@@ -50,6 +51,7 @@ pub async fn fill(data : Arc<RwLock<TypeMap>>, prefix : &str) -> Result<(), Box<
     map.insert("LOADING_EMOJI_ID", env::var("LOADING_EMOJI_ID")?);
     map.insert("LOADING_EMOJI_NAME", env::var("LOADING_EMOJI_NAME")?);
     map.insert("BOT_PREFIX", String::from(prefix));
+    map.insert("BOT_ID", id.to_string());
     data.insert::<BotInfo>(Arc::new(RwLock::new(map)));
 
     // Wandbox
