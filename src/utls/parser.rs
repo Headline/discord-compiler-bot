@@ -33,9 +33,6 @@ impl Error for ParserError {
     }
 }
 
-use crate::utls::constants::*;
-use regex::Regex;
-
 impl Parser {
     pub async fn get_components(input : &str) -> Result<ParserResult, ParserError> {
 
@@ -79,6 +76,9 @@ impl Parser {
                     if stdin.contains("```") {
                         break;
                     }
+                    if *stdin == "<" {
+                        return Err(ParserError::new("`|`` operator should be last, unable to continue"))
+                    }
                     input.push_str(stdin);
                     input.push_str(" ");
                 }
@@ -104,25 +104,19 @@ impl Parser {
             result.code = body;
         }
         else {
-            if !input.contains("```") {
-                return Err(ParserError::new("You must attach codeblocks containing code to your message"))
-            }
-            Parser::find_code_block(&mut result, input);
-            Parser::strip_language_code(& mut result);
+            Parser::find_code_block(&mut result, input)?;
+        }
 
+        if !result.url.is_empty() && !result.code.is_empty() {
+            result.stdin = result.code;
+            result.code = String::new();
         }
         Ok(result)
     }
 
-    fn strip_language_code(result : & mut ParserResult) {
-        let mut vec : Vec<&str> = result.code.split_whitespace().collect();
-        if DISCORD_LANGUAGE_CODES.contains(&vec[0]) {
-            let removed = vec.remove(0);
-            result.code = result.code[removed.len()..].trim().to_string();
-        }
-    }
-    fn find_code_block(result : & mut ParserResult, haystack : &str) {
-        let re = Regex::new("```([\\s\\S]*?)```").unwrap();
+    fn find_code_block(result : & mut ParserResult, haystack : &str) -> Result<(), ParserError> {
+        use regex::Regex;
+        let re = Regex::new(r"```[\S\s]*?\n([\s\S]*?)```").unwrap();
         let matches = re.captures_iter(haystack);
 
         let mut captures : Vec<&str> = Vec::new();
@@ -135,8 +129,11 @@ impl Parser {
             result.code = String::from(captures[1]);
             result.stdin = String::from(captures[0]);
         }
-        else {
+        else if captures.len() == 1 {
             result.code = String::from(captures[0]);
+        } else {
+            return Err(ParserError::new("You must attach a code-block containing code to your message"))
         }
+        Ok(())
     }
 }

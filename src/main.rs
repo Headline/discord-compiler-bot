@@ -104,7 +104,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
 #[hook]
 async fn after(ctx: &Context, msg: &Message, command_name: &str, command_result: CommandResult) {
     use crate::utls::discordhelpers::DiscordHelpers;
-    use crate::cache::{Stats, BotInfo};
+    use crate::cache::{Stats};
     if let Err(e) = command_result {
         let emb = DiscordHelpers::build_fail_embed( &msg.author, &format!("{}", e));
         let mut emb_msg = DiscordHelpers::embed_message(emb);
