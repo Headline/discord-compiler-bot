@@ -1,5 +1,4 @@
 .env
-blacklist.json
 
 #Added by cargo
 /target
