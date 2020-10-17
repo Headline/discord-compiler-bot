@@ -79,11 +79,19 @@ export default class CompilationParser {
             }
             // pipe operator should be last, everything after it should be stdin
             else if (current == '|') {
-                do {
-                    args.shift(); // kill previous
-                    current = args[0];
-                    argsData.stdin += current + ' ';
-                } while (args.length > 1 && !args[1].includes('```'));
+                const regex = /```([\s\S]*?)```/g;
+                regex.lastIndex = this.message.message.content.search('|');
+                let match = regex.exec(this.message.message.content);
+                if (match && (this.getStdinBlockFromText() || argsData.fileInput)) {
+                    argsData.stdin = match[0].substring(3, match[0].length - 3);
+                } else {
+                    do {
+                        args.shift(); // kill previous
+                        current = args[0];
+                        argsData.stdin += current + ' ';
+                    } while (args.length > 1 && !args[1].includes('```'));  
+                }
+
                 args = []; // stop parsing
             }
             // anything else should just be an option

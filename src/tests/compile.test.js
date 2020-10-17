@@ -43,8 +43,7 @@ describe('Compile Command', function() {
         let url = 'http://michaelwflaherty.com/files/conversation.txt';
         let stdin = 'testing 1 2 3';
         let options = '-O3 -std=c++11 -fake-flag1 -fake-flag2';
-        fakeMessage.content = `;compile c++ ${options} < ${url} | \`\`\`
-${stdin}\`\`\``
+        fakeMessage.content = `;compile c++ ${options} < ${url} | \`\`\`\n${stdin}\`\`\``
         let argsData = parser.parseArguments();
 
         assert.strictEqual(argsData.options, options);
@@ -54,7 +53,7 @@ ${stdin}\`\`\``
     it('Parse all standard', () => {
         let stdin = 'testing 1 2 3';
         let options = '-O3 -std=c++11 -fake-flag1 -fake-flag2';
-        fakeMessage.content = `;compile c++ ${options} | ${stdin}`
+        fakeMessage.content = `;compile c++ ${options} | ${stdin}\n\`\`\`cpp\nint main() {}\n\`\`\``
         let argsData = parser.parseArguments();
 
         assert.strictEqual(argsData.options, options);
@@ -63,8 +62,7 @@ ${stdin}\`\`\``
     it('Parse all standard - code block stdin', () => {
         let stdin = 'testing 1 2 3';
         let options = '-O3 -std=c++11 -fake-flag1 -fake-flag2';
-        fakeMessage.content = `;compile c++ ${options} | \`\`\`
-${stdin}\`\`\``
+        fakeMessage.content = `;compile c++ ${options} | \`\`\`\n${stdin}\`\`\`\n\`\`\`cpp\nint main() {}\n\`\`\``
         let argsData = parser.parseArguments();
 
         assert.strictEqual(argsData.options, options);
