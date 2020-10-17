@@ -39,10 +39,32 @@ describe('Compile Command', function() {
         assert.strictEqual(argsData.fileInput, url);
         assert.strictEqual(argsData.stdin, 'testing 1 2 3');
     });
+    it('Parse all url - code block stdin', () => {
+        let url = 'http://michaelwflaherty.com/files/conversation.txt';
+        let stdin = 'testing 1 2 3';
+        let options = '-O3 -std=c++11 -fake-flag1 -fake-flag2';
+        fakeMessage.content = `;compile c++ ${options} < ${url} | \`\`\`
+${stdin}\`\`\``
+        let argsData = parser.parseArguments();
+
+        assert.strictEqual(argsData.options, options);
+        assert.strictEqual(argsData.fileInput, url);
+        assert.strictEqual(argsData.stdin, 'testing 1 2 3');
+    });
     it('Parse all standard', () => {
         let stdin = 'testing 1 2 3';
         let options = '-O3 -std=c++11 -fake-flag1 -fake-flag2';
         fakeMessage.content = `;compile c++ ${options} | ${stdin}`
+        let argsData = parser.parseArguments();
+
+        assert.strictEqual(argsData.options, options);
+        assert.strictEqual(argsData.stdin, 'testing 1 2 3');
+    });
+    it('Parse all standard - code block stdin', () => {
+        let stdin = 'testing 1 2 3';
+        let options = '-O3 -std=c++11 -fake-flag1 -fake-flag2';
+        fakeMessage.content = `;compile c++ ${options} | \`\`\`
+${stdin}\`\`\``
         let argsData = parser.parseArguments();
 
         assert.strictEqual(argsData.options, options);
