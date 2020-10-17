@@ -50,6 +50,7 @@ pub async fn fill(data : Arc<RwLock<TypeMap>>, prefix : &str, id : &UserId) -> R
     map.insert("SUCCESS_EMOJI_NAME", env::var("SUCCESS_EMOJI_NAME")?);
     map.insert("LOADING_EMOJI_ID", env::var("LOADING_EMOJI_ID")?);
     map.insert("LOADING_EMOJI_NAME", env::var("LOADING_EMOJI_NAME")?);
+    map.insert("JOIN_LOG", env::var("JOIN_LOG")?);
     map.insert("BOT_PREFIX", String::from(prefix));
     map.insert("BOT_ID", id.to_string());
     data.insert::<BotInfo>(Arc::new(RwLock::new(map)));

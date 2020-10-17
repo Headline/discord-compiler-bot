@@ -237,15 +237,11 @@ impl DiscordHelpers {
         embed
     }
 
-    pub fn build_leave_embed(guild : &PartialGuild) -> CreateEmbed {
+    pub fn build_leave_embed(guild : &GuildId) -> CreateEmbed {
         let mut embed = CreateEmbed::default();
         embed.title("Guild left");
         embed.color(COLOR_FAIL);
-        embed.field("Name", guild.name.clone(), true);
-        if let Some(icon) = guild.icon_url() {
-            embed.thumbnail(icon);
-        }
-        embed.field("Region", guild.region.clone(), true);
+        embed.field("ID", format!("{}", guild.0), true);
         embed
     }
 

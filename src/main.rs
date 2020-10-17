@@ -38,7 +38,6 @@ use serenity::client::Context;
 use serenity::model::channel::Message;
 use serenity::framework::standard::CommandResult;
 use serenity::client::bridge::gateway::GatewayIntents;
-use serenity::model::id::UserId;
 
 #[group]
 #[commands(botinfo,compile,languages,compilers,ping,help,asm)]
