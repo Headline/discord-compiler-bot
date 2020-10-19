@@ -10,7 +10,6 @@ tokio = { version = "0.2", features = ["full"] }
 reqwest = { version = "0.10" }
 dotenv = "0.15.0"
 regex = "1"
-serenity_utils = "0.5.0"
 log = "0.4"
 pretty_env_logger = "0.3"
 strip-ansi-escapes = "0.1.0"
@@ -20,13 +19,23 @@ serde = { version = "1.0.*", features = ["derive"] }
 dbl-rs = "0.2"
 futures-util = "0.3.6"
 warp = "0.2"
+chrono = "0.4.19"
+
 
 [dependencies.serenity]
-features = ["framework", "standard_framework", "rustls_backend", "collector", "utils", "gateway"]
-version = "0.9.0-rc.2"
+default-features = false
+features = ["collector", "gateway", "builder", "standard_framework", "http", "model", "client", "framework", "utils", "rustls_backend"]
+git = "https://github.com/Headline/serenity"
+branch = "compiler"
 
 [dependencies.wandbox]
 version = "0.1"
 
 [dependencies.godbolt]
-path = "../godbolt"
+git = "https://github.com/Headline/godbolt-rs"
+
+[dependencies.serenity_utils]
+default-features = false
+features = ["rustls_backend"]
+git = "https://github.com/Headline/serenity-utils"
+branch = "compiler"

@@ -196,8 +196,7 @@ dependencies = [
 [[package]]
 name = "command_attr"
 version = "0.3.0-rc.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6745770e89e5e4583424362f15f91c8bb0ef54387d209af30e0446d08909ae7d"
+source = "git+https://github.com/Headline/serenity?branch=compiler#5362980dcd661e254f9157e71c6e8ad6fae66385"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -269,6 +268,7 @@ dependencies = [
 name = "discord-compiler-bot"
 version = "0.1.0"
 dependencies = [
+ "chrono",
  "dbl-rs",
  "dotenv",
  "futures-util",
@@ -509,6 +509,7 @@ dependencies = [
 [[package]]
 name = "godbolt"
 version = "0.1.0"
+source = "git+https://github.com/Headline/godbolt-rs#d74685ea860f8df18b659d7c94f09fc4b4628616"
 dependencies = [
  "reqwest",
  "serde",
@@ -1451,8 +1452,7 @@ dependencies = [
 [[package]]
 name = "serenity"
 version = "0.9.0-rc.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d179c8684cccfc95898c4a97ba3cb8787dd8db5e3f8cb645efd129ddb1a7dd7f"
+source = "git+https://github.com/Headline/serenity?branch=compiler#5362980dcd661e254f9157e71c6e8ad6fae66385"
 dependencies = [
  "async-trait",
  "async-tungstenite",
@@ -1477,9 +1477,8 @@ dependencies = [
 
 [[package]]
 name = "serenity_utils"
-version = "0.5.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bb9fd2e51d5cee31959e328dcd8a635443a9cb3a2818d891b6b7e8ee3f477fb3"
+version = "0.5.1"
+source = "git+https://github.com/Headline/serenity-utils?branch=compiler#16c26e9dedd33a5fc96b4c00a8ff3889265077c6"
 dependencies = [
  "serenity",
  "tokio",
@@ -1561,9 +1560,9 @@ dependencies = [
 
 [[package]]
 name = "syn"
-version = "1.0.42"
+version = "1.0.45"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9c51d92969d209b54a98397e1b91c8ae82d8c87a7bb87df0b29aa2ad81454228"
+checksum = "ea9c5432ff16d6152371f808fb5a871cd67368171b09bb21b43df8e4a47a3556"
 dependencies = [
  "proc-macro2",
  "quote",
