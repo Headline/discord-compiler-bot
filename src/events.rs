@@ -5,12 +5,12 @@ use serenity::{
 };
 
 use serenity::model::gateway::Activity;
-use serenity::model::user::{OnlineStatus, User};
+use serenity::model::user::OnlineStatus;
 
 use crate::cache::*;
-use serenity::model::guild::{Guild, Member};
+use serenity::model::guild::{Guild, GuildUnavailable};
 use crate::utls::discordhelpers::DiscordHelpers;
-use serenity::model::id::GuildId;
+use chrono::{Duration, Utc, DateTime};
 
 pub struct Handler; // event handler for serenity
 
@@ -39,8 +39,9 @@ impl ShardsReadyHandler for Handler {
 
 #[async_trait]
 impl EventHandler for Handler {
-    async fn guild_create(&self, ctx: Context, guild: Guild, is_new : bool) {
-        if is_new {
+    async fn guild_create(&self, ctx: Context, guild: Guild) {
+        let now: DateTime<Utc> = Utc::now();
+        if guild.joined_at + Duration::seconds(30) > now {
             let data = ctx.data.read().await;
 
             // publish new server to stats
@@ -77,36 +78,33 @@ impl EventHandler for Handler {
         }
     }
 
-    async fn guild_member_removal(&self, ctx: Context, guild_id: GuildId, user: User, _member_data_if_available: Option<Member>) {
+    async fn guild_delete(&self, ctx: Context, incomplete: GuildUnavailable) {
         let data = ctx.data.read().await;
-        let info = data.get::<BotInfo>().expect("No bot info.").read().await;
-
-        if user.id.to_string() == *info.get("BOT_ID").unwrap() {
-
-            let mut stats = data.get::<Stats>().unwrap().lock().await;
-            if stats.should_track() {
-                stats.leave_server().await;
-            }
-
-            if let Some(log) = info.get("JOIN_LOG") {
-                if let Ok(id) = log.parse::<u64>() {
-                    let emb = DiscordHelpers::build_leave_embed(&guild_id);
-                    DiscordHelpers::manual_dispatch(ctx.http.clone(), id, emb).await;
-                }
-            }
-
-            // update shard guild count & presence
-            let sum : usize = {
-                let mut shard_info = data.get::<ShardServers>().unwrap().lock().await;
-                let index = ctx.shard_id as usize;
-                shard_info[index] += 1;
-                shard_info.iter().sum()
-            };
-            let presence_str = format!("{} servers | ;invite", sum);
-            ctx.set_presence(Some(Activity::listening(&presence_str)), OnlineStatus::Online).await;
-            info!("Leaving {}", guild_id);
+        let mut stats = data.get::<Stats>().unwrap().lock().await;
+        if stats.should_track() {
+            stats.leave_server().await;
         }
+
+        let info = data.get::<BotInfo>().unwrap().read().await;
+        if let Some(log) = info.get("JOIN_LOG") {
+            if let Ok(id) = log.parse::<u64>() {
+                let emb = DiscordHelpers::build_leave_embed(&incomplete.id);
+                DiscordHelpers::manual_dispatch(ctx.http.clone(), id, emb).await;
+            }
+        }
+
+        // update shard guild count & presence
+        let sum : usize = {
+            let mut shard_info = data.get::<ShardServers>().unwrap().lock().await;
+            let index = ctx.shard_id as usize;
+            shard_info[index] -= 1;
+            shard_info.iter().sum()
+        };
+        info!("Leaving {}", &incomplete.id);
+        let presence_str = format!("{} servers | ;invite", sum);
+        ctx.set_presence(Some(Activity::listening(&presence_str)), OnlineStatus::Online).await;
     }
+
 
     async fn ready(&self, ctx : Context, ready: Ready) {
         info!("[Shard {}] Ready", ctx.shard_id);
