@@ -61,7 +61,7 @@ pub async fn compile(ctx: &Context, msg: &Message, _args: Args) -> CommandResult
     let reaction = match msg.react(&ctx.http, DiscordHelpers::build_reaction(loading_id, &loading_name)).await {
         Ok(r) => r,
         Err(e) => {
-            return Err(CommandError::from(format!(" Unable to react to message, am I missing permissions?\n{}", e)));
+            return Err(CommandError::from(format!(" Unable to react to message, am I missing permissions to react or use external emoji?\n{}", e)));
         }
     };
 

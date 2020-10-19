@@ -20,11 +20,7 @@ pub mod hide {
         let result : ParserResult = match Parser::get_components(&msg.content).await {
             Ok(r) => r,
             Err(e) => {
-                let emb = DiscordHelpers::build_fail_embed( &msg.author, &format!("{}", e));
-                let mut emb_msg = DiscordHelpers::embed_message(emb);
-                msg.channel_id.send_message(&ctx.http, |_| &mut emb_msg).await?;
-
-                return Ok(());
+                return Err(CommandError::from(format!("{}", e)));
             }
         };
 
@@ -34,11 +30,7 @@ pub mod hide {
         let godbolt_lock = match data_read.get::<GodboltInfo>() {
             Some(l) => l,
             None => {
-                let emb = DiscordHelpers::build_fail_embed( &msg.author, "Internal request failure\nGodbolt cache is uninitialized, please file a bug.");
-                let mut emb_msg = DiscordHelpers::embed_message(emb);
-                msg.channel_id.send_message(&ctx.http, |_| &mut emb_msg).await?;
-
-                return Ok(());
+                return Err(CommandError::from(format!("Internal request failure\nGodbolt cache is uninitialized, please file a bug.")));
             }
         };
         let godbolt = godbolt_lock.read().await;
@@ -46,11 +38,7 @@ pub mod hide {
         let c = match godbolt.resolve(&result.target) {
             Some(c) => c,
             None => {
-                let emb = DiscordHelpers::build_fail_embed( &msg.author, &format!("Unable to find valid compiler or language '{}'\n", &result.target));
-                let mut emb_msg = DiscordHelpers::embed_message(emb);
-                msg.channel_id.send_message(&ctx.http, |_| &mut emb_msg).await?;
-
-                return Ok(());
+                return Err(CommandError::from(format!("Unable to find valid compiler or language '{}'\n", &result.target)));
             }
         };
 
@@ -59,11 +47,7 @@ pub mod hide {
         let reaction = match msg.react(&ctx.http, DiscordHelpers::build_reaction(752440820036272139, "compiler_loading2")).await {
             Ok(r) => r,
             Err(e) => {
-                let emb = DiscordHelpers::build_fail_embed( &msg.author, &format!("Unable to react to message, am I missing permissions?\n{}", e));
-                let mut emb_msg = DiscordHelpers::embed_message(emb);
-                msg.channel_id.send_message(&ctx.http, |_| &mut emb_msg).await?;
-
-                return Ok(());
+                return Err(CommandError::from(format!(" Unable to react to message, am I missing permissions to react or use external emoji?\n{}", e)));
             }
         };
 
@@ -82,13 +66,9 @@ pub mod hide {
         let response = match Godbolt::send_request(&c, &result.code, &result.options.join(" "), &filters).await {
             Ok(resp) => resp,
             Err(e) => {
-                let emb = DiscordHelpers::build_fail_embed( &msg.author, &format!("Godbolt request failed!\n\n{}", e));
-                let mut emb_msg = DiscordHelpers::embed_message(emb);
-                msg.channel_id.send_message(&ctx.http, |_| &mut emb_msg).await?;
-
                 // we failed, lets remove the loading react before leaving so it doesn't seem like we're still processing
                 msg.delete_reaction_emoji(&ctx.http, reaction.emoji.clone()).await?;
-                return Ok(());
+                return Err(CommandError::from(format!("Godbolt request failed!\n\n{}", e)));
             }
         };
 
@@ -96,9 +76,7 @@ pub mod hide {
         match msg.delete_reaction_emoji(&ctx.http, reaction.emoji.clone()).await {
             Ok(()) => (),
             Err(_e) => {
-                let emb = DiscordHelpers::build_fail_embed( &msg.author, "Unable to remove reactions!\nAm I missing permission to manage messages?");
-                let mut emb_msg = DiscordHelpers::embed_message(emb);
-                msg.channel_id.send_message(&ctx.http, |_| &mut emb_msg).await?;
+                return Err(CommandError::from("Unable to remove reactions!\nAm I missing permission to manage messages?"));
             }
         }
 
