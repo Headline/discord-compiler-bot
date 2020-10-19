@@ -5,18 +5,19 @@ mod cache;
 mod events;
 mod stats;
 
+use serenity::{
+    framework::{
+        StandardFramework,
+        standard::macros::group,
+    },
+    http::Http,
+    client::bridge::gateway::GatewayIntents
+};
+
 use std::{
     collections::HashSet,
     env,
     error::Error
-};
-
-use serenity::{
-    framework::{
-        StandardFramework,
-        standard::macros::{group, hook},
-    },
-    http::Http,
 };
 
 #[macro_use]
@@ -34,15 +35,10 @@ use crate::commands::{
     asm::hide::*
 };
 use crate::apis::dbl::BotsListAPI;
-use serenity::client::Context;
-use serenity::model::channel::Message;
-use serenity::framework::standard::CommandResult;
-use serenity::client::bridge::gateway::GatewayIntents;
 
 #[group]
 #[commands(botinfo,compile,languages,compilers,ping,help,asm)]
 struct General;
-
 
 /** Spawn bot **/
 #[tokio::main]
@@ -77,7 +73,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
         .configure(|c| c
         .owners(owners)
         .prefix(&prefix))
-        .after(after)
+        .after(events::after)
         .group(&GENERAL_GROUP);
     let mut client = serenity::Client::new(token)
         .framework(framework)
@@ -99,23 +95,4 @@ async fn main() -> Result<(), Box<dyn Error>> {
     }
 
     Ok(())
-}
-
-#[hook]
-async fn after(ctx: &Context, msg: &Message, command_name: &str, command_result: CommandResult) {
-    use crate::utls::discordhelpers::DiscordHelpers;
-    use crate::cache::{Stats};
-    if let Err(e) = command_result {
-        let emb = DiscordHelpers::build_fail_embed( &msg.author, &format!("{}", e));
-        let mut emb_msg = DiscordHelpers::embed_message(emb);
-        if let Err(_) = msg.channel_id.send_message(&ctx.http, |_| &mut emb_msg).await {
-            // missing permissions, just ignore...
-        }
-    }
-
-    let data = ctx.data.read().await;
-    let stats = data.get::<Stats>().unwrap().lock().await;
-    if stats.should_track() {
-        stats.command_executed(command_name).await;
-    }
 }

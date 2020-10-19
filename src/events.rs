@@ -1,14 +1,21 @@
 use serenity::{
     async_trait,
-    model::{event::ResumedEvent, gateway::Ready},
     prelude::*,
+    model:: {
+        event::ResumedEvent,
+        gateway::Ready,
+        gateway::Activity,
+        user::OnlineStatus,
+        guild::{Guild, GuildUnavailable},
+        channel::Message
+    },
+    framework::{
+        standard::CommandResult,
+        standard::macros::{hook},
+    },
 };
 
-use serenity::model::gateway::Activity;
-use serenity::model::user::OnlineStatus;
-
 use crate::cache::*;
-use serenity::model::guild::{Guild, GuildUnavailable};
 use crate::utls::discordhelpers::DiscordHelpers;
 use chrono::{Duration, Utc, DateTime};
 
@@ -124,4 +131,23 @@ impl EventHandler for Handler {
         info!("Resumed");
     }
 
+}
+
+#[hook]
+pub async fn after(ctx: &Context, msg: &Message, command_name: &str, command_result: CommandResult) {
+    use crate::utls::discordhelpers::DiscordHelpers;
+    use crate::cache::{Stats};
+    if let Err(e) = command_result {
+        let emb = DiscordHelpers::build_fail_embed( &msg.author, &format!("{}", e));
+        let mut emb_msg = DiscordHelpers::embed_message(emb);
+        if let Err(_) = msg.channel_id.send_message(&ctx.http, |_| &mut emb_msg).await {
+            // missing permissions, just ignore...
+        }
+    }
+
+    let data = ctx.data.read().await;
+    let stats = data.get::<Stats>().unwrap().lock().await;
+    if stats.should_track() {
+        stats.command_executed(command_name).await;
+    }
 }
