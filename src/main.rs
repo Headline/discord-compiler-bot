@@ -34,7 +34,7 @@ use crate::commands::{
     languages::*,
     compilers::*,
     help::*,
-    asm::hide::*
+    asm::ASM_COMMAND
 };
 
 #[group]

@@ -2,12 +2,13 @@ use serenity::prelude::*;
 use serenity::model::prelude::*;
 use serenity::framework::standard::{
     Args, CommandResult,
-    macros::command,
+    macros::command, CommandError
 };
-use crate::cache::{WandboxInfo, BotInfo};
-use crate::utls::discordhelpers::DiscordHelpers;
+
 use serenity_utils::menu::*;
-use serenity::framework::standard::CommandError;
+
+use crate::utls::discordhelpers;
+use crate::cache::{WandboxInfo, BotInfo};
 
 #[command]
 pub async fn languages(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
@@ -39,14 +40,14 @@ pub async fn languages(ctx: &Context, msg: &Message, _args: Args) -> CommandResu
     }
 
 
-    let options = DiscordHelpers::build_menu_controls();
-    let pages = DiscordHelpers::build_menu_items(items, 15, "Supported Languages", &avatar, &msg.author.tag());
+    let options = discordhelpers::build_menu_controls();
+    let pages = discordhelpers::build_menu_items(items, 15, "Supported Languages", &avatar, &msg.author.tag());
     let menu = Menu::new(ctx, msg, &pages, options);
     match menu.run().await {
         Ok(m) => m,
         Err(e) => {
             if e.to_string() == "Unknown Message" {
-                match msg.react(&ctx.http, DiscordHelpers::build_reaction(success_id, &success_name)).await {
+                match msg.react(&ctx.http, discordhelpers::build_reaction(success_id, &success_name)).await {
                     Ok(r) => r,
                     Err(_e) => {
                         // No need to fail here - this case is handled above

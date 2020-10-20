@@ -16,8 +16,8 @@ use serenity::{
 };
 
 use crate::cache::*;
-use crate::utls::discordhelpers::DiscordHelpers;
 use chrono::{Duration, Utc, DateTime};
+use crate::utls::discordhelpers;
 
 pub struct Handler; // event handler for serenity
 
@@ -64,8 +64,8 @@ impl EventHandler for Handler {
                 let info = data.get::<BotInfo>().unwrap().read().await;
                 if let Some(log) = info.get("JOIN_LOG") {
                     if let Ok(id) = log.parse::<u64>() {
-                        let emb = DiscordHelpers::build_join_embed(&guild);
-                        DiscordHelpers::manual_dispatch(ctx.http.clone(), id, emb).await;
+                        let emb = discordhelpers::build_join_embed(&guild);
+                        discordhelpers::manual_dispatch(ctx.http.clone(), id, emb).await;
                     }
                 }
             }
@@ -95,8 +95,8 @@ impl EventHandler for Handler {
         let info = data.get::<BotInfo>().unwrap().read().await;
         if let Some(log) = info.get("JOIN_LOG") {
             if let Ok(id) = log.parse::<u64>() {
-                let emb = DiscordHelpers::build_leave_embed(&incomplete.id);
-                DiscordHelpers::manual_dispatch(ctx.http.clone(), id, emb).await;
+                let emb = discordhelpers::build_leave_embed(&incomplete.id);
+                discordhelpers::manual_dispatch(ctx.http.clone(), id, emb).await;
             }
         }
 
@@ -135,11 +135,10 @@ impl EventHandler for Handler {
 
 #[hook]
 pub async fn after(ctx: &Context, msg: &Message, command_name: &str, command_result: CommandResult) {
-    use crate::utls::discordhelpers::DiscordHelpers;
     use crate::cache::{Stats};
     if let Err(e) = command_result {
-        let emb = DiscordHelpers::build_fail_embed( &msg.author, &format!("{}", e));
-        let mut emb_msg = DiscordHelpers::embed_message(emb);
+        let emb = discordhelpers::build_fail_embed( &msg.author, &format!("{}", e));
+        let mut emb_msg = discordhelpers::embed_message(emb);
         if let Err(_) = msg.channel_id.send_message(&ctx.http, |_| &mut emb_msg).await {
             // missing permissions, just ignore...
         }

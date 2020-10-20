@@ -1,3 +1,8 @@
+use std::sync::Arc;
+use std::env;
+
+use tokio::sync::RwLock;
+
 use warp::{
     body::BodyDeserializeError,
     http::StatusCode,
@@ -8,15 +13,11 @@ use serenity::{
     prelude::TypeMap
 };
 
-use tokio::sync::RwLock;
-use std::sync::Arc;
-use std::env;
-
 use dbl::types::{Webhook};
 use futures_util::future;
 
-use crate::utls::discordhelpers::DiscordHelpers;
 use crate::cache::DBLApi;
+use crate::utls::discordhelpers;
 
 pub struct BotsListAPI {
     password : String,
@@ -26,23 +27,11 @@ pub struct BotsListAPI {
 
 impl BotsListAPI {
     pub fn new() -> BotsListAPI {
-        let webhookpass = match env::var("DBL_WEBHOOK_PASSWORD") {
-            Ok(pass) => pass,
-            Err(_e) => String::from("")
-        };
-
-        let webhookport = match env::var("DBL_WEBHOOK_PORT") {
-            Ok(pass) => pass,
-            Err(_e) => String::from("")
-        };
-        let port = webhookport.parse::<u16>().unwrap_or(0);
-
-
-        let vote_channel = match env::var("VOTE_CHANNEL") {
-            Ok(vc) => vc,
-            Err(_e) => String::from("")
-        };
-        let channel_id = vote_channel.parse::<u64>().unwrap_or(0);
+        let webhookpass = env::var("DBL_WEBHOOK_PASSWORD").unwrap_or_default();
+        let webhookport = env::var("DBL_WEBHOOK_PORT").unwrap_or_default();
+        let port = webhookport.parse::<u16>().unwrap_or_default();
+        let vote_channel = env::var("VOTE_CHANNEL").unwrap_or_default();
+        let channel_id = vote_channel.parse::<u64>().unwrap_or_default();
 
         return BotsListAPI {
             password : webhookpass,
@@ -103,8 +92,8 @@ impl BotsListAPI {
             };
 
             let tag = format!("{}#{}", usr.username, usr.discriminator);
-            let emb = DiscordHelpers::build_dblvote_embed(tag);
-            DiscordHelpers::manual_dispatch(http.clone(), vote_channel, emb).await;
+            let emb = discordhelpers::build_dblvote_embed(tag);
+            discordhelpers::manual_dispatch(http.clone(), vote_channel, emb).await;
         });
     }
 }

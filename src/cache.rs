@@ -56,7 +56,11 @@ pub async fn fill(data : Arc<RwLock<TypeMap>>, prefix : &str, id : &UserId) -> R
     data.insert::<BotInfo>(Arc::new(RwLock::new(map)));
 
     // Wandbox
-    let wbox = wandbox::Wandbox::new(None, None).await?;
+    let mut broken_compilers = std::collections::HashSet::new();
+    broken_compilers.insert(String::from("ghc-head"));
+    let mut broken_languages = std::collections::HashSet::new();
+    broken_languages.insert(String::from("cpp"));
+    let wbox = wandbox::Wandbox::new(Some(broken_compilers), Some(broken_languages)).await?;
     info!("WandBox cache loaded");
     data.insert::<WandboxInfo>(Arc::new(RwLock::new(wbox)));
 

@@ -1,14 +1,17 @@
-use serenity::prelude::*;
-use serenity::model::prelude::*;
-use serenity::framework::standard::{
-    Args, CommandResult,
-    macros::command,
+use std::env;
+
+use serenity::{
+    model::prelude::*,
+    prelude::*,
+    framework::standard::{
+        Args, CommandResult,
+        macros::command,
+    },
+    builder::CreateEmbed
 };
 
-use crate::utls::constants::{COLOR_OKAY, ICON_HELP, COLOR_FAIL, ICON_FAIL};
-use std::env;
-use serenity::builder::CreateEmbed;
-use crate::utls::discordhelpers::DiscordHelpers;
+use crate::utls::discordhelpers;
+use crate::utls::constants::*;
 
 #[command]
 pub async fn help(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
@@ -77,7 +80,7 @@ pub async fn help(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
 
         emb.description(description);
 
-        let mut emb_msg = DiscordHelpers::embed_message(emb);
+        let mut emb_msg = discordhelpers::embed_message(emb);
         msg.channel_id.send_message(&ctx.http, |_| &mut emb_msg).await?;
 
         return Ok(());

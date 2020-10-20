@@ -2,12 +2,13 @@ use serenity::prelude::*;
 use serenity::model::prelude::*;
 use serenity::framework::standard::{
     Args, CommandResult,
-    macros::command,
+    macros::command, CommandError
 };
-use crate::cache::{WandboxInfo, BotInfo};
-use crate::utls::discordhelpers::DiscordHelpers;
+
 use serenity_utils::menu::*;
-use serenity::framework::standard::CommandError;
+
+use crate::utls::discordhelpers;
+use crate::cache::{WandboxInfo, BotInfo};
 
 #[command]
 pub async fn compilers(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
@@ -57,8 +58,8 @@ pub async fn compilers(ctx: &Context, msg: &Message, _args: Args) -> CommandResu
     }
 
     // build menu
-    let options = DiscordHelpers::build_menu_controls();
-    let pages = DiscordHelpers::build_menu_items(items, 35, "Supported Compilers", &avatar, &msg.author.tag());
+    let options = discordhelpers::build_menu_controls();
+    let pages = discordhelpers::build_menu_items(items, 35, "Supported Compilers", &avatar, &msg.author.tag());
     let menu = Menu::new(ctx, msg, &pages, options);
     match menu.run().await {
         Ok(m) => m,
@@ -66,7 +67,7 @@ pub async fn compilers(ctx: &Context, msg: &Message, _args: Args) -> CommandResu
             // When they click the "X", we get Unknown Message for some reason from serenity_utils
             // We'll manually check for that - and then let us return out
             if e.to_string() == "Unknown Message" {
-                match msg.react(&ctx.http, DiscordHelpers::build_reaction(success_id, &success_name)).await {
+                match msg.react(&ctx.http, discordhelpers::build_reaction(success_id, &success_name)).await {
                     Ok(r) => r,
                     Err(_e) => {
                         // No need to fail here - this case is handled above

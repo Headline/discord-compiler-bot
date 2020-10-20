@@ -1,13 +1,13 @@
+use std::env;
+
 use serenity::prelude::*;
 use serenity::model::prelude::*;
 use serenity::framework::standard::{Args, CommandResult, macros::command, CommandError};
 
-use crate::cache::{WandboxInfo, BotInfo, Stats};
 use wandbox::*;
 
-use crate::utls::parser::{Parser, ParserResult};
-use crate::utls::discordhelpers::*;
-use std::env;
+use crate::cache::{WandboxInfo, BotInfo, Stats};
+use crate::utls::{discordhelpers, parser, parser::*};
 
 #[command]
 pub async fn compile(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
@@ -27,7 +27,7 @@ pub async fn compile(ctx: &Context, msg: &Message, _args: Args) -> CommandResult
     }
 
     // parse user input
-    let parse_result : ParserResult = Parser::get_components(&msg.content).await?;
+    let parse_result : ParserResult = parser::get_components(&msg.content).await?;
 
 
     // build user input
@@ -57,8 +57,14 @@ pub async fn compile(ctx: &Context, msg: &Message, _args: Args) -> CommandResult
         }
     };
 
+    // lets see if we can manually fix botched java compilations...
+    // for wandbox, "public class" is invalid, so lets do a quick replacement
+    if builder.lang == "java" {
+        builder.code(&parse_result.code.replacen("public class", "class", 1));
+    }
+
     // send out loading emote
-    let reaction = match msg.react(&ctx.http, DiscordHelpers::build_reaction(loading_id, &loading_name)).await {
+    let reaction = match msg.react(&ctx.http, discordhelpers::build_reaction(loading_id, &loading_name)).await {
         Ok(r) => r,
         Err(e) => {
             return Err(CommandError::from(format!(" Unable to react to message, am I missing permissions to react or use external emoji?\n{}", e)));
@@ -85,14 +91,14 @@ pub async fn compile(ctx: &Context, msg: &Message, _args: Args) -> CommandResult
     }
 
     // Dispatch our request
-    let emb = DiscordHelpers::build_compilation_embed( &msg.author, &result);
-    let mut emb_msg = DiscordHelpers::embed_message(emb);
+    let emb = discordhelpers::build_compilation_embed( &msg.author, &result);
+    let mut emb_msg = discordhelpers::embed_message(emb);
     let compilation_embed = msg.channel_id.send_message(&ctx.http, |_| &mut emb_msg).await?;
 
     // Success/fail react
     let reaction;
     if result.status == "0" {
-        reaction = DiscordHelpers::build_reaction(success_id, &success_name);
+        reaction = discordhelpers::build_reaction(success_id, &success_name);
     }
     else {
         reaction = ReactionType::Unicode(String::from("❌"));
@@ -112,9 +118,9 @@ pub async fn compile(ctx: &Context, msg: &Message, _args: Args) -> CommandResult
     }
     if let Ok(log) = env::var("COMPILE_LOG") {
         if let Ok(id) = log.parse::<u64>() {
-            let emb = DiscordHelpers::build_complog_embed(result.status == "1",
+            let emb = discordhelpers::build_complog_embed(result.status == "1",
         &parse_result.code, &builder.lang, &msg.author.tag(), &guild);
-            DiscordHelpers::manual_dispatch(ctx.http.clone(), id, emb).await;
+            discordhelpers::manual_dispatch(ctx.http.clone(), id, emb).await;
         }
     }
 
