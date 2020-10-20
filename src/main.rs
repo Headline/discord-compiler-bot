@@ -20,6 +20,8 @@ use std::{
     error::Error
 };
 
+use crate::apis::dbl::BotsListAPI;
+
 #[macro_use]
 extern crate log;
 extern crate pretty_env_logger;
@@ -34,7 +36,6 @@ use crate::commands::{
     help::*,
     asm::hide::*
 };
-use crate::apis::dbl::BotsListAPI;
 
 #[group]
 #[commands(botinfo,compile,languages,compilers,ping,help,asm)]

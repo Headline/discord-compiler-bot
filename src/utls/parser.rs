@@ -116,13 +116,13 @@ impl Parser {
 
     fn find_code_block(result : & mut ParserResult, haystack : &str) -> Result<(), ParserError> {
         use regex::Regex;
-        let re = Regex::new(r"```[\S\s]*?\n([\s\S]*?)```").unwrap();
+        let re = Regex::new(r"```(?:(?P<language>[^\s`]*)\r?\n)?(?P<code>[\s\S]*?)```").unwrap();
         let matches = re.captures_iter(haystack);
 
         let mut captures : Vec<&str> = Vec::new();
         let list =  matches.enumerate();
         for (_, cap) in list {
-            captures.push(cap.get(1).unwrap().as_str());
+            captures.push(cap.name("code").unwrap().as_str());
         }
 
         if captures.len() > 1 {
