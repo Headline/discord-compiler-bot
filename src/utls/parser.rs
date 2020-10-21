@@ -87,7 +87,7 @@ pub async fn get_components(input: &str) -> Result<ParserResult, ParserError> {
                     ));
                 }
                 input.push_str(stdin);
-                input.push_str(" ");
+                input.push(' ');
             }
 
             result.stdin = input.trim().to_owned();
