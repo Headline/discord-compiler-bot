@@ -1,21 +1,17 @@
 use std::env;
 
 use serenity::{
+    builder::CreateEmbed,
+    framework::standard::{macros::command, Args, CommandResult},
     model::prelude::*,
     prelude::*,
-    framework::standard::{
-        Args, CommandResult,
-        macros::command,
-    },
-    builder::CreateEmbed
 };
 
-use crate::utls::discordhelpers;
 use crate::utls::constants::*;
+use crate::utls::discordhelpers;
 
 #[command]
 pub async fn help(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
-
     let prefix = env::var("BOT_PREFIX").expect("Bot prefix is not set!");
     if !args.is_empty() {
         let cmd = args.parse::<String>().unwrap();
@@ -30,46 +26,58 @@ pub async fn help(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
                 emb.title("Invite command");
                 emb.field("Example", format!("{}invite", prefix), false);
                 "Grabs the bot's invite link\n\n"
-            },
+            }
             "compile" => {
                 emb.title("Compile command");
-                emb.field("Example",
-                          format!("{}compile c++\n\
+                emb.field(
+                    "Example",
+                    format!(
+                        "{}compile c++\n\
           \\`\\`\\`\n\
           #include <iostream>\n\n\
           int main() {{ \n\
           \tstd::cout << \"Hello, world\";\n\
           }}\n\
-          \\`\\`\\`\n", prefix), false);
+          \\`\\`\\`\n",
+                        prefix
+                    ),
+                    false,
+                );
                 "Sends a compilation request\n\n"
-            },
+            }
             "compilers" => {
                 emb.title("Compilers command");
                 emb.field("Example", format!("{}compilers <language>", prefix), false);
                 "Lists all compilers supported for a given language"
-            },
+            }
             "languages" => {
                 emb.title("Languages command");
                 emb.field("Example", format!("{}languages", prefix), false);
                 "Lists all languages supported"
-            },
+            }
             "asm" => {
                 emb.title("Assembly command");
-                emb.field("Example",
-                          format!("{}asm c++\n\
+                emb.field(
+                    "Example",
+                    format!(
+                        "{}asm c++\n\
           \\`\\`\\`\n\
           #include <iostream>\n\n\
           int main() {{ \n\
           \tstd::cout << \"Hello, world\";\n\
           }}\n\
-          \\`\\`\\`\n", prefix), false);
+          \\`\\`\\`\n",
+                        prefix
+                    ),
+                    false,
+                );
                 "Sends an assembly request, displaying the assembly output\n\n"
-            },
+            }
             "botinfo" => {
                 emb.title("Bot info command");
                 emb.field("Example", format!("{}botinfo", prefix), false);
                 "Outputs information about the bot"
-            },
+            }
             _ => {
                 emb.title("Command not found");
                 emb.color(COLOR_FAIL);
@@ -81,11 +89,12 @@ pub async fn help(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
         emb.description(description);
 
         let mut emb_msg = discordhelpers::embed_message(emb);
-        msg.channel_id.send_message(&ctx.http, |_| &mut emb_msg).await?;
+        msg.channel_id
+            .send_message(&ctx.http, |_| &mut emb_msg)
+            .await?;
 
         return Ok(());
     }
-
 
     let prefix = env::var("BOT_PREFIX").expect("Prefix has not been set!");
     msg.channel_id.send_message(&ctx.http, |m| {

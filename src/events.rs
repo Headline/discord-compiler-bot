@@ -1,36 +1,33 @@
 use serenity::{
     async_trait,
-    prelude::*,
-    model:: {
+    framework::{standard::macros::hook, standard::CommandResult},
+    model::{
+        channel::Message,
         event::ResumedEvent,
-        gateway::Ready,
         gateway::Activity,
-        user::OnlineStatus,
+        gateway::Ready,
         guild::{Guild, GuildUnavailable},
-        channel::Message
+        user::OnlineStatus,
     },
-    framework::{
-        standard::CommandResult,
-        standard::macros::{hook},
-    },
+    prelude::*,
 };
 
 use crate::cache::*;
-use chrono::{Duration, Utc, DateTime};
 use crate::utls::discordhelpers;
+use chrono::{DateTime, Duration, Utc};
 use serenity::framework::standard::DispatchError;
 
 pub struct Handler; // event handler for serenity
 
 #[async_trait]
 trait ShardsReadyHandler {
-    async fn all_shards_ready(&self, ctx : &Context, data : &TypeMap, shards : &[usize]);
+    async fn all_shards_ready(&self, ctx: &Context, data: &TypeMap, shards: &[usize]);
 }
 
 #[async_trait]
 impl ShardsReadyHandler for Handler {
-    async fn all_shards_ready(&self, ctx : &Context, data : &TypeMap, shards : &[usize]) {
-        let sum : usize = shards.iter().sum();
+    async fn all_shards_ready(&self, ctx: &Context, data: &TypeMap, shards: &[usize]) {
+        let sum: usize = shards.iter().sum();
 
         // update stats
         let mut stats = data.get::<Stats>().unwrap().lock().await;
@@ -39,7 +36,11 @@ impl ShardsReadyHandler for Handler {
         }
 
         let presence_str = format!("{} servers | ;invite", sum);
-        ctx.set_presence(Some(Activity::listening(&presence_str)), OnlineStatus::Online).await;
+        ctx.set_presence(
+            Some(Activity::listening(&presence_str)),
+            OnlineStatus::Online,
+        )
+        .await;
         info!("{} shard(s) ready", shards.len());
         debug!("Existing in {} guilds", sum);
     }
@@ -72,7 +73,7 @@ impl EventHandler for Handler {
             }
 
             // update shard guild count & presence
-            let sum : usize = {
+            let sum: usize = {
                 let mut shard_info = data.get::<ShardServers>().unwrap().lock().await;
                 let index = ctx.shard_id as usize;
                 shard_info[index] += 1;
@@ -80,7 +81,11 @@ impl EventHandler for Handler {
             };
 
             let presence_str = format!("{} servers | ;invite", sum);
-            ctx.set_presence(Some(Activity::listening(&presence_str)), OnlineStatus::Online).await;
+            ctx.set_presence(
+                Some(Activity::listening(&presence_str)),
+                OnlineStatus::Online,
+            )
+            .await;
 
             info!("Joining {}", guild.name);
         }
@@ -102,7 +107,7 @@ impl EventHandler for Handler {
         }
 
         // update shard guild count & presence
-        let sum : usize = {
+        let sum: usize = {
             let mut shard_info = data.get::<ShardServers>().unwrap().lock().await;
             let index = ctx.shard_id as usize;
             shard_info[index] -= 1;
@@ -110,11 +115,14 @@ impl EventHandler for Handler {
         };
         info!("Leaving {}", &incomplete.id);
         let presence_str = format!("{} servers | ;invite", sum);
-        ctx.set_presence(Some(Activity::listening(&presence_str)), OnlineStatus::Online).await;
+        ctx.set_presence(
+            Some(Activity::listening(&presence_str)),
+            OnlineStatus::Online,
+        )
+        .await;
     }
 
-
-    async fn ready(&self, ctx : Context, ready: Ready) {
+    async fn ready(&self, ctx: Context, ready: Ready) {
         info!("[Shard {}] Ready", ctx.shard_id);
         let data = ctx.data.read().await;
         let mut info = data.get::<BotInfo>().unwrap().write().await;
@@ -131,16 +139,25 @@ impl EventHandler for Handler {
     async fn resume(&self, _: Context, _: ResumedEvent) {
         info!("Resumed");
     }
-
 }
 
 #[hook]
-pub async fn after(ctx: &Context, msg: &Message, command_name: &str, command_result: CommandResult) {
-    use crate::cache::{Stats};
+pub async fn after(
+    ctx: &Context,
+    msg: &Message,
+    command_name: &str,
+    command_result: CommandResult,
+) {
+    use crate::cache::Stats;
     if let Err(e) = command_result {
-        let emb = discordhelpers::build_fail_embed( &msg.author, &format!("{}", e));
+        let emb = discordhelpers::build_fail_embed(&msg.author, &format!("{}", e));
         let mut emb_msg = discordhelpers::embed_message(emb);
-        if msg.channel_id.send_message(&ctx.http, |_| &mut emb_msg).await.is_err() {
+        if msg
+            .channel_id
+            .send_message(&ctx.http, |_| &mut emb_msg)
+            .await
+            .is_err()
+        {
             // missing permissions, just ignore...
         }
     }
@@ -153,11 +170,16 @@ pub async fn after(ctx: &Context, msg: &Message, command_name: &str, command_res
 }
 
 #[hook]
-pub async fn dispatch_error(ctx : &Context, msg : &Message, error : DispatchError) {
-    if let DispatchError::Ratelimited(_)  = error {
-        let emb = discordhelpers::build_fail_embed( &msg.author, "You are sending requests too fast!");
+pub async fn dispatch_error(ctx: &Context, msg: &Message, error: DispatchError) {
+    if let DispatchError::Ratelimited(_) = error {
+        let emb =
+            discordhelpers::build_fail_embed(&msg.author, "You are sending requests too fast!");
         let mut emb_msg = discordhelpers::embed_message(emb);
-        if msg.channel_id.send_message(&ctx.http, |_| &mut emb_msg).await.is_err() {
-        }
+        if msg
+            .channel_id
+            .send_message(&ctx.http, |_| &mut emb_msg)
+            .await
+            .is_err()
+        {}
     }
 }

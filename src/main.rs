@@ -1,24 +1,17 @@
-mod utls;
 mod apis;
-mod commands;
 mod cache;
+mod commands;
 mod events;
 mod stats;
+mod utls;
 
 use serenity::{
-    framework::{
-        StandardFramework,
-        standard::macros::group,
-    },
+    client::bridge::gateway::GatewayIntents,
+    framework::{standard::macros::group, StandardFramework},
     http::Http,
-    client::bridge::gateway::GatewayIntents
 };
 
-use std::{
-    collections::HashSet,
-    env,
-    error::Error
-};
+use std::{collections::HashSet, env, error::Error};
 
 use crate::apis::dbl::BotsListAPI;
 
@@ -28,23 +21,16 @@ extern crate pretty_env_logger;
 
 /** Command Registration **/
 use crate::commands::{
-    ping::*,
-    botinfo::*,
-    compile::*,
-    languages::*,
-    compilers::*,
-    help::*,
-    asm::ASM_COMMAND
+    asm::ASM_COMMAND, botinfo::*, compile::*, compilers::*, help::*, languages::*, ping::*,
 };
 
 #[group]
-#[commands(botinfo,compile,languages,compilers,ping,help,asm)]
+#[commands(botinfo, compile, languages, compilers, ping, help, asm)]
 struct General;
 
 /** Spawn bot **/
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
-
     dotenv::dotenv().ok();
     pretty_env_logger::init();
 
@@ -63,20 +49,26 @@ async fn main() -> Result<(), Box<dyn Error>> {
             }
 
             (owners, info.id)
-        },
+        }
         Err(why) => panic!("Could not access application info: {:?}", why),
     };
 
-    info!("Registering owner(s): {}", owners.iter().map(|o| format!("{}", o.0)).collect::<Vec<String>>().join(", "));
+    info!(
+        "Registering owner(s): {}",
+        owners
+            .iter()
+            .map(|o| format!("{}", o.0))
+            .collect::<Vec<String>>()
+            .join(", ")
+    );
 
     let prefix = env::var("BOT_PREFIX")?;
     let framework = StandardFramework::new()
-        .configure(|c| c
-        .owners(owners)
-        .prefix(&prefix))
+        .configure(|c| c.owners(owners).prefix(&prefix))
         .after(events::after)
         .group(&GENERAL_GROUP)
-        .bucket("nospam", |b| b.delay(3).time_span(10).limit(3)).await
+        .bucket("nospam", |b| b.delay(3).time_span(10).limit(3))
+        .await
         .on_dispatch_error(events::dispatch_error);
     let mut client = serenity::Client::new(token)
         .framework(framework)

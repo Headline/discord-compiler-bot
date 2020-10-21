@@ -1,15 +1,15 @@
-use std::env;
+use serenity::prelude::{TypeMap, TypeMapKey};
 use std::collections::HashMap;
-use serenity::prelude::{TypeMapKey, TypeMap};
-use std::sync::{Arc};
+use std::env;
+use std::sync::Arc;
 use tokio::sync::RwLock;
 
-use wandbox::Wandbox;
+use crate::stats::statsmanager::StatsManager;
 use godbolt::Godbolt;
 use serenity::futures::lock::Mutex;
-use std::error::Error;
-use crate::stats::statsmanager::StatsManager;
 use serenity::model::id::UserId;
+use std::error::Error;
+use wandbox::Wandbox;
 
 /** Caching **/
 pub struct BotInfo;
@@ -41,7 +41,11 @@ impl TypeMapKey for Stats {
     type Value = Arc<Mutex<StatsManager>>;
 }
 
-pub async fn fill(data : Arc<RwLock<TypeMap>>, prefix : &str, id : &UserId) -> Result<(), Box<dyn Error>>{
+pub async fn fill(
+    data: Arc<RwLock<TypeMap>>,
+    prefix: &str,
+    id: &UserId,
+) -> Result<(), Box<dyn Error>> {
     let mut data = data.write().await;
 
     // Lets map some common things in BotInfo
@@ -71,7 +75,7 @@ pub async fn fill(data : Arc<RwLock<TypeMap>>, prefix : &str, id : &UserId) -> R
 
     // DBL
     let token = env::var("DBL_TOKEN")?;
-    let client =  dbl::Client::new(token)?;
+    let client = dbl::Client::new(token)?;
     data.insert::<DBLApi>(Arc::new(RwLock::new(client)));
 
     // DBL

@@ -1,18 +1,20 @@
-use std::fmt;
 use std::error::Error;
+use std::fmt;
 
 #[derive(Debug)]
 pub struct ParserError {
-    details: String
+    details: String,
 }
 impl ParserError {
     fn new(msg: &str) -> ParserError {
-        ParserError{details: msg.to_string()}
+        ParserError {
+            details: msg.to_string(),
+        }
     }
 }
 impl fmt::Display for ParserError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f,"{}",self.details)
+        write!(f, "{}", self.details)
     }
 }
 impl Error for ParserError {
@@ -22,35 +24,33 @@ impl Error for ParserError {
 }
 
 pub struct ParserResult {
-    pub url : String,
-    pub stdin : String,
-    pub target : String,
-    pub code : String,
-    pub options : Vec<String>,
+    pub url: String,
+    pub stdin: String,
+    pub target: String,
+    pub code: String,
+    pub options: Vec<String>,
 }
 
 #[allow(clippy::while_let_on_iterator)]
-pub async fn get_components(input : &str) -> Result<ParserResult, ParserError> {
+pub async fn get_components(input: &str) -> Result<ParserResult, ParserError> {
     let mut result = ParserResult {
-        url : Default::default(),
-        stdin : Default::default(),
-        target : Default::default(),
-        code : Default::default(),
-        options : Default::default()
+        url: Default::default(),
+        stdin: Default::default(),
+        target: Default::default(),
+        code: Default::default(),
+        options: Default::default(),
     };
-
 
     // we grab the index for the first code block - this will help us
     // know when to stop parsing arguments
-    let code_block : usize;
+    let code_block: usize;
     if let Some(index) = input.find('`') {
         code_block = index;
-    }
-    else {
+    } else {
         code_block = input.len();
     }
 
-    let mut args : Vec<&str> = input[..code_block].split(' ').collect();
+    let mut args: Vec<&str> = input[..code_block].split(' ').collect();
 
     // ditch command str (;compile, ;asm)
     args.remove(0);
@@ -65,7 +65,7 @@ pub async fn get_components(input : &str) -> Result<ParserResult, ParserError> {
     // looping every argument
     let mut iter = args.iter();
     while let Some(c) = iter.next() {
-        if c.contains("```"){
+        if c.contains("```") {
             break;
         }
 
@@ -75,23 +75,23 @@ pub async fn get_components(input : &str) -> Result<ParserResult, ParserError> {
                 None => return Err(ParserError::new("'<' operator requires a url\n\nUsage: `;compile c++ < http://foo.bar/code.txt`"))
             };
             result.url = link.trim().to_string();
-        }
-        else if *c == "|" {
-            let mut input : String = String::new();
+        } else if *c == "|" {
+            let mut input: String = String::new();
             while let Some(stdin) = iter.next() {
                 if stdin.contains("```") {
                     break;
                 }
                 if *stdin == "<" {
-                    return Err(ParserError::new("`|`` operator should be last, unable to continue"))
+                    return Err(ParserError::new(
+                        "`|`` operator should be last, unable to continue",
+                    ));
                 }
                 input.push_str(stdin);
                 input.push_str(" ");
             }
 
             result.stdin = input.trim().to_owned();
-        }
-        else {
+        } else {
             result.options.push(c.trim().to_string());
         }
     }
@@ -99,17 +99,20 @@ pub async fn get_components(input : &str) -> Result<ParserResult, ParserError> {
     if !result.url.is_empty() {
         let response = match reqwest::get(&result.url).await {
             Ok(b) => b,
-            Err(_e) => return Err(ParserError::new("GET request failed, perhaps your link is unreachable?"))
+            Err(_e) => {
+                return Err(ParserError::new(
+                    "GET request failed, perhaps your link is unreachable?",
+                ))
+            }
         };
 
         let body = match response.text().await {
             Ok(t) => t,
-            Err(_e) => return Err(ParserError::new("Unable to grab resource"))
+            Err(_e) => return Err(ParserError::new("Unable to grab resource")),
         };
 
         result.code = body;
-    }
-    else {
+    } else {
         find_code_block(&mut result, input)?;
     }
 
@@ -121,12 +124,12 @@ pub async fn get_components(input : &str) -> Result<ParserResult, ParserError> {
     Ok(result)
 }
 
-fn find_code_block(result : & mut ParserResult, haystack : &str) -> Result<(), ParserError> {
+fn find_code_block(result: &mut ParserResult, haystack: &str) -> Result<(), ParserError> {
     let re = regex::Regex::new(r"```(?:(?P<language>[^\s`]*)\r?\n)?(?P<code>[\s\S]*?)```").unwrap();
     let matches = re.captures_iter(haystack);
 
-    let mut captures : Vec<&str> = Vec::new();
-    let list =  matches.enumerate();
+    let mut captures: Vec<&str> = Vec::new();
+    let list = matches.enumerate();
     for (_, cap) in list {
         captures.push(cap.name("code").unwrap().as_str());
     }
@@ -134,15 +137,17 @@ fn find_code_block(result : & mut ParserResult, haystack : &str) -> Result<(), P
     // support for stdin codeblocks
     // support for stdin codeblocks
     match captures.len() {
-        len if len > 1 =>  {
+        len if len > 1 => {
             result.code = String::from(captures[1]);
             result.stdin = String::from(captures[0]);
-        },
+        }
         1 => {
             result.code = String::from(captures[0]);
-        },
+        }
         _ => {
-            return Err(ParserError::new("You must attach a code-block containing code to your message"))
+            return Err(ParserError::new(
+                "You must attach a code-block containing code to your message",
+            ))
         }
     }
     Ok(())

@@ -1,28 +1,25 @@
-use std::sync::Arc;
 use std::env;
+use std::sync::Arc;
 
 use tokio::sync::RwLock;
 
+use serenity::{http::Http, prelude::TypeMap};
 use warp::{
     body::BodyDeserializeError,
     http::StatusCode,
-    {path, Filter, Rejection, Reply}
-};
-use serenity::{
-    http::Http,
-    prelude::TypeMap
+    {path, Filter, Rejection, Reply},
 };
 
-use dbl::types::{Webhook};
+use dbl::types::Webhook;
 use futures_util::future;
 
 use crate::cache::DBLApi;
 use crate::utls::discordhelpers;
 
 pub struct BotsListAPI {
-    password : String,
-    port : u16,
-    vote_channel : u64
+    password: String,
+    port: u16,
+    vote_channel: u64,
 }
 
 impl BotsListAPI {
@@ -34,9 +31,9 @@ impl BotsListAPI {
         let channel_id = vote_channel.parse::<u64>().unwrap_or_default();
 
         BotsListAPI {
-            password : webhookpass,
+            password: webhookpass,
             port,
-            vote_channel: channel_id
+            vote_channel: channel_id,
         }
     }
 
@@ -44,13 +41,26 @@ impl BotsListAPI {
         self.port != 0 && !self.password.is_empty() && self.vote_channel != 0
     }
 
-    pub fn spawn(self, http : Arc<Http>, data : Arc<RwLock<TypeMap>>) {
+    pub fn spawn(self, http: Arc<Http>, data: Arc<RwLock<TypeMap>>) {
         tokio::spawn(async move {
-            BotsListAPI::start_webhook(http, data, self.vote_channel, self.password.clone(), self.port).await
+            BotsListAPI::start_webhook(
+                http,
+                data,
+                self.vote_channel,
+                self.password.clone(),
+                self.port,
+            )
+            .await
         });
     }
 
-    async fn start_webhook(http : Arc<Http>, data : Arc<RwLock<TypeMap>>, vote_channel : u64, pass : String, port : u16)  {
+    async fn start_webhook(
+        http: Arc<Http>,
+        data: Arc<RwLock<TypeMap>>,
+        vote_channel: u64,
+        pass: String,
+        port: u16,
+    ) {
         let filter = warp::header::<String>("authorization")
             .and_then(move |value| {
                 if value == pass {
@@ -65,11 +75,10 @@ impl BotsListAPI {
             .and(path!("dblwebhook"))
             .and(filter)
             .and(warp::body::json())
-            .map( move |hook: Webhook| {
-
+            .map(move |hook: Webhook| {
                 let user_id = hook.user.0;
                 let data = data.clone();
-                let http : Arc<Http> = http.clone();
+                let http: Arc<Http> = http.clone();
                 BotsListAPI::send_vote(user_id, vote_channel, http, data);
 
                 warp::reply()
@@ -80,7 +89,7 @@ impl BotsListAPI {
         warp::serve(webhook).run(([127, 0, 0, 1], port)).await;
     }
 
-    fn send_vote(user_id : u64, vote_channel : u64, http : Arc<Http>, data : Arc<RwLock<TypeMap>>)  {
+    fn send_vote(user_id: u64, vote_channel: u64, http: Arc<Http>, data: Arc<RwLock<TypeMap>>) {
         tokio::spawn(async move {
             let read = data.read().await;
             let client_lock = read.get::<DBLApi>().expect("Unable to find dbl data");
@@ -88,7 +97,7 @@ impl BotsListAPI {
 
             let usr = match awd.user(user_id).await {
                 Ok(u) => u,
-                Err(err) => return warn!("Unable to retrieve user info: {}", err)
+                Err(err) => return warn!("Unable to retrieve user info: {}", err),
             };
 
             let tag = format!("{}#{}", usr.username, usr.discriminator);
@@ -97,7 +106,6 @@ impl BotsListAPI {
         });
     }
 }
-
 
 async fn custom_error(err: Rejection) -> Result<impl Reply, Rejection> {
     if err.find::<BodyDeserializeError>().is_some() {
