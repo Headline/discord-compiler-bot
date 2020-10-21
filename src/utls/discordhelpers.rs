@@ -69,12 +69,10 @@ pub fn build_menu_controls() -> MenuOptions {
     ];
 
     // Let's create options for the menu.
-    let options = MenuOptions {
+    MenuOptions {
         controls,
         ..Default::default()
-    };
-
-    options
+    }
 }
 
 // Pandas#3**2 on serenity disc, tyty
@@ -115,7 +113,7 @@ pub fn build_compilation_embed(author : &User, res : &CompilationResult) -> Crea
 // Certain compiler outputs use unicode control characters that
 // make the user experience look nice (colors, etc). This ruins
 // the look of the compiler messages in discord, so we strip them out
-pub fn conform_external_str(input : &String) -> String {
+pub fn conform_external_str(input : &str) -> String {
     let str;
     if let Ok(vec) = strip_ansi_escapes::strip(input) {
         let utf8str = String::from_utf8_lossy(&vec);
@@ -123,7 +121,7 @@ pub fn conform_external_str(input : &String) -> String {
         // while we're at it, we'll escape ` characters with a
         // zero-width space to prevent our embed from getting
         // messed up later
-        str = String::from(utf8str.replace("`", "\u{200B}`"));
+        str = utf8str.replace("`", "\u{200B}`");
 
     } else {
         str = input.replace("`", "\u{200B}")
@@ -196,7 +194,7 @@ pub fn build_asm_embed(author : &User, res : &godbolt::CompilationResult) -> Cre
     embed
 }
 
-pub async fn manual_dispatch(http : Arc<Http>, id : u64, emb : CreateEmbed) -> () {
+pub async fn manual_dispatch(http : Arc<Http>, id : u64, emb : CreateEmbed) {
     match serenity::model::id::ChannelId(id).send_message(&http, |m| {
         m.embed(|mut e| {
             e.0 = emb.0;

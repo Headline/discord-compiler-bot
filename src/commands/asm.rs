@@ -33,7 +33,7 @@ pub async fn asm(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
     let godbolt_lock = match data_read.get::<GodboltInfo>() {
         Some(l) => l,
         None => {
-            return Err(CommandError::from(format!("Internal request failure\nGodbolt cache is uninitialized, please file a bug.")));
+            return Err(CommandError::from("Internal request failure\nGodbolt cache is uninitialized, please file a bug."));
         }
     };
     let godbolt = godbolt_lock.read().await;
@@ -181,7 +181,7 @@ async fn languages(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
     let mut vec : Vec<String> = Vec::new();
     for cache_entry in &godbolt.cache {
         let lang = &cache_entry.language;
-        vec.push(format!("{}", &lang.id));
+        vec.push(String::from(&lang.id));
     }
 
 
@@ -196,7 +196,7 @@ async fn languages(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
     }
 
     let options = discordhelpers::build_menu_controls();
-    let pages = discordhelpers::build_menu_items(vec, 15, &format!("Godbolt languages"), COMPILER_EXPLORER_ICON, &msg.author.tag());
+    let pages = discordhelpers::build_menu_items(vec, 15, "Godbolt languages", COMPILER_EXPLORER_ICON, &msg.author.tag());
     let menu = Menu::new(ctx, msg, &pages, options);
     match menu.run().await {
         Ok(m) => m,

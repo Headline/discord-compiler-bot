@@ -33,15 +33,15 @@ impl BotsListAPI {
         let vote_channel = env::var("VOTE_CHANNEL").unwrap_or_default();
         let channel_id = vote_channel.parse::<u64>().unwrap_or_default();
 
-        return BotsListAPI {
+        BotsListAPI {
             password : webhookpass,
             port,
             vote_channel: channel_id
-        };
+        }
     }
 
     pub fn should_spawn(&self) -> bool {
-        return self.port != 0 && !self.password.is_empty() && self.vote_channel != 0;
+        self.port != 0 && !self.password.is_empty() && self.vote_channel != 0
     }
 
     pub fn spawn(self, http : Arc<Http>, data : Arc<RwLock<TypeMap>>) {

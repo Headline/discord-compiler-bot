@@ -22,7 +22,7 @@ impl StatsManager {
     }
 
     pub fn should_track(&self) -> bool {
-        return !self.url.is_empty() && !self.pass.is_empty();
+        !self.url.is_empty() && !self.pass.is_empty()
     }
 
     pub async fn compilation(&self, language : &str, fail : bool) {

@@ -24,12 +24,12 @@ pub struct Handler; // event handler for serenity
 
 #[async_trait]
 trait ShardsReadyHandler {
-    async fn all_shards_ready(&self, ctx : &Context, data : &TypeMap, shards : &Vec<usize>);
+    async fn all_shards_ready(&self, ctx : &Context, data : &TypeMap, shards : &[usize]);
 }
 
 #[async_trait]
 impl ShardsReadyHandler for Handler {
-    async fn all_shards_ready(&self, ctx : &Context, data : &TypeMap, shards : &Vec<usize>) {
+    async fn all_shards_ready(&self, ctx : &Context, data : &TypeMap, shards : &[usize]) {
         let sum : usize = shards.iter().sum();
 
         // update stats
@@ -140,7 +140,7 @@ pub async fn after(ctx: &Context, msg: &Message, command_name: &str, command_res
     if let Err(e) = command_result {
         let emb = discordhelpers::build_fail_embed( &msg.author, &format!("{}", e));
         let mut emb_msg = discordhelpers::embed_message(emb);
-        if let Err(_) = msg.channel_id.send_message(&ctx.http, |_| &mut emb_msg).await {
+        if msg.channel_id.send_message(&ctx.http, |_| &mut emb_msg).await.is_err() {
             // missing permissions, just ignore...
         }
     }
@@ -157,7 +157,7 @@ pub async fn dispatch_error(ctx : &Context, msg : &Message, error : DispatchErro
     if let DispatchError::Ratelimited(_)  = error {
         let emb = discordhelpers::build_fail_embed( &msg.author, "You are sending requests too fast!");
         let mut emb_msg = discordhelpers::embed_message(emb);
-        if let Err(_) = msg.channel_id.send_message(&ctx.http, |_| &mut emb_msg).await {
+        if msg.channel_id.send_message(&ctx.http, |_| &mut emb_msg).await.is_err() {
         }
     }
 }

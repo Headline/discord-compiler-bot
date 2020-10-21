@@ -86,6 +86,5 @@ pub fn get_github_build(short : bool) -> String{
 
     args.push( "HEAD");
     let output = Command::new("git").args(&args).output().unwrap();
-    let git_hash = String::from_utf8(output.stdout).unwrap();
-    git_hash
+    String::from_utf8(output.stdout).unwrap()
 }

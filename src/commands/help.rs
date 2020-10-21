@@ -17,7 +17,7 @@ use crate::utls::constants::*;
 pub async fn help(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
 
     let prefix = env::var("BOT_PREFIX").expect("Bot prefix is not set!");
-    if args.len() > 0 {
+    if !args.is_empty() {
         let cmd = args.parse::<String>().unwrap();
         let mut emb = CreateEmbed::default();
         emb.thumbnail(ICON_HELP);

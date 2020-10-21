@@ -29,6 +29,7 @@ pub struct ParserResult {
     pub options : Vec<String>,
 }
 
+#[allow(clippy::while_let_on_iterator)]
 pub async fn get_components(input : &str) -> Result<ParserResult, ParserError> {
     let mut result = ParserResult {
         url : Default::default(),
@@ -42,14 +43,14 @@ pub async fn get_components(input : &str) -> Result<ParserResult, ParserError> {
     // we grab the index for the first code block - this will help us
     // know when to stop parsing arguments
     let code_block : usize;
-    if let Some(index) = input.find("`") {
+    if let Some(index) = input.find('`') {
         code_block = index;
     }
     else {
         code_block = input.len();
     }
 
-    let mut args : Vec<&str> = input[..code_block].split(" ").collect();
+    let mut args : Vec<&str> = input[..code_block].split(' ').collect();
 
     // ditch command str (;compile, ;asm)
     args.remove(0);
@@ -131,14 +132,18 @@ fn find_code_block(result : & mut ParserResult, haystack : &str) -> Result<(), P
     }
 
     // support for stdin codeblocks
-    if captures.len() > 1 {
-        result.code = String::from(captures[1]);
-        result.stdin = String::from(captures[0]);
-    }
-    else if captures.len() == 1 {
-        result.code = String::from(captures[0]);
-    } else {
-        return Err(ParserError::new("You must attach a code-block containing code to your message"))
+    // support for stdin codeblocks
+    match captures.len() {
+        len if len > 1 =>  {
+            result.code = String::from(captures[1]);
+            result.stdin = String::from(captures[0]);
+        },
+        1 => {
+            result.code = String::from(captures[0]);
+        },
+        _ => {
+            return Err(ParserError::new("You must attach a code-block containing code to your message"))
+        }
     }
     Ok(())
 }

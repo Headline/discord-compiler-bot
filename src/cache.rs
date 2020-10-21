@@ -8,7 +8,7 @@ use wandbox::Wandbox;
 use godbolt::Godbolt;
 use serenity::futures::lock::Mutex;
 use std::error::Error;
-use crate::stats::stats::StatsManager;
+use crate::stats::statsmanager::StatsManager;
 use serenity::model::id::UserId;
 
 /** Caching **/
