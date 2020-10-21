@@ -18,6 +18,7 @@ use serenity::{
 use crate::cache::*;
 use chrono::{Duration, Utc, DateTime};
 use crate::utls::discordhelpers;
+use serenity::framework::standard::DispatchError;
 
 pub struct Handler; // event handler for serenity
 
@@ -148,5 +149,15 @@ pub async fn after(ctx: &Context, msg: &Message, command_name: &str, command_res
     let stats = data.get::<Stats>().unwrap().lock().await;
     if stats.should_track() {
         stats.command_executed(command_name).await;
+    }
+}
+
+#[hook]
+pub async fn dispatch_error(ctx : &Context, msg : &Message, error : DispatchError) {
+    if let DispatchError::Ratelimited(_)  = error {
+        let emb = discordhelpers::build_fail_embed( &msg.author, "You are sending requests too fast!");
+        let mut emb_msg = discordhelpers::embed_message(emb);
+        if let Err(_) = msg.channel_id.send_message(&ctx.http, |_| &mut emb_msg).await {
+        }
     }
 }

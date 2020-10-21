@@ -10,6 +10,7 @@ use crate::cache::{WandboxInfo, BotInfo, Stats};
 use crate::utls::{discordhelpers, parser, parser::*};
 
 #[command]
+#[bucket = "nospam"]
 pub async fn compile(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
 
     let success_id;

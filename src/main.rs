@@ -75,7 +75,9 @@ async fn main() -> Result<(), Box<dyn Error>> {
         .owners(owners)
         .prefix(&prefix))
         .after(events::after)
-        .group(&GENERAL_GROUP);
+        .group(&GENERAL_GROUP)
+        .bucket("nospam", |b| b.delay(3).time_span(10).limit(3)).await
+        .on_dispatch_error(events::dispatch_error);
     let mut client = serenity::Client::new(token)
         .framework(framework)
         .event_handler(events::Handler)
