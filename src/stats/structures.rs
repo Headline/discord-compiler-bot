@@ -41,7 +41,7 @@ impl CommandRequest {
 impl Sendable for CommandRequest {
     #[inline]
     fn endpoint(&self) -> &'static str {
-        "/insert/command"
+        "insert/command"
     }
 
     fn set_key(&mut self, key: &str) {
@@ -67,7 +67,7 @@ impl LanguageRequest {
 impl Sendable for LanguageRequest {
     #[inline]
     fn endpoint(&self) -> &'static str {
-        "/insert/language"
+        "insert/language"
     }
     fn set_key(&mut self, key: &str) {
         self.key = String::from(key);
@@ -101,7 +101,7 @@ impl LegacyRequest {
 impl Sendable for LegacyRequest {
     #[inline]
     fn endpoint(&self) -> &'static str {
-        "/insert/legacy"
+        "insert/legacy"
     }
     fn set_key(&mut self, key: &str) {
         self.key = String::from(key);
