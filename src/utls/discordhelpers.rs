@@ -112,6 +112,9 @@ pub fn build_compilation_embed(author: &User, res: &CompilationResult) -> Create
             embed.color(COLOR_OKAY);
         }
     }
+    if !res.signal.is_empty() {
+        embed.field("Signal", &res.signal, false);
+    }
     if !res.compiler_all.is_empty() {
         let str = conform_external_str(&res.compiler_all);
         embed.field("Compiler Output", format!("```{}\n```", str), false);
