@@ -54,6 +54,10 @@ pub async fn get_components(input: &str) -> Result<ParserResult, ParserError> {
 
     // ditch command str (;compile, ;asm)
     args.remove(0);
+
+    if args.is_empty() {
+        return Err(ParserError::new("You must provide a valid language or compiler!\n\n;compile c++ \n\\`\\`\\`\nint main() {}\n\\`\\`\\`"));
+    }
     result.target = args.remove(0).trim().to_owned().to_lowercase();
 
     // Replace cpp with c++ since we removed the c pre-processor
