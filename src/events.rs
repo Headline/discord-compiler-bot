@@ -35,9 +35,9 @@ impl ShardsReadyHandler for Handler {
             stats.post_servers(sum).await;
         }
 
-        let presence_str = format!("{} servers | ;invite", sum);
+        let presence_str = format!("in {} servers | ;invite", sum);
         ctx.set_presence(
-            Some(Activity::listening(&presence_str)),
+            Some(Activity::playing(&presence_str)),
             OnlineStatus::Online,
         )
         .await;
