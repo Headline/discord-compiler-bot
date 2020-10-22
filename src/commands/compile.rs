@@ -94,7 +94,7 @@ pub async fn compile(ctx: &Context, msg: &Message, _args: Args) -> CommandResult
     };
 
     // dispatch our req
-    let result = match builder.dispatch().await {
+    let mut result = match builder.dispatch().await {
         Ok(r) => r,
         Err(e) => {
             // we failed, lets remove the loading react so it doesn't seem like we're still processing
@@ -119,7 +119,7 @@ pub async fn compile(ctx: &Context, msg: &Message, _args: Args) -> CommandResult
     }
 
     // Dispatch our request
-    let emb = discordhelpers::build_compilation_embed(&msg.author, &result);
+    let emb = discordhelpers::build_compilation_embed(&msg.author, &mut result);
     let mut emb_msg = discordhelpers::embed_message(emb);
     let compilation_embed = msg
         .channel_id

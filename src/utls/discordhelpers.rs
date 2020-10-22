@@ -97,7 +97,7 @@ pub fn build_reaction(emoji_id: u64, emoji_name: &str) -> ReactionType {
     }
 }
 
-pub fn build_compilation_embed(author: &User, res: &CompilationResult) -> CreateEmbed {
+pub fn build_compilation_embed(author: &User, res: & mut CompilationResult) -> CreateEmbed {
     let mut embed = CreateEmbed::default();
 
     if !res.status.is_empty() {
@@ -114,6 +114,13 @@ pub fn build_compilation_embed(author: &User, res: &CompilationResult) -> Create
     }
     if !res.signal.is_empty() {
         embed.field("Signal", &res.signal, false);
+
+        // If we received 'Signal', then the application successfully ran, but was timed out
+        // by wandbox. We should skin this as successful, so we set status to 0 (success).
+        // This is done to ensure that the checkmark is added at the end of the compile
+        // command hook.
+        embed.color(COLOR_OKAY);
+        res.status = String::from('0');
     }
     if !res.compiler_all.is_empty() {
         let str = conform_external_str(&res.compiler_all);
