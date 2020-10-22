@@ -113,16 +113,14 @@ pub fn build_compilation_embed(author: &User, res: &CompilationResult) -> Create
         }
     }
     if !res.compiler_all.is_empty() {
-        // Certain compiler outputs use unicode control characters that
-        // make the user experience look nice (colors, etc). This ruins
-        // the look of the compiler messages in discord, so we strip them out
         let str = conform_external_str(&res.compiler_all);
         embed.field("Compiler Output", format!("```{}\n```", str), false);
     }
     if !res.program_all.is_empty() {
+        let str = conform_external_str(&res.program_all);
         embed.field(
             "Program Output",
-            format!("```\n{}\n```", &res.program_all.replace("`", "\u{200B}`")),
+            format!("```\n{}\n```", str),
             false,
         );
     }
@@ -143,21 +141,25 @@ pub fn build_compilation_embed(author: &User, res: &CompilationResult) -> Create
 // Certain compiler outputs use unicode control characters that
 // make the user experience look nice (colors, etc). This ruins
 // the look of the compiler messages in discord, so we strip them out
+//
+// Here we also limit the text to 1000 chars, this prevents discord from
+// rejecting our embeds for being to long if someone decides to spam.
 pub fn conform_external_str(input: &str) -> String {
-    let str;
+    let mut str : String;
     if let Ok(vec) = strip_ansi_escapes::strip(input) {
-        let utf8str = String::from_utf8_lossy(&vec);
-
-        // while we're at it, we'll escape ` characters with a
-        // zero-width space to prevent our embed from getting
-        // messed up later
-        str = utf8str.replace("`", "\u{200B}`");
+        str = String::from_utf8_lossy(&vec).to_string();
     } else {
-        str = input.replace("`", "\u{200B}")
+        str = String::from(input);
     }
 
-    if str.len() > 1000 {
-        String::from(&str[0..1000])
+    // while we're at it, we'll escape ` characters with a
+    // zero-width space to prevent our embed from getting
+    // messed up later
+    str = str.replace("`", "\u{200B}`");
+
+    // Conform our string.
+    if str.len() > MAX_OUTPUT_LEN {
+        String::from(&str[0..MAX_OUTPUT_LEN])
     } else {
         str
     }
