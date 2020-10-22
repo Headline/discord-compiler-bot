@@ -121,11 +121,7 @@ pub fn build_compilation_embed(author: &User, res: &CompilationResult) -> Create
     }
     if !res.program_all.is_empty() {
         let str = conform_external_str(&res.program_all);
-        embed.field(
-            "Program Output",
-            format!("```\n{}\n```", str),
-            false,
-        );
+        embed.field("Program Output", format!("```\n{}\n```", str), false);
     }
     if !res.url.is_empty() {
         embed.field("URL", &res.url, false);
@@ -148,7 +144,7 @@ pub fn build_compilation_embed(author: &User, res: &CompilationResult) -> Create
 // Here we also limit the text to 1000 chars, this prevents discord from
 // rejecting our embeds for being to long if someone decides to spam.
 pub fn conform_external_str(input: &str) -> String {
-    let mut str : String;
+    let mut str: String;
     if let Ok(vec) = strip_ansi_escapes::strip(input) {
         str = String::from_utf8_lossy(&vec).to_string();
     } else {

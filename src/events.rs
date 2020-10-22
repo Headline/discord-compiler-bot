@@ -36,11 +36,8 @@ impl ShardsReadyHandler for Handler {
         }
 
         let presence_str = format!("in {} servers | ;invite", sum);
-        ctx.set_presence(
-            Some(Activity::playing(&presence_str)),
-            OnlineStatus::Online,
-        )
-        .await;
+        ctx.set_presence(Some(Activity::playing(&presence_str)), OnlineStatus::Online)
+            .await;
         info!("{} shard(s) ready", shards.len());
         debug!("Existing in {} guilds", sum);
     }
