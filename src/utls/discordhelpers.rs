@@ -165,7 +165,7 @@ pub fn conform_external_str(input: &str) -> String {
 
     // Conform our string.
     if str.len() > MAX_OUTPUT_LEN {
-        String::from(&str[0..MAX_OUTPUT_LEN])
+        str.chars().take(MAX_OUTPUT_LEN).collect()
     } else {
         str
     }
