@@ -44,7 +44,7 @@ jobs:
           toolchain: ${{ matrix.rust }}
           target: ${{ matrix.target }}
           override: true
-          components: rustfmt, clippy
+          components: clippy
 
       - uses: actions-rs/cargo@v1
         with:
@@ -52,11 +52,6 @@ jobs:
           args: --all --all-targets --target=${{ matrix.target }}
         env:
           RUSTFLAGS: ${{ matrix.rustflags }}
-
-      - uses: actions-rs/cargo@v1
-        with:
-          command: fmt
-          args: --all -- --check
 
       - uses: actions-rs/cargo@v1
         with:
