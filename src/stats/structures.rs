@@ -13,8 +13,10 @@ pub trait Sendable: Serialize {
         client: Arc<reqwest::Client>,
         url: &str,
     ) -> Result<Response, reqwest::Error> {
+        let url = format!("{}/{}", url, self.endpoint());
+        debug!("Sending request to: {}", &url);
         client
-            .post(&format!("{}/{}", url, self.endpoint()))
+            .post(&url)
             .json(&self)
             .header(USER_AGENT, "godbolt-rust-crate")
             .header(ACCEPT, "application/json; charset=utf-8")

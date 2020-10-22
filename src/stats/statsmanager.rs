@@ -56,7 +56,7 @@ impl StatsManager {
     async fn send_request<T: Sendable + std::marker::Sync>(&self, sendable: &mut T) {
         sendable.set_key(&self.pass);
         match sendable.send(self.client.clone(), &self.url).await {
-            Ok(_) => debug!("Sending request to: {}", &self.url),
+            Ok(_) => (),
             Err(e) => warn!("Request failed to {}: {}", sendable.endpoint(), e),
         }
     }
