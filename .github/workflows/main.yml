@@ -1,0 +1,61 @@
+name: Continuous Integration
+
+on: [push, pull_request]
+
+jobs:
+  ci:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        name:
+          - ubuntu-latest-stable
+          - ubuntu-latest-nightly
+          - windows-latest-stable
+          - windows-latest-nightly
+        include:
+          - name: ubuntu-latest-stable
+            os: ubuntu-latest
+            rust: stable
+            target: x86_64-unknown-linux-gnu
+            rustflags: -D warnings
+          - name: ubuntu-latest-nightly
+            os: ubuntu-latest
+            rust: nightly
+            target: x86_64-unknown-linux-gnu
+            rustflags: -D warnings
+          - name: windows-latest-stable
+            os: windows-latest
+            rust: stable
+            target: x86_64-pc-windows-msvc
+            rustflags: -D warnings
+          - name: windows-latest-nightly
+            os: windows-latest
+            rust: nightly
+            target: x86_64-pc-windows-msvc
+            rustflags: -D warnings
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: ${{ matrix.rust }}
+          target: ${{ matrix.target }}
+          override: true
+          components: clippy
+
+      - uses: actions-rs/cargo@v1
+        with:
+          command: build
+          args: --all --all-targets --target=${{ matrix.target }}
+        env:
+          RUSTFLAGS: ${{ matrix.rustflags }}
+
+      - uses: actions-rs/cargo@v1
+        with:
+          command: clippy
+          args: --all --all-targets --target=${{ matrix.target }} -- -D warnings
+        env:
+          RUSTFLAGS: ${{ matrix.rustflags }}

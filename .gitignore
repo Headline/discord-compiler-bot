@@ -1,6 +1,4 @@
-node_modules/
-build/
-dist/
 .env
-blacklist.json
-*.heapsnapshot
+
+#Added by cargo
+/target

@@ -1,7 +1,6 @@
 # 👩‍💻 Discord Compiler
 A Discord bot which can compile code, display the output of the compiler, and run the program. This bot is great for prototyping ideas, or testing concepts on-the-fly with very little effort. It supports almost every programing language you could name (c++, c, java, python, ruby, javascript, go, php, lua, & more!). 
 
-![Node.js CI](https://github.com/Headline/discord-compiler-bot/workflows/Node.js%20CI/badge.svg) [![DeepScan grade](https://deepscan.io/api/teams/10269/projects/12988/branches/210338/badge/grade.svg)](https://deepscan.io/dashboard#view=project&tid=10269&pid=12988&bid=210338)
 ## 🔗 Links
  - **[Invitation Link](https://discordapp.com/oauth2/authorize?client_id=504095380166803466&scope=bot&permissions=388160)**
  
@@ -13,13 +12,12 @@ A Discord bot which can compile code, display the output of the compiler, and ru
 For a tutorial about how to use this bot, feel free to view our [wiki](https://github.com/Headline/discord-compiler/wiki/Introduction)!
 
 ## 🔰 Hosting it yourself?
-Only a few steps are required to get this bot up-and-running.
+There's only two steps required to get this bot up-and-running.
 1) Rename .env.example to .env and fill out the required information
-2) Run `npm install` to install the bot's dependencies
-3) Run `npm start` to start the bot
+2) Execute `cargo run --release`
 
 ## ⚖️ License
-This project is licensed with the GNU GPLv3 general purpose license.
+This project's license is the GNU GPLv3 general purpose license.
 
 ## 🖼️ Icons
 Icons made by [Freepik](https://www.flaticon.com/authors/freepik) and [pixelmeetup](https://www.flaticon.com/authors/pixelmeetup) from [www.flaticon.com](https://www.flaticon.com/)
