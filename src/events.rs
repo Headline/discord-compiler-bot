@@ -133,11 +133,36 @@ impl EventHandler for Handler {
 }
 
 #[hook]
-pub async fn before(ctx: &Context, _: &Message, _: &str) -> bool {
+pub async fn before(ctx: &Context, msg : &Message, _: &str) -> bool {
     let data = ctx.data.read().await;
-    let stats = data.get::<Stats>().unwrap().lock().await;
-    if stats.should_track() {
-        stats.post_request().await;
+    {
+        let stats = data.get::<Stats>().unwrap().lock().await;
+        if stats.should_track() {
+            stats.post_request().await;
+        }
+    }
+
+    // we'll go with 0 if we couldn't grab guild id
+    let mut guild_id = 0;
+    if let Some(id) = msg.guild_id {
+        guild_id = id.0;
+    }
+
+    // check user against our blocklist
+    {
+        let blocklist = data.get::<BlockListInfo>().unwrap().read().await;
+        if blocklist.contains(msg.author.id.0) || blocklist.contains(guild_id) {
+            let emb = discordhelpers::build_fail_embed(&msg.author,
+       "This server or user is blocked from executing commands.
+            This may have happened due to abuse, spam, or other reasons.
+            If you feel that this has been done in error, request an unban in the support server.");
+
+            let mut emb_msg = discordhelpers::embed_message(emb);
+            if msg.channel_id.send_message(&ctx.http, |_| &mut emb_msg).await.is_err() {
+                // do nothing
+            }
+            return false;
+        }
     }
 
     true
