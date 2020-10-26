@@ -53,6 +53,11 @@ impl StatsManager {
         self.send_request::<LegacyRequest>(&mut legacy).await;
     }
 
+    pub async fn post_request(&self) {
+        let mut legacy = LegacyRequest::new(None);
+        self.send_request::<LegacyRequest>(&mut legacy).await;
+    }
+
     async fn send_request<T: Sendable + std::marker::Sync>(&self, sendable: &mut T) {
         sendable.set_key(&self.pass);
         match sendable.send(self.client.clone(), &self.url).await {

@@ -133,6 +133,17 @@ impl EventHandler for Handler {
 }
 
 #[hook]
+pub async fn before(ctx: &Context, _: &Message, _: &str) -> bool {
+    let data = ctx.data.read().await;
+    let stats = data.get::<Stats>().unwrap().lock().await;
+    if stats.should_track() {
+        stats.post_request().await;
+    }
+
+    true
+}
+
+#[hook]
 pub async fn after(
     ctx: &Context,
     msg: &Message,

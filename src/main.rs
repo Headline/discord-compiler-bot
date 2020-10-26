@@ -65,6 +65,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let prefix = env::var("BOT_PREFIX")?;
     let framework = StandardFramework::new()
         .configure(|c| c.owners(owners).prefix(&prefix))
+        .before(events::before)
         .after(events::after)
         .group(&GENERAL_GROUP)
         .bucket("nospam", |b| b.delay(3).time_span(10).limit(3))
