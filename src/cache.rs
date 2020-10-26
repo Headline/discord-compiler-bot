@@ -5,6 +5,8 @@ use std::sync::Arc;
 use tokio::sync::RwLock;
 
 use crate::stats::statsmanager::StatsManager;
+use crate::utls::blocklist::Blocklist;
+
 use godbolt::Godbolt;
 use serenity::futures::lock::Mutex;
 use serenity::model::id::UserId;
@@ -39,6 +41,11 @@ impl TypeMapKey for ShardServers {
 pub struct Stats;
 impl TypeMapKey for Stats {
     type Value = Arc<Mutex<StatsManager>>;
+}
+
+pub struct BlockListInfo;
+impl TypeMapKey for BlockListInfo {
+    type Value = Arc<RwLock<Blocklist>>;
 }
 
 pub async fn fill(
@@ -87,6 +94,11 @@ pub async fn fill(
         info!("Statistics tracking enabled");
     }
     data.insert::<Stats>(Arc::new(Mutex::new(stats)));
+
+
+    // Blocklist
+    let blocklist = Blocklist::new();
+    data.insert::<BlockListInfo>(Arc::new(RwLock::new(blocklist)));
 
     Ok(())
 }

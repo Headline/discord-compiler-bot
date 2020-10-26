@@ -1,4 +1,5 @@
 .env
+blocklist.json
 
 #Added by cargo
 /target

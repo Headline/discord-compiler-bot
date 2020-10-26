@@ -278,6 +278,7 @@ dependencies = [
  "regex",
  "reqwest",
  "serde",
+ "serde_json",
  "serenity",
  "serenity_utils",
  "strip-ansi-escapes",
