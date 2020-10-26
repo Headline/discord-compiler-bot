@@ -158,7 +158,7 @@ pub async fn before(ctx: &Context, msg : &Message, _: &str) -> bool {
             If you feel that this has been done in error, request an unban in the support server.");
 
             let mut emb_msg = discordhelpers::embed_message(emb);
-            if let Err(_) = msg.channel_id.send_message(&ctx.http, |_| &mut emb_msg).await {
+            if msg.channel_id.send_message(&ctx.http, |_| &mut emb_msg).await.is_err() {
                 // do nothing
             }
             return false;
