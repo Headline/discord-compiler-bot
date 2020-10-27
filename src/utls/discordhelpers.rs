@@ -270,6 +270,16 @@ pub fn build_dblvote_embed(tag: String) -> CreateEmbed {
     embed
 }
 
+pub fn build_invite_embed(invite_link : &str) -> CreateEmbed {
+    let mut embed = CreateEmbed::default();
+    embed.title("Invite Link");
+    embed.color(COLOR_OKAY);
+    embed.thumbnail(ICON_INVITE);
+    let description = format!("Click the link below to invite me to your server!\n\n[Invite me!]({})", invite_link);
+    embed.description(description);
+    embed
+}
+
 pub fn build_join_embed(guild: &Guild) -> CreateEmbed {
     let mut embed = CreateEmbed::default();
     embed.title("Guild joined");
