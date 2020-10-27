@@ -22,11 +22,12 @@ extern crate pretty_env_logger;
 /** Command Registration **/
 use crate::commands::{
     asm::ASM_COMMAND, botinfo::*, compile::*, compilers::*,
-    help::*, languages::*, ping::*, block::*, unblock::*
+    help::*, languages::*, ping::*, block::*, unblock::*,
+    invite::*
 };
 
 #[group]
-#[commands(botinfo, compile, languages, compilers, ping, help, asm, block, unblock)]
+#[commands(botinfo, compile, languages, compilers, ping, help, asm, block, unblock, invite)]
 struct General;
 
 /** Spawn bot **/
