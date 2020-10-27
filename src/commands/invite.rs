@@ -6,7 +6,7 @@ use std::env;
 
 use crate::utls::discordhelpers;
 
-#[command]91
+#[command]
 pub async fn invite(ctx: &Context, msg: &Message, _: Args) -> CommandResult {
     let invite = env::var("INVITE_LINK").expect("Expected invite link envvar");
 
