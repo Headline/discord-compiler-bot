@@ -86,7 +86,7 @@ impl BotsListAPI {
             .recover(custom_error);
 
         info!("Starting webhook");
-        warp::serve(webhook).run(([127, 0, 0, 1], port)).await;
+        warp::serve(webhook).run(([0, 0, 0, 0], port)).await;
     }
 
     fn send_vote(user_id: u64, vote_channel: u64, http: Arc<Http>, data: Arc<RwLock<TypeMap>>) {
