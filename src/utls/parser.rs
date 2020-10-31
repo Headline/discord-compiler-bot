@@ -1,6 +1,9 @@
 use std::error::Error;
 use std::fmt;
 
+use crate::utls::constants::URL_ALLOW_LIST;
+use serenity::model::user::User;
+
 #[derive(Debug)]
 pub struct ParserError {
     details: String,
@@ -32,7 +35,7 @@ pub struct ParserResult {
 }
 
 #[allow(clippy::while_let_on_iterator)]
-pub async fn get_components(input: &str) -> Result<ParserResult, ParserError> {
+pub async fn get_components(input: &str, author : &User) -> Result<ParserResult, ParserError> {
     let mut result = ParserResult {
         url: Default::default(),
         stdin: Default::default(),
@@ -101,6 +104,19 @@ pub async fn get_components(input: &str) -> Result<ParserResult, ParserError> {
     }
 
     if !result.url.is_empty() {
+        let url = match reqwest::Url::parse(&result.url) {
+            Err(e) => {
+                return Err(ParserError::new(&format!("Error parsing url: {}", e)))
+            },
+            Ok(url) => url
+        };
+
+        let host = url.host().unwrap().to_string();
+        if !URL_ALLOW_LIST.contains(&host.as_str()) {
+            warn!("Blocked URL request to: {} by {} [{}]", host, author.id.0, author.tag());
+            return Err(ParserError::new("Unknown paste service. Please use pastebin.com, hastebin.com, or GitHub gists.\n\nAlso please be sure to use a 'raw text' link"))
+        }
+
         let response = match reqwest::get(&result.url).await {
             Ok(b) => b,
             Err(_e) => {
@@ -118,11 +134,6 @@ pub async fn get_components(input: &str) -> Result<ParserResult, ParserError> {
         result.code = body;
     } else {
         find_code_block(&mut result, input)?;
-    }
-
-    if !result.url.is_empty() && !result.code.is_empty() {
-        result.stdin = result.code;
-        result.code = String::new();
     }
 
     Ok(result)

@@ -40,7 +40,7 @@ pub async fn compile(ctx: &Context, msg: &Message, _args: Args) -> CommandResult
     }
 
     // parse user input
-    let parse_result: ParserResult = parser::get_components(&msg.content).await?;
+    let parse_result: ParserResult = parser::get_components(&msg.content, &msg.author).await?;
 
     // build user input
     let mut builder = CompilationBuilder::new();
