@@ -8,7 +8,7 @@ pub struct StatsManager {
     client: Arc<reqwest::Client>,
     url: String,
     pass: String,
-    servers: usize,
+    servers: u64,
 }
 
 impl StatsManager {
@@ -35,7 +35,7 @@ impl StatsManager {
         self.send_request::<CommandRequest>(&mut cmd).await;
     }
 
-    pub async fn post_servers(&mut self, amount: usize) {
+    pub async fn post_servers(&mut self, amount: u64) {
         self.servers = amount;
         let mut legacy = LegacyRequest::new(Some(amount));
         self.send_request::<LegacyRequest>(&mut legacy).await;

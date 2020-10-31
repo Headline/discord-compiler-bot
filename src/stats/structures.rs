@@ -80,10 +80,10 @@ pub struct LegacyRequest {
     #[serde(rename = "type")]
     request_type: String,
     #[serde(skip_serializing_if = "Option::is_none")]
-    amount: Option<usize>,
+    amount: Option<u64>,
 }
 impl LegacyRequest {
-    pub fn new(amount: Option<usize>) -> LegacyRequest {
+    pub fn new(amount: Option<u64>) -> LegacyRequest {
         let request_type;
         if amount.is_some() {
             request_type = "servers"

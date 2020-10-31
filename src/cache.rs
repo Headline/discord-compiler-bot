@@ -35,7 +35,7 @@ impl TypeMapKey for DBLApi {
 
 pub struct ShardServers;
 impl TypeMapKey for ShardServers {
-    type Value = Arc<Mutex<Vec<usize>>>;
+    type Value = Arc<Mutex<Vec<u64>>>;
 }
 
 pub struct Stats;
