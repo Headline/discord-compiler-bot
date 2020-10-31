@@ -321,8 +321,8 @@ pub fn build_complog_embed(
     embed.field("Author", tag, true);
     embed.field("Guild", guild, true);
     let mut code = String::from(input_code);
-    if code.len() > 800 {
-        code = code[..800].to_owned();
+    if code.len() > MAX_OUTPUT_LEN {
+        code = code.chars().take(MAX_OUTPUT_LEN).collect()
     }
     embed.field("Code", format!("```{}\n{}\n```", lang, code), false);
 
