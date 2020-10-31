@@ -151,15 +151,23 @@ pub async fn before(ctx: &Context, msg : &Message, _: &str) -> bool {
     // check user against our blocklist
     {
         let blocklist = data.get::<BlockListInfo>().unwrap().read().await;
-        if blocklist.contains(msg.author.id.0) || blocklist.contains(guild_id) {
+        let author_blocklisted = blocklist.contains(msg.author.id.0);
+        let guild_blocklisted = blocklist.contains(guild_id);
+
+        if author_blocklisted || guild_blocklisted {
             let emb = discordhelpers::build_fail_embed(&msg.author,
        "This server or user is blocked from executing commands.
             This may have happened due to abuse, spam, or other reasons.
             If you feel that this has been done in error, request an unban in the support server.");
 
             let mut emb_msg = discordhelpers::embed_message(emb);
-            if msg.channel_id.send_message(&ctx.http, |_| &mut emb_msg).await.is_err() {
-                // do nothing
+            if msg.channel_id.send_message(&ctx.http, |_| &mut emb_msg).await.is_ok() {
+                if author_blocklisted {
+                    warn!("Blocked user {} [{}]", msg.author.tag(), msg.author.id.0);
+                }
+                else {
+                    warn!("Blocked guild {}", guild_id);
+                }
             }
             return false;
         }
