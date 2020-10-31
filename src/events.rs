@@ -16,18 +16,19 @@ use crate::cache::*;
 use crate::utls::discordhelpers;
 use chrono::{DateTime, Duration, Utc};
 use serenity::framework::standard::DispatchError;
+use dbl::types::ShardStats;
 
 pub struct Handler; // event handler for serenity
 
 #[async_trait]
 trait ShardsReadyHandler {
-    async fn all_shards_ready(&self, ctx: &Context, data: &TypeMap, shards: &[usize]);
+    async fn all_shards_ready(&self, ctx: &Context, data: &TypeMap, shards: &[u64]);
 }
 
 #[async_trait]
 impl ShardsReadyHandler for Handler {
-    async fn all_shards_ready(&self, ctx: &Context, data: &TypeMap, shards: &[usize]) {
-        let sum: usize = shards.iter().sum();
+    async fn all_shards_ready(&self, ctx: &Context, data: &TypeMap, shards: &[u64]) {
+        let sum: u64 = shards.iter().sum();
 
         // update stats
         let mut stats = data.get::<Stats>().unwrap().lock().await;
@@ -58,9 +59,13 @@ impl EventHandler for Handler {
                 }
             }
 
+
             // post new server to join log
+            let id;
             {
                 let info = data.get::<BotInfo>().unwrap().read().await;
+                id = info.get("BOT_ID").unwrap().parse::<u64>().unwrap();
+
                 if let Some(log) = info.get("JOIN_LOG") {
                     if let Ok(id) = log.parse::<u64>() {
                         let emb = discordhelpers::build_join_embed(&guild);
@@ -69,14 +74,25 @@ impl EventHandler for Handler {
                 }
             }
 
-            // update shard guild count & presence
-            let sum: usize = {
+            // update DBL site
+            let sum : u64;
+            {
                 let mut shard_info = data.get::<ShardServers>().unwrap().lock().await;
                 let index = ctx.shard_id as usize;
                 shard_info[index] += 1;
-                shard_info.iter().sum()
-            };
+                sum = shard_info.iter().sum();
 
+                let dbl = data.get::<DBLApi>().unwrap().read().await;
+                let new_stats = ShardStats::Shards {
+                    shards: shard_info.clone(),
+                };
+
+                if dbl.update_stats(id, new_stats).await.is_err() {
+                    warn!("Failed to post stats to dbl");
+                }
+            }
+
+            // update shard guild count & presence
             let presence_str = format!("in {} servers | ;invite", sum);
             ctx.set_presence(Some(Activity::playing(&presence_str)), OnlineStatus::Online).await;
 
@@ -91,7 +107,9 @@ impl EventHandler for Handler {
             stats.leave_server().await;
         }
 
+        // post new server to join log
         let info = data.get::<BotInfo>().unwrap().read().await;
+        let id = info.get("BOT_ID").unwrap().parse::<u64>().unwrap();
         if let Some(log) = info.get("JOIN_LOG") {
             if let Ok(id) = log.parse::<u64>() {
                 let emb = discordhelpers::build_leave_embed(&incomplete.id);
@@ -99,14 +117,25 @@ impl EventHandler for Handler {
             }
         }
 
-        // update shard guild count & presence
-        let sum: usize = {
+        // update DBL site
+        let sum : u64;
+        {
             let mut shard_info = data.get::<ShardServers>().unwrap().lock().await;
             let index = ctx.shard_id as usize;
-            shard_info[index] -= 1;
-            shard_info.iter().sum()
-        };
+            shard_info[index] += 1;
+            sum = shard_info.iter().sum();
 
+            let dbl = data.get::<DBLApi>().unwrap().read().await;
+            let new_stats = ShardStats::Shards {
+                shards: shard_info.clone(),
+            };
+
+            if dbl.update_stats(id, new_stats).await.is_err() {
+                warn!("Failed to post stats to dbl");
+            }
+        }
+
+        // update shard guild count & presence
         let presence_str = format!("in {} servers | ;invite", sum);
         ctx.set_presence(Some(Activity::playing(&presence_str)), OnlineStatus::Online).await;
 
@@ -120,7 +149,7 @@ impl EventHandler for Handler {
         info.insert("BOT_AVATAR", ready.user.avatar_url().unwrap());
 
         let mut shard_info = data.get::<ShardServers>().unwrap().lock().await;
-        shard_info.push(ready.guilds.len());
+        shard_info.push(ready.guilds.len() as u64);
 
         if shard_info.len() == ready.shard.unwrap()[1] as usize {
             self.all_shards_ready(&ctx, &data, &shard_info).await;
