@@ -17,7 +17,7 @@ use crate::utls::{discordhelpers, parser};
 #[bucket = "nospam"]
 pub async fn asm(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
     // parse user input
-    let result: ParserResult = match parser::get_components(&msg.content).await {
+    let result: ParserResult = match parser::get_components(&msg.content, &msg.author).await {
         Ok(r) => r,
         Err(e) => {
             return Err(CommandError::from(format!("{}", e)));
