@@ -62,6 +62,6 @@ jobs:
       - uses: actions-rs/cargo@v1
         with:
           command: clippy
-          args: --all --all-targets --target=${{ matrix.target }} -- -D warnings
+          args: --all-targets --all-features --target=${{ matrix.target }} -- -D warnings
         env:
           RUSTFLAGS: ${{ matrix.rustflags }}
