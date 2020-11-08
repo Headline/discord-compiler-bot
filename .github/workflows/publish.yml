@@ -14,18 +14,18 @@ jobs:
         include:
           - os: ubuntu-latest
             artifact_name: discord-compiler-bot
+            target: x86_64-unknown-linux-gnu
           - os: windows-latest
             artifact_name: discord-compiler-bot.exe
+            target: x86_64-pc-windows-msvc
 
     steps:
       - uses: actions/checkout@v2
 
       - uses: actions-rs/toolchain@v1
         with:
-          profile: minimal
-          toolchain: ${{ matrix.rust }}
+          toolchain: stable
           target: ${{ matrix.target }}
-          override: true
 
       - uses: actions/cache@v2
         with:
@@ -35,8 +35,11 @@ jobs:
             target
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
 
-      - name: Build
-        run: cargo build --release --locked
+      - uses: actions-rs/cargo@v1
+        with:
+          command: build
+          args: --release --all-features --target=${{ matrix.target }}
+
       - name: Upload binaries to release
         uses: svenstaro/upload-release-action@v2
         with:
