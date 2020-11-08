@@ -12,9 +12,10 @@ A Discord bot which can compile code, display the output of the compiler, and ru
 For a tutorial about how to use this bot, feel free to view our [wiki](https://github.com/Headline/discord-compiler/wiki/Introduction)!
 
 ## 🔰 Hosting it yourself?
-There's only two steps required to get this bot up-and-running.
-1) Rename .env.example to .env and fill out the required information
-2) Execute `cargo run --release`
+There's only two steps required to get this bot up-and-running. Our release builds only support 64-bit, if you'd like to run this on a different architecture you will have to compile the project yourself, this is also true if you wish to host this bot on MacOS.
+1) Copy the repository's .env.example as a `.env` file & fill in required information
+2) Download our [latest release](https://github.com/Headline/discord-compiler-bot/releases/) build & place it in the same directory as the `.env` file. For windows download `discord-compiler-bot.exe` & for linux download `discord-compiler-bot`.
+3) Start the bot
 
 ## ⚖️ License
 This project's license is the GNU GPLv3 general purpose license.
