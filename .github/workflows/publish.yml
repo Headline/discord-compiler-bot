@@ -12,9 +12,9 @@ jobs:
     strategy:
       matrix:
         include:
-          - os: ubuntu-latest-stable
+          - os: ubuntu-latest
             artifact_name: discord-compiler-bot
-          - os: windows-latest-stable
+          - os: windows-latest
             artifact_name: discord-compiler-bot.exe
 
     steps:
