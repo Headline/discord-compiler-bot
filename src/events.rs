@@ -122,7 +122,7 @@ impl EventHandler for Handler {
         {
             let mut shard_info = data.get::<ShardServers>().unwrap().lock().await;
             let index = ctx.shard_id as usize;
-            shard_info[index] += 1;
+            shard_info[index] -= 1;
             sum = shard_info.iter().sum();
 
             let dbl = data.get::<DBLApi>().unwrap().read().await;
