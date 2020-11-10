@@ -52,7 +52,13 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
             (owners, info.id)
         }
-        Err(why) => panic!("Could not access application info: {:?}", why),
+        Err(why) => {
+            warn!("Could not access application info: {:?}", why);
+            warn!("Trying environment variable for bot id...");
+            let id = env::var("BOT_ID").expect("Unable to find BOT_ID environment variable");
+            let bot_id = id.parse::<u64>().expect("Invalid bot id");
+            (HashSet::new(), serenity::model::id::UserId(bot_id))
+        },
     };
 
     info!(
