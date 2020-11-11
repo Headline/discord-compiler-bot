@@ -15,40 +15,51 @@ use wandbox::Wandbox;
 use serenity::client::bridge::gateway::ShardManager;
 
 /** Caching **/
+
+/// Contains bot configuration information provided mostly from environment variables
 pub struct ConfigCache;
 impl TypeMapKey for ConfigCache {
     type Value = Arc<RwLock<HashMap<&'static str, String>>>;
 }
 
+/// The cache of all compilers/languages from wandbox - along with our bindings for their api
 pub struct WandboxCache;
 impl TypeMapKey for WandboxCache {
     type Value = Arc<RwLock<Wandbox>>;
 }
+
+/// Same as WandBox cache, but this time it's Matthew's toys
 pub struct GodboltCache;
 impl TypeMapKey for GodboltCache {
     type Value = Arc<RwLock<Godbolt>>;
 }
 
+/// Contains our top.gg api client for server count updates
 pub struct DBLCache;
 impl TypeMapKey for DBLCache {
     type Value = Arc<RwLock<dbl::Client>>;
 }
 
+/// Server count on boot, each shard has their own entry and server count
+//TODO: This should die eventually
 pub struct ServerCountCache;
 impl TypeMapKey for ServerCountCache {
     type Value = Arc<Mutex<Vec<u64>>>;
 }
 
+/// Our endpoints for the in-house statistics tracing - see apis/dbl.rs
 pub struct StatsManagerCache;
 impl TypeMapKey for StatsManagerCache {
     type Value = Arc<Mutex<StatsManager>>;
 }
 
+/// Internal blocklist for abusive users or guilds
 pub struct BlocklistCache;
 impl TypeMapKey for BlocklistCache {
     type Value = Arc<RwLock<Blocklist>>;
 }
 
+/// Contains the shard manager - used to send global presence updates
 pub struct ShardManagerCache;
 impl TypeMapKey for ShardManagerCache {
     type Value = Arc<tokio::sync::Mutex<ShardManager>>;
@@ -106,7 +117,6 @@ pub async fn fill(
         info!("Statistics tracking enabled");
     }
     data.insert::<StatsManagerCache>(Arc::new(Mutex::new(stats)));
-
 
     // Blocklist
     let blocklist = Blocklist::new();
