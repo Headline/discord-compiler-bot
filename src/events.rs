@@ -93,8 +93,8 @@ impl EventHandler for Handler {
             }
 
             // update shard guild count & presence
-            let presence_str = format!("in {} servers | ;invite", sum);
-            ctx.set_presence(Some(Activity::playing(&presence_str)), OnlineStatus::Online).await;
+            let shard_manager = data.get::<ShardManagerInfo>().unwrap().lock().await;
+            discordhelpers::send_global_presence(&shard_manager, sum).await;
 
             info!("Joining {}", guild.name);
         }
@@ -135,10 +135,8 @@ impl EventHandler for Handler {
             }
         }
 
-        // update shard guild count & presence
-        let presence_str = format!("in {} servers | ;invite", sum);
-        ctx.set_presence(Some(Activity::playing(&presence_str)), OnlineStatus::Online).await;
-
+        let shard_manager = data.get::<ShardManagerInfo>().unwrap().lock().await;
+        discordhelpers::send_global_presence(&shard_manager, sum).await;
         info!("Leaving {}", &incomplete.id);
     }
 

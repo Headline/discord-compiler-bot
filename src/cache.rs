@@ -12,6 +12,7 @@ use serenity::futures::lock::Mutex;
 use serenity::model::id::UserId;
 use std::error::Error;
 use wandbox::Wandbox;
+use serenity::client::bridge::gateway::ShardManager;
 
 /** Caching **/
 pub struct BotInfo;
@@ -48,10 +49,16 @@ impl TypeMapKey for BlockListInfo {
     type Value = Arc<RwLock<Blocklist>>;
 }
 
+pub struct ShardManagerInfo;
+impl TypeMapKey for ShardManagerInfo {
+    type Value = Arc<tokio::sync::Mutex<ShardManager>>;
+}
+
 pub async fn fill(
     data: Arc<RwLock<TypeMap>>,
     prefix: &str,
     id: &UserId,
+    shard_manager: Arc<tokio::sync::Mutex<ShardManager>>
 ) -> Result<(), Box<dyn Error>> {
     let mut data = data.write().await;
 
@@ -65,6 +72,9 @@ pub async fn fill(
     map.insert("BOT_PREFIX", String::from(prefix));
     map.insert("BOT_ID", id.to_string());
     data.insert::<BotInfo>(Arc::new(RwLock::new(map)));
+
+    // Shard manager for universal presence
+    data.insert::<ShardManagerInfo>(shard_manager);
 
     // Wandbox
     let mut broken_compilers = std::collections::HashSet::new();
