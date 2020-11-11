@@ -15,42 +15,42 @@ use wandbox::Wandbox;
 use serenity::client::bridge::gateway::ShardManager;
 
 /** Caching **/
-pub struct BotInfo;
-impl TypeMapKey for BotInfo {
+pub struct ConfigCache;
+impl TypeMapKey for ConfigCache {
     type Value = Arc<RwLock<HashMap<&'static str, String>>>;
 }
 
-pub struct WandboxInfo;
-impl TypeMapKey for WandboxInfo {
+pub struct WandboxCache;
+impl TypeMapKey for WandboxCache {
     type Value = Arc<RwLock<Wandbox>>;
 }
-pub struct GodboltInfo;
-impl TypeMapKey for GodboltInfo {
+pub struct GodboltCache;
+impl TypeMapKey for GodboltCache {
     type Value = Arc<RwLock<Godbolt>>;
 }
 
-pub struct DBLApi;
-impl TypeMapKey for DBLApi {
+pub struct DBLCache;
+impl TypeMapKey for DBLCache {
     type Value = Arc<RwLock<dbl::Client>>;
 }
 
-pub struct ShardServers;
-impl TypeMapKey for ShardServers {
+pub struct ServerCountCache;
+impl TypeMapKey for ServerCountCache {
     type Value = Arc<Mutex<Vec<u64>>>;
 }
 
-pub struct Stats;
-impl TypeMapKey for Stats {
+pub struct StatsManagerCache;
+impl TypeMapKey for StatsManagerCache {
     type Value = Arc<Mutex<StatsManager>>;
 }
 
-pub struct BlockListInfo;
-impl TypeMapKey for BlockListInfo {
+pub struct BlocklistCache;
+impl TypeMapKey for BlocklistCache {
     type Value = Arc<RwLock<Blocklist>>;
 }
 
-pub struct ShardManagerInfo;
-impl TypeMapKey for ShardManagerInfo {
+pub struct ShardManagerCache;
+impl TypeMapKey for ShardManagerCache {
     type Value = Arc<tokio::sync::Mutex<ShardManager>>;
 }
 
@@ -71,10 +71,10 @@ pub async fn fill(
     map.insert("JOIN_LOG", env::var("JOIN_LOG")?);
     map.insert("BOT_PREFIX", String::from(prefix));
     map.insert("BOT_ID", id.to_string());
-    data.insert::<BotInfo>(Arc::new(RwLock::new(map)));
+    data.insert::<ConfigCache>(Arc::new(RwLock::new(map)));
 
     // Shard manager for universal presence
-    data.insert::<ShardManagerInfo>(shard_manager);
+    data.insert::<ShardManagerCache>(shard_manager);
 
     // Wandbox
     let mut broken_compilers = std::collections::HashSet::new();
@@ -83,32 +83,32 @@ pub async fn fill(
     broken_languages.insert(String::from("cpp"));
     let wbox = wandbox::Wandbox::new(Some(broken_compilers), Some(broken_languages)).await?;
     info!("WandBox cache loaded");
-    data.insert::<WandboxInfo>(Arc::new(RwLock::new(wbox)));
+    data.insert::<WandboxCache>(Arc::new(RwLock::new(wbox)));
 
     // Godbolt
     let godbolt = Godbolt::new().await?;
     info!("Godbolt cache loaded");
-    data.insert::<GodboltInfo>(Arc::new(RwLock::new(godbolt)));
+    data.insert::<GodboltCache>(Arc::new(RwLock::new(godbolt)));
 
     // DBL
     let token = env::var("DBL_TOKEN")?;
     let client = dbl::Client::new(token)?;
-    data.insert::<DBLApi>(Arc::new(RwLock::new(client)));
+    data.insert::<DBLCache>(Arc::new(RwLock::new(client)));
 
     // DBL
-    data.insert::<ShardServers>(Arc::new(Mutex::new(Vec::new())));
+    data.insert::<ServerCountCache>(Arc::new(Mutex::new(Vec::new())));
 
     // Stats tracking
     let stats = StatsManager::new();
     if stats.should_track() {
         info!("Statistics tracking enabled");
     }
-    data.insert::<Stats>(Arc::new(Mutex::new(stats)));
+    data.insert::<StatsManagerCache>(Arc::new(Mutex::new(stats)));
 
 
     // Blocklist
     let blocklist = Blocklist::new();
-    data.insert::<BlockListInfo>(Arc::new(RwLock::new(blocklist)));
+    data.insert::<BlocklistCache>(Arc::new(RwLock::new(blocklist)));
 
     Ok(())
 }

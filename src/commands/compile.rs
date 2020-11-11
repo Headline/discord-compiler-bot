@@ -6,7 +6,7 @@ use serenity::prelude::*;
 
 use wandbox::*;
 
-use crate::cache::{BotInfo, Stats, WandboxInfo};
+use crate::cache::{ConfigCache, WandboxCache, StatsManagerCache};
 use crate::utls::{discordhelpers, parser, parser::*};
 
 #[command]
@@ -19,8 +19,8 @@ pub async fn compile(ctx: &Context, msg: &Message, _args: Args) -> CommandResult
     {
         let data_read = ctx.data.read().await;
         let botinfo_lock = data_read
-            .get::<BotInfo>()
-            .expect("Expected BotInfo in global cache")
+            .get::<ConfigCache>()
+            .expect("Expected ConfigCache in global cache")
             .clone();
         let botinfo = botinfo_lock.read().await;
         success_id = botinfo
@@ -52,7 +52,7 @@ pub async fn compile(ctx: &Context, msg: &Message, _args: Args) -> CommandResult
 
     // aquire lock to our wandbox cache
     let data_read = ctx.data.read().await;
-    let wandbox_lock = match data_read.get::<WandboxInfo>() {
+    let wandbox_lock = match data_read.get::<WandboxCache>() {
         Some(l) => l,
         None => {
             return Err(CommandError::from(
@@ -136,7 +136,7 @@ pub async fn compile(ctx: &Context, msg: &Message, _args: Args) -> CommandResult
     compilation_embed.react(&ctx.http, reaction).await?;
 
     let data = ctx.data.read().await;
-    let stats = data.get::<Stats>().unwrap().lock().await;
+    let stats = data.get::<StatsManagerCache>().unwrap().lock().await;
     if stats.should_track() {
         stats.compilation(&builder.lang, result.status == "1").await;
     }

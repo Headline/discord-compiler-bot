@@ -3,8 +3,11 @@ use serenity::framework::standard::{macros::command, Args, CommandResult};
 use serenity::model::prelude::*;
 use serenity::prelude::*;
 
-use crate::cache::BotInfo;
 use std::env;
+use std::process::Command;
+
+use crate::cache::ConfigCache;
+use crate::utls::constants::COLOR_OKAY;
 
 #[command]
 pub async fn botinfo(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
@@ -16,8 +19,8 @@ pub async fn botinfo(ctx: &Context, msg: &Message, _args: Args) -> CommandResult
     let avatar = {
         let data_read = ctx.data.read().await;
         let botinfo_lock = data_read
-            .get::<BotInfo>()
-            .expect("Expected BotInfo in global cache")
+            .get::<ConfigCache>()
+            .expect("Expected ConfigCache in global cache")
             .clone();
         let botinfo = botinfo_lock.read().await;
         botinfo.get("BOT_AVATAR").unwrap().clone()
@@ -75,9 +78,6 @@ pub async fn botinfo(ctx: &Context, msg: &Message, _args: Args) -> CommandResult
     debug!("Command executed");
     Ok(())
 }
-
-use crate::utls::constants::COLOR_OKAY;
-use std::process::Command;
 
 pub fn get_github_build(short: bool) -> String {
     // note: add error checking yourself.

@@ -7,7 +7,7 @@ use serenity_utils::menu::Menu;
 
 use godbolt::*;
 
-use crate::cache::{BotInfo, GodboltInfo};
+use crate::cache::{GodboltCache, ConfigCache};
 use crate::utls::constants::*;
 use crate::utls::parser::*;
 use crate::utls::{discordhelpers, parser};
@@ -26,7 +26,7 @@ pub async fn asm(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
 
     // aquire lock to our godbolt cache
     let data_read = ctx.data.read().await;
-    let godbolt_lock = match data_read.get::<GodboltInfo>() {
+    let godbolt_lock = match data_read.get::<GodboltCache>() {
         Some(l) => l,
         None => {
             return Err(CommandError::from(
@@ -121,7 +121,7 @@ pub async fn asm(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
 #[command]
 async fn compilers(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
     let data_read = ctx.data.read().await;
-    let godbolt_lock = match data_read.get::<GodboltInfo>() {
+    let godbolt_lock = match data_read.get::<GodboltCache>() {
         Some(l) => l,
         None => {
             return Err(CommandError::from(
@@ -153,7 +153,7 @@ async fn compilers(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
     {
         let data_read = ctx.data.read().await;
         let botinfo_lock = data_read
-            .get::<BotInfo>()
+            .get::<ConfigCache>()
             .expect("Expected BotInfo in global cache")
             .clone();
         let botinfo = botinfo_lock.read().await;
@@ -211,7 +211,7 @@ async fn compilers(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
 #[command]
 async fn languages(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
     let data_read = ctx.data.read().await;
-    let godbolt_lock = match data_read.get::<GodboltInfo>() {
+    let godbolt_lock = match data_read.get::<GodboltCache>() {
         Some(l) => l,
         None => {
             return Err(CommandError::from(
@@ -233,7 +233,7 @@ async fn languages(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
     {
         let data_read = ctx.data.read().await;
         let botinfo_lock = data_read
-            .get::<BotInfo>()
+            .get::<ConfigCache>()
             .expect("Expected BotInfo in global cache")
             .clone();
         let botinfo = botinfo_lock.read().await;

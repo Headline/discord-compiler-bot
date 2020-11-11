@@ -4,7 +4,7 @@ use serenity::prelude::*;
 
 use serenity_utils::menu::*;
 
-use crate::cache::{BotInfo, WandboxInfo};
+use crate::cache::{WandboxCache, ConfigCache};
 use crate::utls::discordhelpers;
 
 #[command]
@@ -21,7 +21,7 @@ pub async fn compilers(ctx: &Context, msg: &Message, _args: Args) -> CommandResu
 
     // y lock on wandbox cache
     let data_read = ctx.data.read().await;
-    let wandbox_lock = match data_read.get::<WandboxInfo>() {
+    let wandbox_lock = match data_read.get::<WandboxCache>() {
         Some(l) => l,
         None => {
             return Err(CommandError::from("Internal request failure.\nWandbox cache is uninitialized, please file a bug if this error persists"));
@@ -46,7 +46,7 @@ pub async fn compilers(ctx: &Context, msg: &Message, _args: Args) -> CommandResu
     {
         let data_read = ctx.data.read().await;
         let botinfo_lock = data_read
-            .get::<BotInfo>()
+            .get::<ConfigCache>()
             .expect("Expected BotInfo in global cache")
             .clone();
         let botinfo = botinfo_lock.read().await;
