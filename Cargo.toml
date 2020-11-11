@@ -25,10 +25,9 @@ chrono = "0.4.19"
 
 
 [dependencies.serenity]
+version = "0.9"
 default-features = false
 features = ["collector", "gateway", "builder", "standard_framework", "http", "model", "client", "framework", "utils", "rustls_backend"]
-git = "https://github.com/Headline/serenity"
-branch = "compiler"
 
 [dependencies.wandbox]
 version = "0.1"
