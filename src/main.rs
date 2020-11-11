@@ -87,7 +87,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
         .add_intent(GatewayIntents::GUILD_MESSAGE_REACTIONS)
         .await?;
 
-    cache::fill(client.data.clone(), &prefix, &bot_id).await?;
+    cache::fill(client.data.clone(), &prefix, &bot_id, client.shard_manager.clone()).await?;
 
     let dbl = BotsListAPI::new();
     if dbl.should_spawn() {

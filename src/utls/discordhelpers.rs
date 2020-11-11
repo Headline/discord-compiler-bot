@@ -12,6 +12,8 @@ use wandbox::*;
 
 use crate::utls::constants::*;
 use crate::utls::discordhelpers;
+use tokio::sync::MutexGuard;
+use serenity::client::bridge::gateway::{ShardManager};
 
 pub fn build_menu_items(
     items: Vec<String>,
@@ -327,6 +329,16 @@ pub fn build_complog_embed(
     embed.field("Code", format!("```{}\n{}\n```", lang, code), false);
 
     embed
+}
+
+pub async fn send_global_presence(shard_manager : &MutexGuard<'_, ShardManager>, sum : u64) {
+    // update shard guild count & presence
+    let presence_str = format!("in {} servers | ;invite", sum);
+
+    let runners = shard_manager.runners.lock().await;
+    for (_, v) in runners.iter() {
+        v.runner_tx.set_presence(Some(Activity::playing(&presence_str)), OnlineStatus::Online);
+    }
 }
 
 pub fn build_fail_embed(author: &User, err: &str) -> CreateEmbed {

@@ -13,7 +13,7 @@ use warp::{
 use dbl::types::Webhook;
 use futures_util::future;
 
-use crate::cache::DBLApi;
+use crate::cache::DBLCache;
 use crate::utls::discordhelpers;
 
 pub struct BotsListAPI {
@@ -92,7 +92,7 @@ impl BotsListAPI {
     fn send_vote(user_id: u64, vote_channel: u64, http: Arc<Http>, data: Arc<RwLock<TypeMap>>) {
         tokio::spawn(async move {
             let read = data.read().await;
-            let client_lock = read.get::<DBLApi>().expect("Unable to find dbl data");
+            let client_lock = read.get::<DBLCache>().expect("Unable to find dbl data");
             let awd = client_lock.read().await;
 
             let usr = match awd.user(user_id).await {

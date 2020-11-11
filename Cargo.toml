@@ -4,6 +4,7 @@ description = "Discord bot to compile your spaghetti code."
 version = "3.0.0-rc.2"
 authors = ["Michael Flaherty (Headline#9999)"]
 edition = "2018"
+build = "src/build.rs"
 
 [dependencies]
 tokio = { version = "0.2", features = ["full"] }

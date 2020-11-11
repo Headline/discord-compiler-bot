@@ -31,7 +31,7 @@ impl ShardsReadyHandler for Handler {
         let sum: u64 = shards.iter().sum();
 
         // update stats
-        let mut stats = data.get::<Stats>().unwrap().lock().await;
+        let mut stats = data.get::<StatsManagerCache>().unwrap().lock().await;
         if stats.should_track() {
             stats.post_servers(sum).await;
         }
@@ -53,7 +53,7 @@ impl EventHandler for Handler {
 
             // publish new server to stats
             {
-                let mut stats = data.get::<Stats>().unwrap().lock().await;
+                let mut stats = data.get::<StatsManagerCache>().unwrap().lock().await;
                 if stats.should_track() {
                     stats.new_server().await;
                 }
@@ -63,7 +63,7 @@ impl EventHandler for Handler {
             // post new server to join log
             let id;
             {
-                let info = data.get::<BotInfo>().unwrap().read().await;
+                let info = data.get::<ConfigCache>().unwrap().read().await;
                 id = info.get("BOT_ID").unwrap().parse::<u64>().unwrap();
 
                 if let Some(log) = info.get("JOIN_LOG") {
@@ -77,12 +77,12 @@ impl EventHandler for Handler {
             // update DBL site
             let sum : u64;
             {
-                let mut shard_info = data.get::<ShardServers>().unwrap().lock().await;
+                let mut shard_info = data.get::<ServerCountCache>().unwrap().lock().await;
                 let index = ctx.shard_id as usize;
                 shard_info[index] += 1;
                 sum = shard_info.iter().sum();
 
-                let dbl = data.get::<DBLApi>().unwrap().read().await;
+                let dbl = data.get::<DBLCache>().unwrap().read().await;
                 let new_stats = ShardStats::Shards {
                     shards: shard_info.clone(),
                 };
@@ -93,8 +93,8 @@ impl EventHandler for Handler {
             }
 
             // update shard guild count & presence
-            let presence_str = format!("in {} servers | ;invite", sum);
-            ctx.set_presence(Some(Activity::playing(&presence_str)), OnlineStatus::Online).await;
+            let shard_manager = data.get::<ShardManagerCache>().unwrap().lock().await;
+            discordhelpers::send_global_presence(&shard_manager, sum).await;
 
             info!("Joining {}", guild.name);
         }
@@ -102,13 +102,13 @@ impl EventHandler for Handler {
 
     async fn guild_delete(&self, ctx: Context, incomplete: GuildUnavailable) {
         let data = ctx.data.read().await;
-        let mut stats = data.get::<Stats>().unwrap().lock().await;
+        let mut stats = data.get::<StatsManagerCache>().unwrap().lock().await;
         if stats.should_track() {
             stats.leave_server().await;
         }
 
         // post new server to join log
-        let info = data.get::<BotInfo>().unwrap().read().await;
+        let info = data.get::<ConfigCache>().unwrap().read().await;
         let id = info.get("BOT_ID").unwrap().parse::<u64>().unwrap();
         if let Some(log) = info.get("JOIN_LOG") {
             if let Ok(id) = log.parse::<u64>() {
@@ -120,12 +120,12 @@ impl EventHandler for Handler {
         // update DBL site
         let sum : u64;
         {
-            let mut shard_info = data.get::<ShardServers>().unwrap().lock().await;
+            let mut shard_info = data.get::<ServerCountCache>().unwrap().lock().await;
             let index = ctx.shard_id as usize;
             shard_info[index] -= 1;
             sum = shard_info.iter().sum();
 
-            let dbl = data.get::<DBLApi>().unwrap().read().await;
+            let dbl = data.get::<DBLCache>().unwrap().read().await;
             let new_stats = ShardStats::Shards {
                 shards: shard_info.clone(),
             };
@@ -135,20 +135,18 @@ impl EventHandler for Handler {
             }
         }
 
-        // update shard guild count & presence
-        let presence_str = format!("in {} servers | ;invite", sum);
-        ctx.set_presence(Some(Activity::playing(&presence_str)), OnlineStatus::Online).await;
-
+        let shard_manager = data.get::<ShardManagerCache>().unwrap().lock().await;
+        discordhelpers::send_global_presence(&shard_manager, sum).await;
         info!("Leaving {}", &incomplete.id);
     }
 
     async fn ready(&self, ctx: Context, ready: Ready) {
         info!("[Shard {}] Ready", ctx.shard_id);
         let data = ctx.data.read().await;
-        let mut info = data.get::<BotInfo>().unwrap().write().await;
+        let mut info = data.get::<ConfigCache>().unwrap().write().await;
         info.insert("BOT_AVATAR", ready.user.avatar_url().unwrap());
 
-        let mut shard_info = data.get::<ShardServers>().unwrap().lock().await;
+        let mut shard_info = data.get::<ServerCountCache>().unwrap().lock().await;
         shard_info.push(ready.guilds.len() as u64);
 
         if shard_info.len() == ready.shard.unwrap()[1] as usize {
@@ -165,7 +163,7 @@ impl EventHandler for Handler {
 pub async fn before(ctx: &Context, msg : &Message, _: &str) -> bool {
     let data = ctx.data.read().await;
     {
-        let stats = data.get::<Stats>().unwrap().lock().await;
+        let stats = data.get::<StatsManagerCache>().unwrap().lock().await;
         if stats.should_track() {
             stats.post_request().await;
         }
@@ -179,7 +177,7 @@ pub async fn before(ctx: &Context, msg : &Message, _: &str) -> bool {
 
     // check user against our blocklist
     {
-        let blocklist = data.get::<BlockListInfo>().unwrap().read().await;
+        let blocklist = data.get::<BlocklistCache>().unwrap().read().await;
         let author_blocklisted = blocklist.contains(msg.author.id.0);
         let guild_blocklisted = blocklist.contains(guild_id);
 
@@ -212,7 +210,7 @@ pub async fn after(
     command_name: &str,
     command_result: CommandResult,
 ) {
-    use crate::cache::Stats;
+    use crate::cache::StatsManagerCache;
     if let Err(e) = command_result {
         let emb = discordhelpers::build_fail_embed(&msg.author, &format!("{}", e));
         let mut emb_msg = discordhelpers::embed_message(emb);
@@ -227,7 +225,7 @@ pub async fn after(
     }
 
     let data = ctx.data.read().await;
-    let stats = data.get::<Stats>().unwrap().lock().await;
+    let stats = data.get::<StatsManagerCache>().unwrap().lock().await;
     if stats.should_track() {
         stats.command_executed(command_name).await;
     }

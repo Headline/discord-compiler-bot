@@ -2,7 +2,7 @@ use serenity::framework::standard::{macros::command, Args, CommandResult, Comman
 use serenity::model::prelude::*;
 use serenity::prelude::*;
 
-use crate::cache::BlockListInfo;
+use crate::cache::BlocklistCache;
 
 #[command]
 #[owners_only]
@@ -14,7 +14,7 @@ pub async fn unblock(ctx: &Context, msg: &Message, args: Args) -> CommandResult 
     let arg = args.parse::<u64>()?;
 
     let data = ctx.data.read().await;
-    let mut blocklist = data.get::<BlockListInfo>().unwrap().write().await;
+    let mut blocklist = data.get::<BlocklistCache>().unwrap().write().await;
 
     blocklist.unblock(arg);
 
