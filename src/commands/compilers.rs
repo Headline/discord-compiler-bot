@@ -70,7 +70,7 @@ pub async fn compilers(ctx: &Context, msg: &Message, _args: Args) -> CommandResu
     let options = discordhelpers::build_menu_controls();
     let pages = discordhelpers::build_menu_items(
         items,
-        35,
+        15,
         "Supported Compilers",
         &avatar,
         &msg.author.tag(),
