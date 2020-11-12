@@ -79,7 +79,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
         .bucket("nospam", |b| b.delay(3).time_span(10).limit(3))
         .await
         .on_dispatch_error(events::dispatch_error);
-    let mut client = serenity::Client::new(token)
+    let mut client = serenity::Client::builder(token)
         .framework(framework)
         .event_handler(events::Handler)
         .add_intent(GatewayIntents::GUILDS)
