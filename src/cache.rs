@@ -69,7 +69,7 @@ impl TypeMapKey for ShardManagerCache {
     type Value = Arc<tokio::sync::Mutex<ShardManager>>;
 }
 
-/// Contains the shard manager - used to send global presence updates
+/// Message deletion cache to delete our own messages after the original request's deletion
 pub struct MessageDeleteCache;
 impl TypeMapKey for MessageDeleteCache {
     type Value = Arc<tokio::sync::Mutex<LruCache<u64, Message>>>;
