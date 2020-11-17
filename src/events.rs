@@ -105,7 +105,7 @@ impl EventHandler for Handler {
         let data = ctx.data.read().await;
         let mut delete_cache = data.get::<MessageDeleteCache>().unwrap().lock().await;
         if let Some(msg) = delete_cache.get_mut(id.as_u64()) {
-            if let Err(_) = msg.delete(ctx.http).await {
+            if msg.delete(ctx.http).await.is_err() {
                 // ignore for now
             }
             delete_cache.remove(id.as_u64());
