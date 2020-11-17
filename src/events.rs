@@ -4,10 +4,7 @@ use serenity::{
     model::{
         channel::Message,
         event::ResumedEvent,
-        gateway::Activity,
-        gateway::Ready,
         guild::{Guild, GuildUnavailable},
-        user::OnlineStatus,
     },
     prelude::*,
 };
@@ -18,17 +15,18 @@ use chrono::{DateTime, Duration, Utc};
 use serenity::framework::standard::DispatchError;
 use dbl::types::ShardStats;
 use serenity::model::id::{ChannelId, MessageId};
+use serenity::model::gateway::Ready;
 
 pub struct Handler; // event handler for serenity
 
 #[async_trait]
 trait ShardsReadyHandler {
-    async fn all_shards_ready(&self, ctx: &Context, data: &TypeMap, shards: &[u64]);
+    async fn all_shards_ready(&self, data: &TypeMap, shards: &[u64]);
 }
 
 #[async_trait]
 impl ShardsReadyHandler for Handler {
-    async fn all_shards_ready(&self, ctx: &Context, data: &TypeMap, shards: &[u64]) {
+    async fn all_shards_ready(&self, data: &TypeMap, shards: &[u64]) {
         let sum: u64 = shards.iter().sum();
 
         // update stats
@@ -37,8 +35,8 @@ impl ShardsReadyHandler for Handler {
             stats.post_servers(sum).await;
         }
 
-        let presence_str = format!("in {} servers | ;invite", sum);
-        ctx.set_presence(Some(Activity::playing(&presence_str)), OnlineStatus::Online).await;
+        let shard_manager = data.get::<ShardManagerCache>().unwrap().lock().await;
+        discordhelpers::send_global_presence(&shard_manager, sum).await;
 
         info!("{} shard(s) ready", shards.len());
         debug!("Existing in {} guilds", sum);
@@ -162,7 +160,7 @@ impl EventHandler for Handler {
         shard_info.push(ready.guilds.len() as u64);
 
         if shard_info.len() == ready.shard.unwrap()[1] as usize {
-            self.all_shards_ready(&ctx, &data, &shard_info).await;
+            self.all_shards_ready(&data, &shard_info).await;
         }
     }
 
