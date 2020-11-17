@@ -6,7 +6,7 @@ use serenity::prelude::*;
 
 use wandbox::*;
 
-use crate::cache::{ConfigCache, WandboxCache, StatsManagerCache};
+use crate::cache::{ConfigCache, WandboxCache, StatsManagerCache, MessageDeleteCache};
 use crate::utls::{discordhelpers, parser, parser::*};
 
 #[command]
@@ -158,6 +158,9 @@ pub async fn compile(ctx: &Context, msg: &Message, _args: Args) -> CommandResult
         }
     }
 
+    let data_read = ctx.data.read().await;
+    let mut delete_cache = data_read.get::<MessageDeleteCache>().unwrap().lock().await;
+    delete_cache.insert(msg.id.0, compilation_embed.clone());
     debug!("Command executed");
     Ok(())
 }
