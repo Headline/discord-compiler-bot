@@ -17,6 +17,7 @@ use crate::utls::discordhelpers;
 use chrono::{DateTime, Duration, Utc};
 use serenity::framework::standard::DispatchError;
 use dbl::types::ShardStats;
+use serenity::model::id::{ChannelId, MessageId};
 
 pub struct Handler; // event handler for serenity
 
@@ -97,6 +98,17 @@ impl EventHandler for Handler {
             discordhelpers::send_global_presence(&shard_manager, sum).await;
 
             info!("Joining {}", guild.name);
+        }
+    }
+
+    async fn message_delete(&self, ctx: Context, _channel_id: ChannelId, id: MessageId) {
+        let data = ctx.data.read().await;
+        let mut delete_cache = data.get::<MessageDeleteCache>().unwrap().lock().await;
+        if let Some(msg) = delete_cache.get_mut(id.as_u64()) {
+            if msg.delete(ctx.http).await.is_err() {
+                // ignore for now
+            }
+            delete_cache.remove(id.as_u64());
         }
     }
 

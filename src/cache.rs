@@ -1,18 +1,22 @@
-use serenity::prelude::{TypeMap, TypeMapKey};
 use std::collections::HashMap;
 use std::env;
 use std::sync::Arc;
+use std::error::Error;
+
 use tokio::sync::RwLock;
+
+use serenity::prelude::{TypeMap, TypeMapKey};
+use serenity::futures::lock::Mutex;
+use serenity::model::id::UserId;
+use serenity::client::bridge::gateway::ShardManager;
 
 use crate::stats::statsmanager::StatsManager;
 use crate::utls::blocklist::Blocklist;
 
 use godbolt::Godbolt;
-use serenity::futures::lock::Mutex;
-use serenity::model::id::UserId;
-use std::error::Error;
 use wandbox::Wandbox;
-use serenity::client::bridge::gateway::ShardManager;
+use lru_cache::LruCache;
+use serenity::model::channel::Message;
 
 /** Caching **/
 
@@ -65,6 +69,12 @@ impl TypeMapKey for ShardManagerCache {
     type Value = Arc<tokio::sync::Mutex<ShardManager>>;
 }
 
+/// Message deletion cache to delete our own messages after the original request's deletion
+pub struct MessageDeleteCache;
+impl TypeMapKey for MessageDeleteCache {
+    type Value = Arc<tokio::sync::Mutex<LruCache<u64, Message>>>;
+}
+
 pub async fn fill(
     data: Arc<RwLock<TypeMap>>,
     prefix: &str,
@@ -97,6 +107,9 @@ pub async fn fill(
     let wbox = wandbox::Wandbox::new(Some(broken_compilers), Some(broken_languages)).await?;
     info!("WandBox cache loaded");
     data.insert::<WandboxCache>(Arc::new(RwLock::new(wbox)));
+
+    // Message delete cache
+    data.insert::<MessageDeleteCache>(Arc::new(tokio::sync::Mutex::new(LruCache::new(10))));
 
     // Godbolt
     let godbolt = Godbolt::new().await?;
