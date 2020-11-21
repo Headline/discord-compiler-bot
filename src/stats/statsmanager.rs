@@ -58,6 +58,10 @@ impl StatsManager {
         self.send_request::<LegacyRequest>(&mut legacy).await;
     }
 
+    pub fn server_count(&self) -> u64 {
+        self.servers
+    }
+
     async fn send_request<T: Sendable + std::marker::Sync>(&self, sendable: &mut T) {
         sendable.set_key(&self.pass);
         match sendable.send(self.client.clone(), &self.url).await {

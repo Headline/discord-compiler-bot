@@ -51,12 +51,11 @@ impl EventHandler for Handler {
             let data = ctx.data.read().await;
 
             // publish new server to stats
-            {
-                let mut stats = data.get::<StatsManagerCache>().unwrap().lock().await;
-                if stats.should_track() {
-                    stats.new_server().await;
-                }
+            let mut stats = data.get::<StatsManagerCache>().unwrap().lock().await;
+            if stats.should_track() {
+                stats.new_server().await;
             }
+            let server_count = stats.server_count();
 
 
             // post new server to join log
@@ -74,16 +73,13 @@ impl EventHandler for Handler {
             }
 
             // update DBL site
-            let sum : u64;
             {
-                let mut shard_info = data.get::<ServerCountCache>().unwrap().lock().await;
-                let index = ctx.shard_id as usize;
-                shard_info[index] += 1;
-                sum = shard_info.iter().sum();
-
+                let shard_info = data.get::<ServerCountCache>().unwrap().lock().await;
                 let dbl = data.get::<DBLCache>().unwrap().read().await;
-                let new_stats = ShardStats::Shards {
-                    shards: shard_info.clone(),
+
+                let new_stats = ShardStats::Cumulative {
+                    server_count,
+                    shard_count: Some(shard_info.len() as u64)
                 };
 
                 if dbl.update_stats(id, new_stats).await.is_err() {
@@ -93,7 +89,7 @@ impl EventHandler for Handler {
 
             // update shard guild count & presence
             let shard_manager = data.get::<ShardManagerCache>().unwrap().lock().await;
-            discordhelpers::send_global_presence(&shard_manager, sum).await;
+            discordhelpers::send_global_presence(&shard_manager, server_count).await;
 
             info!("Joining {}", guild.name);
         }
@@ -116,6 +112,7 @@ impl EventHandler for Handler {
         if stats.should_track() {
             stats.leave_server().await;
         }
+        let server_count = stats.server_count();
 
         // post new server to join log
         let info = data.get::<ConfigCache>().unwrap().read().await;
@@ -128,16 +125,13 @@ impl EventHandler for Handler {
         }
 
         // update DBL site
-        let sum : u64;
         {
-            let mut shard_info = data.get::<ServerCountCache>().unwrap().lock().await;
-            let index = ctx.shard_id as usize;
-            shard_info[index] -= 1;
-            sum = shard_info.iter().sum();
-
+            let shard_info = data.get::<ServerCountCache>().unwrap().lock().await;
             let dbl = data.get::<DBLCache>().unwrap().read().await;
-            let new_stats = ShardStats::Shards {
-                shards: shard_info.clone(),
+
+            let new_stats = ShardStats::Cumulative {
+                server_count,
+                shard_count: Some(shard_info.len() as u64)
             };
 
             if dbl.update_stats(id, new_stats).await.is_err() {
@@ -145,8 +139,10 @@ impl EventHandler for Handler {
             }
         }
 
+        // update shard guild count & presence
         let shard_manager = data.get::<ShardManagerCache>().unwrap().lock().await;
-        discordhelpers::send_global_presence(&shard_manager, sum).await;
+        discordhelpers::send_global_presence(&shard_manager, server_count).await;
+
         info!("Leaving {}", &incomplete.id);
     }
 
