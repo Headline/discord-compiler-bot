@@ -9,6 +9,8 @@ pub struct StatsManager {
     url: String,
     pass: String,
     servers: u64,
+    shards: u64,
+    boot_count: Vec<u64>,
 }
 
 impl StatsManager {
@@ -18,6 +20,8 @@ impl StatsManager {
             url: env::var("STATS_API_LINK").unwrap_or_default(),
             pass: env::var("STATS_API_KEY").unwrap_or_default(),
             servers: 0,
+            shards: 0,
+            boot_count: Vec::new()
         }
     }
 
@@ -60,6 +64,19 @@ impl StatsManager {
 
     pub fn server_count(&self) -> u64 {
         self.servers
+    }
+
+    pub fn shard_count(&self) -> u64 {
+        self.shards
+    }
+
+    pub fn add_shard(& mut self, server_count : u64) {
+        self.shards += 1;
+        self.boot_count.push(server_count);
+    }
+
+    pub fn get_boot_vec_sum(&self) -> u64 {
+        self.boot_count.iter().sum()
     }
 
     async fn send_request<T: Sendable + std::marker::Sync>(&self, sendable: &mut T) {

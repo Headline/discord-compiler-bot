@@ -44,13 +44,6 @@ impl TypeMapKey for DBLCache {
     type Value = Arc<RwLock<dbl::Client>>;
 }
 
-/// Server count on boot, each shard has their own entry and server count
-//TODO: This should die eventually
-pub struct ServerCountCache;
-impl TypeMapKey for ServerCountCache {
-    type Value = Arc<Mutex<Vec<u64>>>;
-}
-
 /// Our endpoints for the in-house statistics tracing - see apis/dbl.rs
 pub struct StatsManagerCache;
 impl TypeMapKey for StatsManagerCache {
@@ -120,9 +113,6 @@ pub async fn fill(
     let token = env::var("DBL_TOKEN")?;
     let client = dbl::Client::new(token)?;
     data.insert::<DBLCache>(Arc::new(RwLock::new(client)));
-
-    // DBL
-    data.insert::<ServerCountCache>(Arc::new(Mutex::new(Vec::new())));
 
     // Stats tracking
     let stats = StatsManager::new();
