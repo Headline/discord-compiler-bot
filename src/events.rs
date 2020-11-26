@@ -1,45 +1,50 @@
 use serenity::{
     async_trait,
-    framework::{standard::macros::hook, standard::CommandResult},
+    framework::standard:: {
+        macros::hook, CommandResult, DispatchError
+    },
     model::{
         channel::Message,
         event::ResumedEvent,
         guild::{Guild, GuildUnavailable},
+        id::{ChannelId, MessageId},
+        gateway::Ready
     },
     prelude::*,
+    futures::lock::MutexGuard
 };
+
+use chrono::{DateTime, Duration, Utc};
 
 use crate::cache::*;
 use crate::utls::discordhelpers;
-use chrono::{DateTime, Duration, Utc};
-use serenity::framework::standard::DispatchError;
-use dbl::types::ShardStats;
-use serenity::model::id::{ChannelId, MessageId};
-use serenity::model::gateway::Ready;
+use crate::stats::statsmanager::StatsManager;
 
 pub struct Handler; // event handler for serenity
 
 #[async_trait]
 trait ShardsReadyHandler {
-    async fn all_shards_ready(&self, data: &TypeMap, shards: &[u64]);
+    async fn all_shards_ready(&self, ctx: &Context, stats: & mut MutexGuard<'_, StatsManager>, ready : &Ready);
 }
 
 #[async_trait]
 impl ShardsReadyHandler for Handler {
-    async fn all_shards_ready(&self, data: &TypeMap, shards: &[u64]) {
-        let sum: u64 = shards.iter().sum();
-
-        // update stats
-        let mut stats = data.get::<StatsManagerCache>().unwrap().lock().await;
-        if stats.should_track() {
-            stats.post_servers(sum).await;
-        }
+    async fn all_shards_ready(&self, ctx: &Context, stats: & mut MutexGuard<'_, StatsManager>, ready : &Ready) {
+        let data = ctx.data.read().await;
+        let mut info = data.get::<ConfigCache>().unwrap().write().await;
+        info.insert("BOT_AVATAR", ready.user.avatar_url().unwrap());
 
         let shard_manager = data.get::<ShardManagerCache>().unwrap().lock().await;
-        discordhelpers::send_global_presence(&shard_manager, sum).await;
+        let guild_count = stats.get_boot_vec_sum();
 
-        info!("{} shard(s) ready", shards.len());
-        debug!("Existing in {} guilds", sum);
+        // update stats
+        if stats.should_track() {
+            stats.post_servers(guild_count).await;
+        }
+
+        discordhelpers::send_global_presence(&shard_manager, guild_count).await;
+
+        info!("Ready in {} guilds", guild_count);
     }
 }
 
@@ -51,12 +56,12 @@ impl EventHandler for Handler {
             let data = ctx.data.read().await;
 
             // publish new server to stats
-            {
-                let mut stats = data.get::<StatsManagerCache>().unwrap().lock().await;
-                if stats.should_track() {
-                    stats.new_server().await;
-                }
+            let mut stats = data.get::<StatsManagerCache>().unwrap().lock().await;
+            if stats.should_track() {
+                stats.new_server().await;
             }
+            let server_count = stats.server_count();
+            let shard_count = stats.shard_count();
 
 
             // post new server to join log
@@ -74,16 +79,12 @@ impl EventHandler for Handler {
             }
 
             // update DBL site
-            let sum : u64;
             {
-                let mut shard_info = data.get::<ServerCountCache>().unwrap().lock().await;
-                let index = ctx.shard_id as usize;
-                shard_info[index] += 1;
-                sum = shard_info.iter().sum();
-
                 let dbl = data.get::<DBLCache>().unwrap().read().await;
-                let new_stats = ShardStats::Shards {
-                    shards: shard_info.clone(),
+
+                let new_stats = dbl::types::ShardStats::Cumulative {
+                    server_count,
+                    shard_count: Some(shard_count)
                 };
 
                 if dbl.update_stats(id, new_stats).await.is_err() {
@@ -93,7 +94,7 @@ impl EventHandler for Handler {
 
             // update shard guild count & presence
             let shard_manager = data.get::<ShardManagerCache>().unwrap().lock().await;
-            discordhelpers::send_global_presence(&shard_manager, sum).await;
+            discordhelpers::send_global_presence(&shard_manager, server_count).await;
 
             info!("Joining {}", guild.name);
         }
@@ -128,39 +129,44 @@ impl EventHandler for Handler {
         }
 
         // update DBL site
-        let sum : u64;
         {
-            let mut shard_info = data.get::<ServerCountCache>().unwrap().lock().await;
-            let index = ctx.shard_id as usize;
-            shard_info[index] -= 1;
-            sum = shard_info.iter().sum();
-
-            let dbl = data.get::<DBLCache>().unwrap().read().await;
-            let new_stats = ShardStats::Shards {
-                shards: shard_info.clone(),
+            let new_stats = dbl::types::ShardStats::Cumulative {
+                server_count: stats.server_count(),
+                shard_count: Some(stats.shard_count())
             };
 
+            let dbl = data.get::<DBLCache>().unwrap().read().await;
             if dbl.update_stats(id, new_stats).await.is_err() {
                 warn!("Failed to post stats to dbl");
             }
         }
 
+        // update shard guild count & presence
         let shard_manager = data.get::<ShardManagerCache>().unwrap().lock().await;
-        discordhelpers::send_global_presence(&shard_manager, sum).await;
+        discordhelpers::send_global_presence(&shard_manager, stats.server_count()).await;
+
         info!("Leaving {}", &incomplete.id);
     }
 
     async fn ready(&self, ctx: Context, ready: Ready) {
         info!("[Shard {}] Ready", ctx.shard_id);
+
         let data = ctx.data.read().await;
-        let mut info = data.get::<ConfigCache>().unwrap().write().await;
-        info.insert("BOT_AVATAR", ready.user.avatar_url().unwrap());
+        let mut stats = data.get::<StatsManagerCache>().unwrap().lock().await;
 
-        let mut shard_info = data.get::<ServerCountCache>().unwrap().lock().await;
-        shard_info.push(ready.guilds.len() as u64);
+        // occasionally we can have a ready event fire well after execution
+        // this check prevents us from double calling all_shards_ready
+        let total_shards_to_spawn = ready.shard.unwrap()[1];
+        if stats.shard_count()+1 > total_shards_to_spawn {
+            info!("Skipping duplicate ready event...");
+            return;
+        }
 
-        if shard_info.len() == ready.shard.unwrap()[1] as usize {
-            self.all_shards_ready(&data, &shard_info).await;
+        let guild_count = ready.guilds.len() as u64;
+        stats.add_shard(guild_count);
+
+        if stats.shard_count() == total_shards_to_spawn {
+            self.all_shards_ready(&ctx, & mut stats, &ready).await;
         }
     }
 
@@ -220,7 +226,6 @@ pub async fn after(
     command_name: &str,
     command_result: CommandResult,
 ) {
-    use crate::cache::StatsManagerCache;
     if let Err(e) = command_result {
         let emb = discordhelpers::build_fail_embed(&msg.author, &format!("{}", e));
         let mut emb_msg = discordhelpers::embed_message(emb);
