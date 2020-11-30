@@ -111,9 +111,14 @@ pub async fn get_components(input: &str, author : &User) -> Result<ParserResult,
             Ok(url) => url
         };
 
-        let host = url.host().unwrap().to_string();
-        if !URL_ALLOW_LIST.contains(&host.as_str()) {
-            warn!("Blocked URL request to: {} by {} [{}]", host, author.id.0, author.tag());
+        let host = url.host();
+        if host.is_none() {
+            return Err(ParserError::new("Unable to find host"))
+        }
+
+        let host_str = host.unwrap().to_string();
+        if !URL_ALLOW_LIST.contains(&host_str.as_str()) {
+            warn!("Blocked URL request to: {} by {} [{}]", host_str, author.id.0, author.tag());
             return Err(ParserError::new("Unknown paste service. Please use pastebin.com, hastebin.com, or GitHub gists.\n\nAlso please be sure to use a 'raw text' link"))
         }
 
