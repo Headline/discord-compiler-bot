@@ -95,6 +95,7 @@ pub async fn fill(
     // Wandbox
     let mut broken_compilers = std::collections::HashSet::new();
     broken_compilers.insert(String::from("ghc-head"));
+    broken_compilers.insert(String::from("go-head"));
     let mut broken_languages = std::collections::HashSet::new();
     broken_languages.insert(String::from("cpp"));
     let wbox = wandbox::Wandbox::new(Some(broken_compilers), Some(broken_languages)).await?;
