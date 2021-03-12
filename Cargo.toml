@@ -7,8 +7,8 @@ edition = "2018"
 build = "src/build.rs"
 
 [dependencies]
-tokio = { version = "0.2", features = ["full"] }
-reqwest = { version = "0.10" }
+tokio = { version = "1", features = ["full"] }
+reqwest = { version = "0.11" }
 dotenv = "0.15.0"
 regex = "1"
 log = "0.4"
@@ -19,14 +19,14 @@ serde_json = "1.0"
 lru-cache = "0.1"
 
 #dbl
-dbl-rs = "0.2"
+dbl-rs = "0.3"
 futures-util = "0.3.6"
-warp = "0.2"
+warp = "0.3"
 chrono = "0.4.19"
 
 
 [dependencies.serenity]
-version = "0.9"
+version = "0.10"
 default-features = false
 features = ["collector", "gateway", "builder", "standard_framework", "http", "model", "client", "framework", "utils", "rustls_backend"]
 
@@ -39,5 +39,6 @@ git = "https://github.com/Headline/godbolt-rs"
 [dependencies.serenity_utils]
 default-features = false
 features = ["rustls_backend"]
-git = "https://github.com/Headline/serenity-utils"
-branch = "compiler"
+version = "0.6.1"
+#git = "https://github.com/Headline/serenity-utils"
+#branch = "compiler"

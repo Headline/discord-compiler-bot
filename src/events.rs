@@ -19,6 +19,7 @@ use chrono::{DateTime, Duration, Utc};
 use crate::cache::*;
 use crate::utls::discordhelpers;
 use crate::stats::statsmanager::StatsManager;
+use serenity::model::id::GuildId;
 
 pub struct Handler; // event handler for serenity
 
@@ -100,7 +101,7 @@ impl EventHandler for Handler {
         }
     }
 
-    async fn message_delete(&self, ctx: Context, _channel_id: ChannelId, id: MessageId) {
+    async fn message_delete(&self, ctx: Context, _channel_id: ChannelId, id: MessageId, _guild_id: Option<GuildId>) {
         let data = ctx.data.read().await;
         let mut delete_cache = data.get::<MessageDeleteCache>().unwrap().lock().await;
         if let Some(msg) = delete_cache.get_mut(id.as_u64()) {
