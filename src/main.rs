@@ -1,3 +1,5 @@
+#![type_length_limit="1146253"]
+
 mod apis;
 mod cache;
 mod commands;
@@ -82,9 +84,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let mut client = serenity::Client::builder(token)
         .framework(framework)
         .event_handler(events::Handler)
-        .add_intent(GatewayIntents::GUILDS)
-        .add_intent(GatewayIntents::GUILD_MESSAGES)
-        .add_intent(GatewayIntents::GUILD_MESSAGE_REACTIONS)
+        .intents(GatewayIntents::GUILDS | GatewayIntents::GUILD_MESSAGES | GatewayIntents::GUILD_MESSAGE_REACTIONS)
         .await?;
 
     cache::fill(client.data.clone(), &prefix, &bot_id, client.shard_manager.clone()).await?;
