@@ -70,6 +70,6 @@ jobs:
       - uses: actions-rs/cargo@v1
         with:
           command: clippy
-          args: --all --all-targets --target=${{ matrix.target }} -- -D warnings
+          args: --all --all-targets --target=${{ matrix.target }} -- -D warnings -p discord-compiler-bot
         env:
           RUSTFLAGS: ${{ matrix.rustflags }}
