@@ -164,11 +164,11 @@ pub fn build_compilation_embed(author: &User, res: & mut CompilationResult, page
         res.status = String::from('0');
     }
     if !res.compiler_all.is_empty() {
-        let str = conform_external_str(&res.compiler_all, 0);
+        let str = conform_external_str(&res.compiler_all, 0, MAX_ERROR_LEN);
         embed.field("Compiler Output", format!("```{}\n```", str), false);
     }
     if !res.program_all.is_empty() {
-        let str = conform_external_str(&res.program_all, page_number);
+        let str = conform_external_str(&res.program_all, page_number, MAX_OUTPUT_LEN);
         embed.field("Program Output", format!("```\n{}\n```", str), false);
     }
     if !res.url.is_empty() {
@@ -200,7 +200,7 @@ pub fn build_compilation_embed(author: &User, res: & mut CompilationResult, page
 //
 // Here we also limit the text to 1000 chars, this prevents discord from
 // rejecting our embeds for being to long if someone decides to spam.
-pub fn conform_external_str(input: &str, page_number : i32) -> String {
+pub fn conform_external_str(input: &str, page_number : i32, max_len : usize) -> String {
     let mut str: String;
     if let Ok(vec) = strip_ansi_escapes::strip(input) {
         str = String::from_utf8_lossy(&vec).to_string();
@@ -214,14 +214,14 @@ pub fn conform_external_str(input: &str, page_number : i32) -> String {
     str = str.replace("`", "\u{200B}`");
 
     // Conform our string.
-    if str.len() > MAX_OUTPUT_LEN {
+    if str.len() > max_len {
         if page_number > 0 {
             let it = str.chars();
-            let skip = it.skip(MAX_OUTPUT_LEN*(page_number as usize));
-            skip.take(MAX_OUTPUT_LEN).collect()
+            let skip = it.skip(max_len*(page_number as usize));
+            skip.take(max_len).collect()
         }
         else {
-            str.chars().take(MAX_OUTPUT_LEN).collect()
+            str.chars().take(max_len).collect()
         }
     } else {
         str
@@ -245,7 +245,7 @@ pub fn build_asm_embed(author: &User, res: &godbolt::CompilationResult) -> Creat
                 errs.push_str(&line);
             }
 
-            let compliant_str = discordhelpers::conform_external_str(&errs, 0);
+            let compliant_str = discordhelpers::conform_external_str(&errs, 0, MAX_ERROR_LEN);
             embed.field(
                 "Compilation Errors",
                 format!("```\n{}```", compliant_str),
