@@ -8,6 +8,7 @@ use wandbox::*;
 
 use crate::cache::{ConfigCache, WandboxCache, StatsManagerCache, MessageDeleteCache};
 use crate::utls::{discordhelpers, parser, parser::*};
+use serenity_utils::menu::Menu;
 
 #[command]
 #[bucket = "nospam"]
@@ -118,22 +119,88 @@ pub async fn compile(ctx: &Context, msg: &Message, _args: Args) -> CommandResult
         }
     }
 
-    // Dispatch our request
-    let emb = discordhelpers::build_compilation_embed(&msg.author, &mut result);
-    let mut emb_msg = discordhelpers::embed_message(emb);
-    let compilation_embed = msg
-        .channel_id
-        .send_message(&ctx.http, |_| &mut emb_msg)
-        .await?;
+    let page_count = discordhelpers::get_page_count(&result);
+    if page_count > 1 {
+        // build pages
+        let mut pages = Vec::new();
+        let mut i : i32 = 0;
+        while i < page_count as i32 {
+            let emb = discordhelpers::build_compilation_embed(&msg.author, &mut result, i);
+            let emb_msg = discordhelpers::embed_message(emb);
+            pages.push(emb_msg);
+            i += 1;
+        }
 
-    // Success/fail react
-    let reaction;
-    if result.status == "0" {
-        reaction = discordhelpers::build_reaction(success_id, &success_name);
-    } else {
-        reaction = ReactionType::Unicode(String::from("❌"));
+        // create menu
+        let options = discordhelpers::build_compile_controls();
+        let menu = Menu::new(ctx, msg, &pages, options);
+        match menu.run().await {
+            Ok(sent_msg) => {
+                // add message to delete cache
+                if let Some(m) = sent_msg {
+                    let data_read = ctx.data.read().await;
+                    let mut delete_cache = data_read.get::<MessageDeleteCache>().unwrap().lock().await;
+                    delete_cache.insert(msg.id.0, m.clone());
+
+                    let reaction;
+                    if result.status == "0" {
+                        reaction = discordhelpers::build_reaction(success_id, &success_name);
+                    } else {
+                        reaction = ReactionType::Unicode(String::from("❌"));
+                    }
+                    m.react(&ctx.http, reaction).await?;
+
+                }
+            },
+            Err(e) => {
+                if e.to_string() == "Unknown Message" {
+                    match msg
+                        .react(
+                            &ctx.http,
+                            discordhelpers::build_reaction(success_id, &success_name),
+                        )
+                        .await
+                    {
+                        Ok(r) => r,
+                        Err(_e) => {
+                            // No need to fail here - this case is handled above
+                            return Ok(());
+                        }
+                    };
+
+                    return Ok(());
+                }
+
+                return Err(CommandError::from(format!(
+                    "Failed to build languages menu\n{}",
+                    e
+                )));
+            }
+        };
     }
-    compilation_embed.react(&ctx.http, reaction).await?;
+    else { // single page - display normally.
+        let emb = discordhelpers::build_compilation_embed(&msg.author, &mut result, 0);
+        let mut emb_msg = discordhelpers::embed_message(emb);
+
+        // Dispatch our request
+        let m = msg
+            .channel_id
+            .send_message(&ctx.http, |_| &mut emb_msg)
+            .await?;
+
+        // Success/fail react
+        let reaction;
+        if result.status == "0" {
+            reaction = discordhelpers::build_reaction(success_id, &success_name);
+        } else {
+            reaction = ReactionType::Unicode(String::from("❌"));
+        }
+        m.react(&ctx.http, reaction).await?;
+        let data_read = ctx.data.read().await;
+        let mut delete_cache = data_read.get::<MessageDeleteCache>().unwrap().lock().await;
+        delete_cache.insert(msg.id.0, m);
+    }
+
 
     let data = ctx.data.read().await;
     let stats = data.get::<StatsManagerCache>().unwrap().lock().await;
@@ -157,10 +224,6 @@ pub async fn compile(ctx: &Context, msg: &Message, _args: Args) -> CommandResult
             discordhelpers::manual_dispatch(ctx.http.clone(), id, emb).await;
         }
     }
-
-    let data_read = ctx.data.read().await;
-    let mut delete_cache = data_read.get::<MessageDeleteCache>().unwrap().lock().await;
-    delete_cache.insert(msg.id.0, compilation_embed.clone());
     debug!("Command executed");
     Ok(())
 }
