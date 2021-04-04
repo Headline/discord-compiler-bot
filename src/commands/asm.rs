@@ -16,14 +16,6 @@ use crate::utls::{discordhelpers, parser};
 #[sub_commands(compilers, languages)]
 #[bucket = "nospam"]
 pub async fn asm(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
-    // parse user input
-    let result: ParserResult = match parser::get_components(&msg.content, &msg.author).await {
-        Ok(r) => r,
-        Err(e) => {
-            return Err(CommandError::from(format!("{}", e)));
-        }
-    };
-
     // aquire lock to our godbolt cache
     let data_read = ctx.data.read().await;
     let godbolt_lock = match data_read.get::<GodboltCache>() {
@@ -34,8 +26,16 @@ pub async fn asm(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
             ));
         }
     };
-    let godbolt = godbolt_lock.read().await;
 
+    // parse user input
+    let result: ParserResult = match parser::get_components(&msg.content, &msg.author, godbolt_lock).await {
+        Ok(r) => r,
+        Err(e) => {
+            return Err(CommandError::from(format!("{}", e)));
+        }
+    };
+
+    let godbolt = godbolt_lock.read().await;
     let c = match godbolt.resolve(&result.target) {
         Some(c) => c,
         None => {
