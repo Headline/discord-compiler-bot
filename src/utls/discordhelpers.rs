@@ -365,6 +365,7 @@ pub fn build_complog_embed(
     input_code: &str,
     lang: &str,
     tag: &str,
+    id: u64,
     guild: &str,
 ) -> CreateEmbed {
     let mut embed = CreateEmbed::default();
@@ -376,6 +377,7 @@ pub fn build_complog_embed(
     embed.title("Compilation requested");
     embed.field("Language", lang, true);
     embed.field("Author", tag, true);
+    embed.field("Author ID", id, true);
     embed.field("Guild", guild, true);
     let mut code = String::from(input_code);
     if code.len() > MAX_OUTPUT_LEN {
