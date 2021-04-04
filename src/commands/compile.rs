@@ -219,6 +219,7 @@ pub async fn compile(ctx: &Context, msg: &Message, _args: Args) -> CommandResult
                 &parse_result.code,
                 &builder.lang,
                 &msg.author.tag(),
+                msg.author.id.0,
                 &guild,
             );
             discordhelpers::manual_dispatch(ctx.http.clone(), id, emb).await;
