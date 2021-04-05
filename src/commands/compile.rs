@@ -6,7 +6,7 @@ use serenity::prelude::*;
 
 use wandbox::*;
 
-use crate::cache::{ConfigCache, WandboxCache, StatsManagerCache, MessageDeleteCache};
+use crate::cache::{ConfigCache, WandboxCache, StatsManagerCache, MessageCache};
 use crate::utls::{discordhelpers, parser, parser::*};
 use serenity_utils::menu::Menu;
 
@@ -139,8 +139,8 @@ pub async fn compile(ctx: &Context, msg: &Message, _args: Args) -> CommandResult
                 // add message to delete cache
                 if let Some(m) = sent_msg {
                     let data_read = ctx.data.read().await;
-                    let mut delete_cache = data_read.get::<MessageDeleteCache>().unwrap().lock().await;
-                    delete_cache.insert(msg.id.0, m.clone());
+                    let mut message_cache = data_read.get::<MessageCache>().unwrap().lock().await;
+                    message_cache.insert(msg.id.0, m.clone());
 
                     let reaction;
                     if result.status == "0" {
@@ -197,8 +197,8 @@ pub async fn compile(ctx: &Context, msg: &Message, _args: Args) -> CommandResult
         }
         m.react(&ctx.http, reaction).await?;
         let data_read = ctx.data.read().await;
-        let mut delete_cache = data_read.get::<MessageDeleteCache>().unwrap().lock().await;
-        delete_cache.insert(msg.id.0, m);
+        let mut message_cache = data_read.get::<MessageCache>().unwrap().lock().await;
+        message_cache.insert(msg.id.0, m);
     }
 
 

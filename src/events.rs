@@ -20,6 +20,7 @@ use crate::cache::*;
 use crate::utls::discordhelpers;
 use crate::stats::statsmanager::StatsManager;
 use serenity::model::id::GuildId;
+use serenity::model::event::MessageUpdateEvent;
 
 pub struct Handler; // event handler for serenity
 
@@ -51,6 +52,19 @@ impl ShardsReadyHandler for Handler {
 
 #[async_trait]
 impl EventHandler for Handler {
+    async fn message_update(&self, ctx: Context, new_data: MessageUpdateEvent) {
+        let data = ctx.data.read().await;
+        let mut message_cache = data.get::<MessageCache>().unwrap().lock().await;
+
+        if let Some(msg) = message_cache.get_mut(&new_data.id.0) {
+            if let Some(new_msg) = new_data.content {
+                if let Some (author) = new_data.author {
+                    discordhelpers::handle_edit(&ctx, new_msg, author, msg.clone()).await;
+                }
+            }
+        }
+    }
+
     async fn guild_create(&self, ctx: Context, guild: Guild) {
         let now: DateTime<Utc> = Utc::now();
         if guild.joined_at + Duration::seconds(30) > now {
@@ -103,12 +117,12 @@ impl EventHandler for Handler {
 
     async fn message_delete(&self, ctx: Context, _channel_id: ChannelId, id: MessageId, _guild_id: Option<GuildId>) {
         let data = ctx.data.read().await;
-        let mut delete_cache = data.get::<MessageDeleteCache>().unwrap().lock().await;
-        if let Some(msg) = delete_cache.get_mut(id.as_u64()) {
+        let mut message_cache = data.get::<MessageCache>().unwrap().lock().await;
+        if let Some(msg) = message_cache.get_mut(id.as_u64()) {
             if msg.delete(ctx.http).await.is_err() {
                 // ignore for now
             }
-            delete_cache.remove(id.as_u64());
+            message_cache.remove(id.as_u64());
         }
     }
 
@@ -200,7 +214,7 @@ pub async fn before(ctx: &Context, msg : &Message, _: &str) -> bool {
 
         if author_blocklisted || guild_blocklisted {
             let emb = discordhelpers::build_fail_embed(&msg.author,
-       "This server or user is blocked from executing commands.
+       "This server or your user is blocked from executing commands.
             This may have happened due to abuse, spam, or other reasons.
             If you feel that this has been done in error, request an unban in the support server.");
 
@@ -237,8 +251,8 @@ pub async fn after(
             .send_message(&ctx.http, |_| &mut emb_msg)
             .await
         {
-            let mut delete_cache = data.get::<MessageDeleteCache>().unwrap().lock().await;
-            delete_cache.insert(msg.id.0, sent);
+            let mut message_cache = data.get::<MessageCache>().unwrap().lock().await;
+            message_cache.insert(msg.id.0, sent);
         }
     }
 

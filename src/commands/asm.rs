@@ -7,7 +7,7 @@ use serenity_utils::menu::Menu;
 
 use godbolt::*;
 
-use crate::cache::{GodboltCache, ConfigCache, MessageDeleteCache};
+use crate::cache::{GodboltCache, ConfigCache, MessageCache};
 use crate::utls::constants::*;
 use crate::utls::parser::*;
 use crate::utls::{discordhelpers, parser};
@@ -116,8 +116,8 @@ pub async fn asm(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
     asm_embed.react(&ctx.http, reaction).await?;
 
     let data_read = ctx.data.read().await;
-    let mut delete_cache = data_read.get::<MessageDeleteCache>().unwrap().lock().await;
-    delete_cache.insert(msg.id.0, asm_embed.clone());
+    let mut message_cache = data_read.get::<MessageCache>().unwrap().lock().await;
+    message_cache.insert(msg.id.0, asm_embed.clone());
     debug!("Command executed");
     Ok(())
 }
