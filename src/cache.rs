@@ -62,9 +62,9 @@ impl TypeMapKey for ShardManagerCache {
     type Value = Arc<tokio::sync::Mutex<ShardManager>>;
 }
 
-/// Message deletion cache to delete our own messages after the original request's deletion
-pub struct MessageDeleteCache;
-impl TypeMapKey for MessageDeleteCache {
+/// Message  cache to interact with our own messages after they are dispatched
+pub struct MessageCache;
+impl TypeMapKey for MessageCache {
     type Value = Arc<tokio::sync::Mutex<LruCache<u64, Message>>>;
 }
 
@@ -103,7 +103,7 @@ pub async fn fill(
     data.insert::<WandboxCache>(Arc::new(RwLock::new(wbox)));
 
     // Message delete cache
-    data.insert::<MessageDeleteCache>(Arc::new(tokio::sync::Mutex::new(LruCache::new(25))));
+    data.insert::<MessageCache>(Arc::new(tokio::sync::Mutex::new(LruCache::new(25))));
 
     // Godbolt
     let godbolt = Godbolt::new().await?;

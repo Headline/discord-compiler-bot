@@ -11,9 +11,13 @@ use serenity_utils::menu::*;
 use wandbox::*;
 
 use crate::utls::constants::*;
-use crate::utls::discordhelpers;
-use tokio::sync::MutexGuard;
+use crate::utls::{discordhelpers, parser};
+use tokio::sync::{MutexGuard};
 use serenity::client::bridge::gateway::{ShardManager};
+use crate::cache::{ConfigCache, GodboltCache};
+use serenity::client::Context;
+use serenity::framework::standard::CommandResult;
+use godbolt::{CompilationFilters, Godbolt};
 
 pub fn build_menu_items(
     items: Vec<String>,
@@ -406,4 +410,299 @@ pub fn build_fail_embed(author: &User, err: &str) -> CreateEmbed {
     embed.thumbnail(ICON_FAIL);
     embed.footer(|f| f.text(format!("Requested by: {}", author.tag())));
     embed
+}
+
+pub async fn handle_edit(ctx : &Context, content : String, author : User, mut old : Message) {
+    let prefix = {
+        let data = ctx.data.read().await;
+        let info = data.get::<ConfigCache>().unwrap().read().await;
+        info.get("BOT_PREFIX").unwrap().to_owned()
+    };
+
+    // try to clear reactions
+   let _ = old.delete_reactions(&ctx).await;
+
+    if content.starts_with(&format!("{}asm", prefix)) {
+        if let Err(e) = handle_edit_asm(&ctx, content, author.clone(), old.clone()).await {
+            let _ = old.edit(&ctx, |m| {
+                let err = build_fail_embed(&author, &e.to_string());
+                m.embed(|e| {
+                    e.0 = err.0;
+                    e
+                });
+                m
+            }).await;
+
+        }
+    }
+    else if content.starts_with(&format!("{}compile", prefix)) {
+        if let Err(e) = handle_edit_compile(&ctx, content, author.clone(), old.clone()).await {
+            let _ = old.edit(&ctx, |m| {
+                let err = build_fail_embed(&author, &e.to_string());
+                m.embed(|e| {
+                    e.0 = err.0;
+                    e
+                });
+                m
+            }).await;
+        }
+    }
+    else {
+        let _ = old.edit(&ctx, |m| {
+            let err = build_fail_embed(&author, "Invalid command for edit functionality!");
+            m.embed(|e| {
+                e.0 = err.0;
+                e
+            });
+            m
+        }).await;
+    }
+}
+
+pub async fn handle_edit_compile(ctx : &Context, content : String, author : User, mut old : Message) -> CommandResult {
+    let success_id;
+    let success_name;
+    let loading_id;
+    let loading_name;
+    {
+        let data_read = ctx.data.read().await;
+        let botinfo_lock = data_read
+            .get::<ConfigCache>()
+            .expect("Expected ConfigCache in global cache")
+            .clone();
+        let botinfo = botinfo_lock.read().await;
+        success_id = botinfo
+            .get("SUCCESS_EMOJI_ID")
+            .unwrap()
+            .clone()
+            .parse::<u64>()
+            .unwrap();
+        success_name = botinfo.get("SUCCESS_EMOJI_NAME").unwrap().clone();
+        loading_id = botinfo
+            .get("LOADING_EMOJI_ID")
+            .unwrap()
+            .clone()
+            .parse::<u64>()
+            .unwrap();
+        loading_name = botinfo.get("LOADING_EMOJI_NAME").unwrap().clone();
+    }
+
+    use serenity::{
+        framework::standard::{CommandError},
+    };
+    use crate::cache::WandboxCache;
+
+    // parse user input
+    let parse_result = parser::get_components(&content, &author).await?;
+
+    // build user input
+    let mut builder = CompilationBuilder::new();
+    builder.code(&parse_result.code);
+    builder.target(&parse_result.target);
+    builder.stdin(&parse_result.stdin);
+    builder.save(true);
+    builder.options(parse_result.options);
+
+    // aquire lock to our wandbox cache
+    let data_read = ctx.data.read().await;
+    let wandbox_lock = match data_read.get::<WandboxCache>() {
+        Some(l) => l,
+        None => {
+            return Err(CommandError::from(
+                "Internal request failure\nWandbox cache is uninitialized, please file a bug.",
+            ));
+        }
+    };
+    let wbox = wandbox_lock.read().await;
+
+    // build request
+    match builder.build(&wbox) {
+        Ok(()) => (),
+        Err(e) => {
+            return Err(CommandError::from(format!(
+                "An internal error has occurred while building request.\n{}",
+                e
+            )));
+        }
+    };
+
+    // lets see if we can manually fix botched java compilations...
+    // for wandbox, "public class" is invalid, so lets do a quick replacement
+    if builder.lang == "java" {
+        builder.code(&parse_result.code.replacen("public class", "class", 1));
+    }
+
+    // send out loading emote
+    let reaction = match old
+        .react(
+            &ctx.http,
+            discordhelpers::build_reaction(loading_id, &loading_name),
+        )
+        .await
+    {
+        Ok(r) => r,
+        Err(e) => {
+            return Err(CommandError::from(format!(" Unable to react to message, am I missing permissions to react or use external emoji?\n{}", e)));
+        }
+    };
+
+    // dispatch our req
+    let mut result = match builder.dispatch().await {
+        Ok(r) => r,
+        Err(e) => {
+            // we failed, lets remove the loading react so it doesn't seem like we're still processing
+            old.delete_reaction_emoji(&ctx.http, reaction.emoji.clone())
+                .await?;
+
+            return Err(CommandError::from(format!("{}", e)));
+        }
+    };
+
+    // remove our loading emote
+    match old
+        .delete_reaction_emoji(&ctx.http, reaction.emoji.clone())
+        .await
+    {
+        Ok(()) => (),
+        Err(_e) => {
+            return Err(CommandError::from(
+                "Unable to remove reactions!\nAm I missing permission to manage messages?",
+            ));
+        }
+    }
+
+    let page_count = discordhelpers::get_page_count(&result);
+    if page_count > 1 {
+        return Err(CommandError::from("Large paginated outputs requires a new request."));
+    }
+    else { // single page - display normally.
+        let emb = discordhelpers::build_compilation_embed(&author, &mut result, 0);
+        let _ = old.edit(&ctx, |m| {
+            m.embed(|e| {
+                e.0 = emb.0;
+                e
+            });
+            m
+        }).await;
+
+
+        // Success/fail react
+        let reaction;
+        if result.status == "0" {
+            reaction = discordhelpers::build_reaction(success_id, &success_name);
+        } else {
+            reaction = ReactionType::Unicode(String::from("❌"));
+        }
+        old.react(&ctx.http, reaction).await?;
+    }
+
+    Ok(())
+}
+pub async fn handle_edit_asm(ctx : &Context, content : String, author : User, mut old : Message) -> CommandResult {
+    use serenity::{
+        framework::standard::{CommandError},
+    };
+
+    // aquire lock to our godbolt cache
+    let data_read = ctx.data.read().await;
+    let godbolt_lock = match data_read.get::<GodboltCache>() {
+        Some(l) => l,
+        None => {
+            return Err(CommandError::from(
+                "Internal request failure\nGodbolt cache is uninitialized, please file a bug.",
+            ));
+        }
+    };
+
+    let godbolt = godbolt_lock.read().await;
+
+    // parse user input
+    let result = match parser::get_components(&content, &author).await {
+        Ok(r) => r,
+        Err(e) => {
+            return Err(CommandError::from(format!("{}", e)));
+        }
+    };
+
+    let c = match godbolt.resolve(&result.target) {
+        Some(c) => c,
+        None => {
+            return Err(CommandError::from(format!(
+                "Unable to find valid compiler or language '{}'\n",
+                &result.target
+            )));
+        }
+    };
+
+    // send out loading emote
+    let reaction = match old
+        .react(
+            &ctx.http,
+            discordhelpers::build_reaction(752440820036272139, "compiler_loading2"),
+        )
+        .await
+    {
+        Ok(r) => r,
+        Err(e) => {
+            return Err(CommandError::from(format!(" Unable to react to message, am I missing permissions to react or use external emoji?\n{}", e)));
+        }
+    };
+
+    let filters = CompilationFilters {
+        binary: None,
+        comment_only: Some(true),
+        demangle: Some(true),
+        directives: Some(true),
+        execute: None,
+        intel: Some(true),
+        labels: Some(true),
+        library_code: None,
+        trim: Some(true),
+    };
+
+    let response =
+        match Godbolt::send_request(&c, &result.code, &result.options.join(" "), &filters).await {
+            Ok(resp) => resp,
+            Err(e) => {
+                // we failed, lets remove the loading react before leaving so it doesn't seem like we're still processing
+                old.delete_reaction_emoji(&ctx.http, reaction.emoji.clone())
+                    .await?;
+                return Err(CommandError::from(format!(
+                    "Godbolt request failed!\n\n{}",
+                    e
+                )));
+            }
+        };
+
+    // remove our loading emote
+    match old
+        .delete_reaction_emoji(&ctx.http, reaction.emoji.clone())
+        .await
+    {
+        Ok(()) => (),
+        Err(_e) => {
+            return Err(CommandError::from(
+                "Unable to remove reactions!\nAm I missing permission to manage messages?",
+            ));
+        }
+    }
+
+    let emb = discordhelpers::build_asm_embed(&author, &response);
+    let _ = old.edit(&ctx, |m| {
+        m.embed(|e| {
+            e.0 = emb.0;
+            e
+        });
+        m
+    }).await;
+
+    let reaction;
+    if response.asm_size.is_some() {
+        reaction = discordhelpers::build_reaction(764356794352009246, "checkmark2");
+    } else {
+        reaction = ReactionType::Unicode(String::from("❌"));
+    }
+
+    old.react(&ctx.http, reaction).await?;
+    Ok(())
 }
