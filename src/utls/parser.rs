@@ -7,18 +7,32 @@ use tokio::sync::RwLock;
 use std::sync::Arc;
 
 //Traits for compiler lookup
-trait LanguageResolvable {
+pub trait LanguageResolvable {
     fn resolve(&self, language : &str) -> bool;
 }
 
 impl LanguageResolvable for wandbox::Wandbox {
     fn resolve(&self, language : &str) -> bool {
-        self.is_valid_compiler_str(language)
+        self.is_valid_language(language) || self.is_valid_compiler_str(language)
     }
 }
 impl LanguageResolvable for godbolt::Godbolt {
     fn resolve(&self, language : &str) -> bool {
         self.resolve(language).is_some()
+    }
+}
+
+// Allows us to convert some common aliases to other programming languages
+pub fn shortname_to_qualified(language : &str) -> &str {
+    match language {
+        // Replace cpp with c++ since we removed the c pre-processor
+        // support for wandbox. This is okay for godbolt requests, too.
+        "cpp" => "c++",
+        "rs" => "rust",
+        "js" => "javascript",
+        "csharp" => "c#",
+        "py" => "python",
+        _ => language
     }
 }
 
@@ -54,8 +68,7 @@ pub struct ParserResult {
 }
 
 #[allow(clippy::while_let_on_iterator)]
-pub async fn get_components(input: &str, author : &User, target_api : &Arc<RwLock<dyn LanguageResolvable>>) -> Result<ParserResult, ParserError> {
-    let lang_lookup = target_api.read().await;
+pub async fn get_components<T : LanguageResolvable>(input: &str, author : &User, target_api : &Arc<RwLock<T>>) -> Result<ParserResult, ParserError> {
 
     let mut result = ParserResult {
         url: Default::default(),
@@ -79,13 +92,19 @@ pub async fn get_components(input: &str, author : &User, target_api : &Arc<RwLoc
     // ditch command str (;compile, ;asm)
     args.remove(0);
 
-    if let Some(param) = args.get(0) {
-        let language = param.to_lowercase();
-        if lang_lookup.resolve(&language) {
-            result.target = language;
+    // Check to see if we were given a valid target... if not we'll check
+    // the syntax highlighting str later.
+    {
+        let lang_lookup = target_api.read().await;
+        if let Some(param) = args.get(0) {
+            let lower_param = param.trim().to_lowercase();
+            let language = shortname_to_qualified(&lower_param);
+            if lang_lookup.resolve(&language) {
+                args.remove(0);
+                result.target = language.to_owned();
+            }
         }
     }
-    result.target = args.remove(0).trim().to_owned().to_lowercase();
 
     // looping every argument
     let mut iter = args.iter();
@@ -163,12 +182,6 @@ pub async fn get_components(input: &str, author : &User, target_api : &Arc<RwLoc
         return Err(ParserError::new("You must provide a valid language or compiler!\n\n;compile c++ \n\\`\\`\\`\nint main() {}\n\\`\\`\\`"));
     }
 
-    // Replace cpp with c++ since we removed the c pre-processor
-    // support for wandbox. This is okay for godbolt requests, too.
-    if result.target == "cpp" {
-        result.target = String::from("c++");
-    }
-
     Ok(result)
 }
 
@@ -176,31 +189,25 @@ fn find_code_block(result: &mut ParserResult, haystack: &str) -> Result<(), Pars
     let re = regex::Regex::new(r"```(?:(?P<language>[^\s`]*)\r?\n)?(?P<code>[\s\S]*?)```").unwrap();
     let matches = re.captures_iter(haystack);
 
-    let mut captures: Vec<&str> = Vec::new();
+    let mut captures = Vec::new();
     let list = matches.enumerate();
     for (_, cap) in list {
-        captures.push(cap.name("code").unwrap().as_str());
+        captures.push(cap);
     }
 
     // support for stdin codeblocks
+    let code_index; // index into captures where we might find our target lang
     match captures.len() {
         len if len > 1 => {
-            result.stdin = String::from(captures[0]);
-            result.code = String::from(captures[1]);
+            result.stdin = String::from(captures[0].name("code").unwrap().as_str());
+            result.code = String::from(captures[1].name("code").unwrap().as_str());
 
-            if result.target.is_empty() {
-                if let Some(lang_match) = captures[1].name("language") {
-                    result.target = lang_match.as_str().to_owned();
-                }
-            }
+            code_index = 1;
         }
         1 => {
-            result.code = String::from(captures[0]);
-            if result.target.is_empty() {
-                if let Some(lang_match) = captures[0].name("language") {
-                    result.target = lang_match.as_str().to_owned();
-                }
-            }
+            result.code = String::from(captures[0].name("code").unwrap().as_str());
+
+            code_index = 0;
         }
         _ => {
             return Err(ParserError::new(
@@ -208,5 +215,13 @@ fn find_code_block(result: &mut ParserResult, haystack: &str) -> Result<(), Pars
             ))
         }
     }
+
+    // if we still don't have our language target, lets try the language for syntax highlighting
+    if result.target.is_empty() {
+        if let Some(lang_match) = captures[code_index].name("language") {
+            result.target = shortname_to_qualified(lang_match.as_str()).to_owned();
+        }
+    }
+
     Ok(())
 }

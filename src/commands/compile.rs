@@ -40,17 +40,6 @@ pub async fn compile(ctx: &Context, msg: &Message, _args: Args) -> CommandResult
         loading_name = botinfo.get("LOADING_EMOJI_NAME").unwrap().clone();
     }
 
-    // parse user input
-    let parse_result: ParserResult = parser::get_components(&msg.content, &msg.author).await?;
-
-    // build user input
-    let mut builder = CompilationBuilder::new();
-    builder.code(&parse_result.code);
-    builder.target(&parse_result.target);
-    builder.stdin(&parse_result.stdin);
-    builder.save(true);
-    builder.options(parse_result.options);
-
     // aquire lock to our wandbox cache
     let data_read = ctx.data.read().await;
     let wandbox_lock = match data_read.get::<WandboxCache>() {
@@ -61,6 +50,18 @@ pub async fn compile(ctx: &Context, msg: &Message, _args: Args) -> CommandResult
             ));
         }
     };
+
+    // parse user input
+    let parse_result: ParserResult = parser::get_components(&msg.content, &msg.author, wandbox_lock).await?;
+
+    // build user input
+    let mut builder = CompilationBuilder::new();
+    builder.code(&parse_result.code);
+    builder.target(&parse_result.target);
+    builder.stdin(&parse_result.stdin);
+    builder.save(true);
+    builder.options(parse_result.options);
+
     let wbox = wandbox_lock.read().await;
 
     // build request
