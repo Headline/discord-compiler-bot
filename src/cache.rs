@@ -103,7 +103,7 @@ pub async fn fill(
     data.insert::<WandboxCache>(Arc::new(RwLock::new(wbox)));
 
     // Message delete cache
-    data.insert::<MessageDeleteCache>(Arc::new(tokio::sync::Mutex::new(LruCache::new(10))));
+    data.insert::<MessageDeleteCache>(Arc::new(tokio::sync::Mutex::new(LruCache::new(25))));
 
     // Godbolt
     let godbolt = Godbolt::new().await?;

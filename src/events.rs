@@ -227,20 +227,23 @@ pub async fn after(
     command_name: &str,
     command_result: CommandResult,
 ) {
+    let data = ctx.data.read().await;
+
     if let Err(e) = command_result {
         let emb = discordhelpers::build_fail_embed(&msg.author, &format!("{}", e));
         let mut emb_msg = discordhelpers::embed_message(emb);
-        if msg
+        if let Ok(sent) = msg
             .channel_id
             .send_message(&ctx.http, |_| &mut emb_msg)
             .await
-            .is_err()
         {
-            // missing permissions, just ignore...
+            let mut delete_cache = data.get::<MessageDeleteCache>().unwrap().lock().await;
+            delete_cache.insert(msg.id.0, sent);
         }
     }
 
-    let data = ctx.data.read().await;
+
+    // push command executed to api
     let stats = data.get::<StatsManagerCache>().unwrap().lock().await;
     if stats.should_track() {
         stats.command_executed(command_name).await;
