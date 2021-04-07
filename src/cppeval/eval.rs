@@ -26,7 +26,7 @@ pub struct CppEval {
 }
 
 impl CppEval {
-    pub fn new(input : &String) -> CppEval {
+    pub fn new(input : &str) -> CppEval {
         CppEval {
             input: input.trim().to_owned(),
             output : String::default()
@@ -34,6 +34,14 @@ impl CppEval {
     }
 
     pub fn evaluate(& mut self) -> Result<String, EvalError> {
+        // allow inline code
+        if self.input.starts_with('`') && self.input.ends_with("`") {
+            self.input.remove(0);
+            self.input.remove(self.input.len()-1);
+            self.input = self.input.trim().to_string();
+        }
+
+        // add bits we need for every request
         self.add_headers();
 
         if self.input.starts_with("{") { // parsing a statement here
@@ -41,7 +49,7 @@ impl CppEval {
                 return Err(e)
             }
         }
-        else if self.input.starts_with("<<") {
+        else if self.input.starts_with("<<") { // just outputting
             self.do_prints();
         }
         else { // they're handling their own main
@@ -54,7 +62,7 @@ impl CppEval {
         Ok(self.output.clone())
     }
 
-    pub fn do_user_handled(& mut self) -> Result<(), EvalError> {
+    fn do_user_handled(& mut self) -> Result<(), EvalError> {
         let re = regex::Regex::new(r"(([a-zA-Z]*?)[\s]+main\((.*?)\)[\s]+\{[\s\S]*?\})").unwrap();
 
         let mut found = false;
@@ -77,11 +85,37 @@ impl CppEval {
         Ok(())
     }
 
-    pub fn do_statements(& mut self) -> Result<(), EvalError>  {
+    fn do_statements(& mut self) -> Result<(), EvalError>  {
+        let end = self.get_statement_end();
+        if end == 0 {
+            return Err(EvalError::new("Parsing failure, detected unbalanced curly-brackets."))
+        }
+
+        self.do_rest(end+1);
+
+        let statements = self.input[1..end].to_owned();
+        self.build_main(&statements);
+
+        Ok(())
+    }
+
+    fn get_statement_end(&self) -> usize {
         let mut balance = 0;
         let mut stop_idx = 0;
-        // TODO: prevent this from failing if people print '{' or '}'
+        let mut ignore = false;
+        let mut last = '\0';
         for (index, char) in self.input.chars().enumerate() {
+            // prevent }  in print statements from messing up our balance, we keep track of the
+            // last character parsed in order to detect escaped quotes that way we know which
+            // quotes indicate the start of a string and which ones do not.
+            if (char == '\'' || char == '"') && last != '\\' {
+                ignore = !ignore;
+            }
+            if ignore && last != '\\' {
+                last = char;
+                continue;
+            }
+            // balance our braces
             if char == '{' {
                 balance += 1;
             }
@@ -92,26 +126,17 @@ impl CppEval {
                 stop_idx = index;
                 break;
             }
+            last = char;
         }
-
-        if stop_idx == 0 {
-            return Err(EvalError::new("Parsing failure, detected unbalanced curly-brackets."))
-        }
-
-        self.do_rest(stop_idx+1);
-
-        let statements = self.input[1..stop_idx].to_owned();
-        self.build_main(&statements);
-
-        Ok(())
+        stop_idx
     }
 
-    pub fn do_rest(& mut self, start_idx : usize) {
+    fn do_rest(& mut self, start_idx : usize) {
         let rest = &self.input[start_idx..];
         self.output.push_str(rest.trim());
     }
 
-    pub fn do_prints(& mut self) {
+    fn do_prints(& mut self) {
         let input;
         if let Some(statement_end) = self.input.find(';') {
             self.do_rest(statement_end+1);
@@ -124,18 +149,18 @@ impl CppEval {
         self.build_main(&format!("cout {};", input));
     }
 
-    pub fn add_headers(& mut self) {
+    fn add_headers(& mut self) {
         self.output.push_str("#include <bits/stdc++.h>\n");
         self.output.push_str("using namespace std;\n");
         //self.add_ostreaming();
     }
 
-    pub fn build_main(& mut self, statements : &String) {
+    fn build_main(& mut self, statements : &String) {
         self.output.push_str(&format!("\nint main (void) {{\n{}\n}}", statements));
 
     }
 
-/*    pub fn add_ostreaming(& mut self) {
+/*    fn add_ostreaming(& mut self) {
         let vec_print = include_str!("more_ostreaming.in");
         self.output.push_str(vec_print);
         self.output.push_str("\n\n");

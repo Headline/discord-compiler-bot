@@ -9,9 +9,8 @@ use crate::cache::{WandboxCache, ConfigCache};
 use crate::utls::discordhelpers;
 
 #[command]
-#[owners_only]
+#[aliases("c++")]
 pub async fn cpp(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
-    let prefix;
     let loading_id;
     let loading_name;
     {
@@ -28,10 +27,18 @@ pub async fn cpp(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
             .parse::<u64>()
             .unwrap();
         loading_name = botinfo.get("LOADING_EMOJI_NAME").unwrap().clone();
-        prefix = botinfo.get("BOT_PREFIX").unwrap().clone();
     }
 
-    let mut eval = CppEval::new(&msg.content.replacen(&format!("{}cpp", prefix), "", 1));
+
+    let start = msg.content.find(' ');
+    if let None = start {
+        return Err(CommandError::from(
+            "Invalid usage. View `;help cpp`",
+        ));
+    }
+
+
+    let mut eval = CppEval::new(msg.content.split_at(start.unwrap()).1);
     let out = eval.evaluate();
 
     if let Err(e) = out {
