@@ -8,3 +8,4 @@ pub mod ping;
 pub mod block;
 pub mod unblock;
 pub mod invite;
+pub mod cpp;
