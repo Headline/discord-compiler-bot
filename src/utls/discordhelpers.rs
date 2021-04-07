@@ -492,17 +492,6 @@ pub async fn handle_edit_compile(ctx : &Context, content : String, author : User
     };
     use crate::cache::WandboxCache;
 
-    // parse user input
-    let parse_result = parser::get_components(&content, &author).await?;
-
-    // build user input
-    let mut builder = CompilationBuilder::new();
-    builder.code(&parse_result.code);
-    builder.target(&parse_result.target);
-    builder.stdin(&parse_result.stdin);
-    builder.save(true);
-    builder.options(parse_result.options);
-
     // aquire lock to our wandbox cache
     let data_read = ctx.data.read().await;
     let wandbox_lock = match data_read.get::<WandboxCache>() {
@@ -513,6 +502,18 @@ pub async fn handle_edit_compile(ctx : &Context, content : String, author : User
             ));
         }
     };
+
+    // parse user input
+    let parse_result = parser::get_components(&content, &author, wandbox_lock).await?;
+
+    // build user input
+    let mut builder = CompilationBuilder::new();
+    builder.code(&parse_result.code);
+    builder.target(&parse_result.target);
+    builder.stdin(&parse_result.stdin);
+    builder.save(true);
+    builder.options(parse_result.options);
+
     let wbox = wandbox_lock.read().await;
 
     // build request
@@ -614,16 +615,15 @@ pub async fn handle_edit_asm(ctx : &Context, content : String, author : User, mu
         }
     };
 
-    let godbolt = godbolt_lock.read().await;
-
     // parse user input
-    let result = match parser::get_components(&content, &author).await {
+    let result = match parser::get_components(&content, &author, godbolt_lock).await {
         Ok(r) => r,
         Err(e) => {
             return Err(CommandError::from(format!("{}", e)));
         }
     };
 
+    let godbolt = godbolt_lock.read().await;
     let c = match godbolt.resolve(&result.target) {
         Some(c) => c,
         None => {
