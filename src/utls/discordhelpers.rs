@@ -142,6 +142,31 @@ pub fn build_reaction(emoji_id: u64, emoji_name: &str) -> ReactionType {
     }
 }
 
+pub fn build_small_compilation_embed(author: &User, res: & mut CompilationResult, page_number : i32) -> CreateEmbed {
+    let mut embed = CreateEmbed::default();
+    if res.status != "0" {
+        embed.color(COLOR_FAIL);
+    } else {
+        embed.color(COLOR_OKAY);
+    }
+
+    if !res.compiler_all.is_empty() {
+        let str = conform_external_str(&res.compiler_all, 0, MAX_ERROR_LEN);
+        embed.field("Compiler Output", format!("```{}\n```", str), false);
+    }
+    if !res.program_all.is_empty() {
+        let str = conform_external_str(&res.program_all, page_number, MAX_OUTPUT_LEN);
+        embed.description(format!("```\n{}\n```", str));
+    }
+    embed.footer(|f| {
+        f.text(format!(
+            "Requested by: {} | Powered by wandbox.org",
+            author.tag()
+        ))
+    });
+
+    embed
+}
 pub fn build_compilation_embed(author: &User, res: & mut CompilationResult, page_number : i32) -> CreateEmbed {
     let mut embed = CreateEmbed::default();
 

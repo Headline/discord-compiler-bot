@@ -50,6 +50,14 @@ pub async fn help(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
                 emb.field("Example", format!("{}compilers <language>", prefix), false);
                 "Lists all compilers supported for a given language"
             }
+
+            "cpp" | "c++" => {
+                emb.title("c++/cpp command");
+                emb.field("Example 1", format!("{}cpp {{ int a = 4; if (a > 3) {{ cout << \"true\"}} }}", prefix), false);
+                emb.field("Example 1", format!("{}cpp {{ int a = 4; if (a > 3) {{ cout << \"true\"}} }}", prefix), false);
+                "Allows you to quickly compile and execute c++ snippets using geordi-like syntax.\nSee section 2.1 of http://eel.is/geordi/#syntax"
+            }
+
             "languages" => {
                 emb.title("Languages command");
                 emb.field("Example", format!("{}languages", prefix), false);

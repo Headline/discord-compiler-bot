@@ -6,6 +6,7 @@ mod commands;
 mod events;
 mod stats;
 mod utls;
+mod cppeval;
 
 use serenity::{
     client::bridge::gateway::GatewayIntents,
@@ -25,11 +26,11 @@ extern crate pretty_env_logger;
 use crate::commands::{
     asm::ASM_COMMAND, botinfo::*, compile::*, compilers::*,
     help::*, languages::*, ping::*, block::*, unblock::*,
-    invite::*
+    invite::*, cpp::*
 };
 
 #[group]
-#[commands(botinfo, compile, languages, compilers, ping, help, asm, block, unblock, invite)]
+#[commands(botinfo, compile, languages, compilers, ping, help, asm, block, unblock, invite, cpp)]
 struct General;
 
 /** Spawn bot **/
