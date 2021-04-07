@@ -70,7 +70,7 @@ pub async fn cpp(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
     builder.target("gcc-10.1.0");
     builder.stdin("");
     builder.save(false);
-    builder.options(vec![String::from("-O2")]);
+    builder.options(vec![String::from("-O2"), String::from("-std=gnu++2a")]);
 
     let data_read = ctx.data.read().await;
     let wandbox_lock = match data_read.get::<WandboxCache>() {
