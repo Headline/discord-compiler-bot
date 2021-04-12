@@ -118,7 +118,7 @@ pub async fn cpp(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
         }
     }
 
-    let emb = discordhelpers::build_small_compilation_embed(&msg.author, &mut result, 0);
+    let emb = discordhelpers::build_small_compilation_embed(&msg.author, &mut result);
     let mut emb_msg = discordhelpers::embed_message(emb);
 
     // Dispatch our request

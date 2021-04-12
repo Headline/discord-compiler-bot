@@ -94,45 +94,6 @@ pub fn build_menu_controls() -> MenuOptions {
     }
 }
 
-pub async fn delete_and_close_menu(menu: &mut Menu<'_>, _reaction: Reaction) {
-    let _ = menu
-        .options
-        .message
-        .as_ref()
-        .unwrap()
-        .delete(&menu.ctx.http)
-        .await;
-
-    let _ = menu.msg.delete(&menu.ctx).await;
-}
-
-pub fn build_compile_controls() -> MenuOptions {
-    let controls = vec![
-        Control::new(
-            ReactionType::from('◀'),
-            Arc::new(|m, r| Box::pin(prev_page(m, r))),
-        ),
-        Control::new(
-            ReactionType::from('🗑'),
-            Arc::new(|m, r| Box::pin(delete_and_close_menu(m, r))),
-        ),
-        Control::new(
-            ReactionType::from('▶'),
-            Arc::new(|m, r| Box::pin(next_page(m, r))),
-        ),
-    ];
-
-    // Let's create options for the menu.
-    MenuOptions {
-        controls,
-        ..Default::default()
-    }
-}
-
-pub fn get_page_count(result : &CompilationResult) -> usize {
-    (result.program_all.chars().count()/MAX_OUTPUT_LEN) + 1
-}
-
 // Pandas#3**2 on serenity disc, tyty
 pub fn build_reaction(emoji_id: u64, emoji_name: &str) -> ReactionType {
     ReactionType::Custom {
@@ -142,7 +103,7 @@ pub fn build_reaction(emoji_id: u64, emoji_name: &str) -> ReactionType {
     }
 }
 
-pub fn build_small_compilation_embed(author: &User, res: & mut CompilationResult, page_number : i32) -> CreateEmbed {
+pub fn build_small_compilation_embed(author: &User, res: & mut CompilationResult) -> CreateEmbed {
     let mut embed = CreateEmbed::default();
     if res.status != "0" {
         embed.color(COLOR_FAIL);
@@ -151,11 +112,11 @@ pub fn build_small_compilation_embed(author: &User, res: & mut CompilationResult
     }
 
     if !res.compiler_all.is_empty() {
-        let str = conform_external_str(&res.compiler_all, 0, MAX_ERROR_LEN);
+        let str = conform_external_str(&res.compiler_all, MAX_ERROR_LEN);
         embed.field("Compiler Output", format!("```{}\n```", str), false);
     }
     if !res.program_all.is_empty() {
-        let str = conform_external_str(&res.program_all, page_number, MAX_OUTPUT_LEN);
+        let str = conform_external_str(&res.program_all, MAX_OUTPUT_LEN);
         embed.description(format!("```\n{}\n```", str));
     }
     embed.footer(|f| {
@@ -167,7 +128,7 @@ pub fn build_small_compilation_embed(author: &User, res: & mut CompilationResult
 
     embed
 }
-pub fn build_compilation_embed(author: &User, res: & mut CompilationResult, page_number : i32) -> CreateEmbed {
+pub fn build_compilation_embed(author: &User, res: & mut CompilationResult) -> CreateEmbed {
     let mut embed = CreateEmbed::default();
 
     if !res.status.is_empty() {
@@ -193,11 +154,11 @@ pub fn build_compilation_embed(author: &User, res: & mut CompilationResult, page
         res.status = String::from('0');
     }
     if !res.compiler_all.is_empty() {
-        let str = conform_external_str(&res.compiler_all, 0, MAX_ERROR_LEN);
+        let str = conform_external_str(&res.compiler_all,  MAX_ERROR_LEN);
         embed.field("Compiler Output", format!("```{}\n```", str), false);
     }
     if !res.program_all.is_empty() {
-        let str = conform_external_str(&res.program_all, page_number, MAX_OUTPUT_LEN);
+        let str = conform_external_str(&res.program_all, MAX_OUTPUT_LEN);
         embed.field("Program Output", format!("```\n{}\n```", str), false);
     }
     if !res.url.is_empty() {
@@ -206,19 +167,10 @@ pub fn build_compilation_embed(author: &User, res: & mut CompilationResult, page
 
     embed.title("Compilation Results");
     embed.footer(|f| {
-        let count = get_page_count(res);
-        if count > 1 {
-            f.text(format!(
-                "Requested by: {} | Powered by wandbox.org | {}/{}",
-                author.tag(), page_number+1, count
-            ))
-        }
-        else {
-            f.text(format!(
-                "Requested by: {} | Powered by wandbox.org",
-                author.tag()
-            ))
-        }
+        f.text(format!(
+            "Requested by: {} | Powered by wandbox.org",
+            author.tag()
+        ))
     });
     embed
 }
@@ -229,7 +181,7 @@ pub fn build_compilation_embed(author: &User, res: & mut CompilationResult, page
 //
 // Here we also limit the text to 1000 chars, this prevents discord from
 // rejecting our embeds for being to long if someone decides to spam.
-pub fn conform_external_str(input: &str, page_number : i32, max_len : usize) -> String {
+pub fn conform_external_str(input: &str, max_len : usize) -> String {
     let mut str: String;
     if let Ok(vec) = strip_ansi_escapes::strip(input) {
         str = String::from_utf8_lossy(&vec).to_string();
@@ -243,15 +195,8 @@ pub fn conform_external_str(input: &str, page_number : i32, max_len : usize) -> 
     str = str.replace("`", "\u{200B}`");
 
     // Conform our string.
-    if str.len() > max_len {
-        if page_number > 0 {
-            let it = str.chars();
-            let skip = it.skip(max_len*(page_number as usize));
-            skip.take(max_len).collect()
-        }
-        else {
-            str.chars().take(max_len).collect()
-        }
+    if str.len() > MAX_OUTPUT_LEN {
+        str.chars().take(max_len).collect()
     } else {
         str
     }
@@ -274,7 +219,7 @@ pub fn build_asm_embed(author: &User, res: &godbolt::CompilationResult) -> Creat
                 errs.push_str(&line);
             }
 
-            let compliant_str = discordhelpers::conform_external_str(&errs, 0, MAX_ERROR_LEN);
+            let compliant_str = discordhelpers::conform_external_str(&errs, MAX_ERROR_LEN);
             embed.field(
                 "Compilation Errors",
                 format!("```\n{}```", compliant_str),
@@ -597,30 +542,24 @@ pub async fn handle_edit_compile(ctx : &Context, content : String, author : User
         }
     }
 
-    let page_count = discordhelpers::get_page_count(&result);
-    if page_count > 1 {
-        return Err(CommandError::from("Large paginated outputs requires a new request."));
-    }
-    else { // single page - display normally.
-        let emb = discordhelpers::build_compilation_embed(&author, &mut result, 0);
-        let _ = old.edit(&ctx, |m| {
-            m.embed(|e| {
-                e.0 = emb.0;
-                e
-            });
-            m
-        }).await;
+    let emb = discordhelpers::build_compilation_embed(&author, &mut result);
+    let _ = old.edit(&ctx, |m| {
+        m.embed(|e| {
+            e.0 = emb.0;
+            e
+        });
+        m
+    }).await;
 
 
-        // Success/fail react
-        let reaction;
-        if result.status == "0" {
-            reaction = discordhelpers::build_reaction(success_id, &success_name);
-        } else {
-            reaction = ReactionType::Unicode(String::from("❌"));
-        }
-        old.react(&ctx.http, reaction).await?;
+    // Success/fail react
+    let reaction;
+    if result.status == "0" {
+        reaction = discordhelpers::build_reaction(success_id, &success_name);
+    } else {
+        reaction = ReactionType::Unicode(String::from("❌"));
     }
+    old.react(&ctx.http, reaction).await?;
 
     Ok(())
 }
