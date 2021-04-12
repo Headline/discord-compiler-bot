@@ -69,7 +69,7 @@ impl CppEval {
         for capture in re.captures_iter(&self.input) {
             let main = capture[1].trim().to_string();
             let rest = self.input.replacen(&main, "", 1).trim().to_string();
-            println!("doing user handled");
+
             self.output.push_str(&format!("{}\n", rest));
             self.output.push_str(&format!("{}\n", main));
 
