@@ -8,7 +8,7 @@ use serenity::{
 };
 
 use crate::utls::constants::*;
-use crate::utls::discordhelpers;
+use crate::utls::discordhelpers::embeds;
 
 #[command]
 pub async fn help(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
@@ -99,7 +99,7 @@ pub async fn help(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
 
         emb.description(description);
 
-        let mut emb_msg = discordhelpers::embed_message(emb);
+        let mut emb_msg = embeds::embed_message(emb);
         msg.channel_id
             .send_message(&ctx.http, |_| &mut emb_msg)
             .await?;

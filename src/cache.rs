@@ -39,8 +39,8 @@ impl TypeMapKey for GodboltCache {
 }
 
 /// Contains our top.gg api client for server count updates
-pub struct DBLCache;
-impl TypeMapKey for DBLCache {
+pub struct DblCache;
+impl TypeMapKey for DblCache {
     type Value = Arc<RwLock<dbl::Client>>;
 }
 
@@ -113,7 +113,7 @@ pub async fn fill(
     // DBL
     let token = env::var("DBL_TOKEN")?;
     let client = dbl::Client::new(token)?;
-    data.insert::<DBLCache>(Arc::new(RwLock::new(client)));
+    data.insert::<DblCache>(Arc::new(RwLock::new(client)));
 
     // Stats tracking
     let stats = StatsManager::new();

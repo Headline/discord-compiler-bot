@@ -35,7 +35,7 @@ impl CppEval {
 
     pub fn evaluate(& mut self) -> Result<String, EvalError> {
         // allow inline code
-        if self.input.starts_with('`') && self.input.ends_with("`") {
+        if self.input.starts_with('`') && self.input.ends_with('`') {
             self.input.remove(0);
             self.input.remove(self.input.len()-1);
             self.input = self.input.trim().to_string();
@@ -44,7 +44,7 @@ impl CppEval {
         // add bits we need for every request
         self.add_headers();
 
-        if self.input.starts_with("{") { // parsing a statement here
+        if self.input.starts_with('{') { // parsing a statement here
             if let Err(e) = self.do_statements() {
                 return Err(e)
             }
@@ -64,23 +64,17 @@ impl CppEval {
 
     fn do_user_handled(& mut self) -> Result<(), EvalError> {
         let re = regex::Regex::new(r"(([a-zA-Z]*?)[\s]+main\((.*?)\)[\s]+\{[\s\S]*?\})").unwrap();
-
-        let mut found = false;
-        for capture in re.captures_iter(&self.input) {
+        if let Some(capture) = re.captures_iter(&self.input).next() {
             let main = capture[1].trim().to_string();
             let rest = self.input.replacen(&main, "", 1).trim().to_string();
 
             self.output.push_str(&format!("{}\n", rest));
             self.output.push_str(&format!("{}\n", main));
-
-            found = true;
-            break;
         }
-
-        if !found {
+        else {
             return Err(EvalError::new("No main() specified. Invalid request"))
-        }
 
+        }
 
         Ok(())
     }
@@ -155,7 +149,7 @@ impl CppEval {
         //self.add_ostreaming();
     }
 
-    fn build_main(& mut self, statements : &String) {
+    fn build_main(& mut self, statements : &str) {
         self.output.push_str(&format!("\nint main (void) {{\n{}\n}}", statements));
 
     }

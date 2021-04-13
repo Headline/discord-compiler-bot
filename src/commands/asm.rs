@@ -5,115 +5,25 @@ use serenity::{
 };
 use serenity_utils::menu::Menu;
 
-use godbolt::*;
-
 use crate::cache::{GodboltCache, ConfigCache, MessageCache};
 use crate::utls::constants::*;
-use crate::utls::parser::*;
-use crate::utls::{discordhelpers, parser};
+use crate::utls::{discordhelpers};
+use crate::utls::discordhelpers::embeds;
 
 #[command]
 #[sub_commands(compilers, languages)]
 #[bucket = "nospam"]
 pub async fn asm(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
-    // aquire lock to our godbolt cache
-    let data_read = ctx.data.read().await;
-    let godbolt_lock = match data_read.get::<GodboltCache>() {
-        Some(l) => l,
-        None => {
-            return Err(CommandError::from(
-                "Internal request failure\nGodbolt cache is uninitialized, please file a bug.",
-            ));
-        }
-    };
-
-    // parse user input
-    let result: ParserResult = match parser::get_components(&msg.content, &msg.author, godbolt_lock).await {
-        Ok(r) => r,
-        Err(e) => {
-            return Err(CommandError::from(format!("{}", e)));
-        }
-    };
-
-    let godbolt = godbolt_lock.read().await;
-    let c = match godbolt.resolve(&result.target) {
-        Some(c) => c,
-        None => {
-            return Err(CommandError::from(format!(
-                "Unable to find valid compiler or language '{}'\n",
-                &result.target
-            )));
-        }
-    };
-
-    // send out loading emote
-    let reaction = match msg
-        .react(
-            &ctx.http,
-            discordhelpers::build_reaction(752440820036272139, "compiler_loading2"),
-        )
-        .await
-    {
-        Ok(r) => r,
-        Err(e) => {
-            return Err(CommandError::from(format!(" Unable to react to message, am I missing permissions to react or use external emoji?\n{}", e)));
-        }
-    };
-
-    let filters = CompilationFilters {
-        binary: None,
-        comment_only: Some(true),
-        demangle: Some(true),
-        directives: Some(true),
-        execute: None,
-        intel: Some(true),
-        labels: Some(true),
-        library_code: None,
-        trim: Some(true),
-    };
-
-    let response =
-        match Godbolt::send_request(&c, &result.code, &result.options.join(" "), &filters).await {
-            Ok(resp) => resp,
-            Err(e) => {
-                // we failed, lets remove the loading react before leaving so it doesn't seem like we're still processing
-                msg.delete_reaction_emoji(&ctx.http, reaction.emoji.clone())
-                    .await?;
-                return Err(CommandError::from(format!(
-                    "Godbolt request failed!\n\n{}",
-                    e
-                )));
-            }
-        };
-
-    // remove our loading emote
-    match msg
-        .delete_reaction_emoji(&ctx.http, reaction.emoji.clone())
-        .await
-    {
-        Ok(()) => (),
-        Err(_e) => {
-            return Err(CommandError::from(
-                "Unable to remove reactions!\nAm I missing permission to manage messages?",
-            ));
-        }
-    }
-
-    let emb = discordhelpers::build_asm_embed(&msg.author, &response);
-    let mut emb_msg = discordhelpers::embed_message(emb);
+    let emb = crate::apis::godbolt::send_request(ctx.clone(), msg.content.clone(), msg.author.clone(), msg).await?;
+    let mut emb_msg = embeds::embed_message(emb);
     let asm_embed = msg
         .channel_id
         .send_message(&ctx.http, |_| &mut emb_msg)
         .await?;
 
-    let reaction;
-    if response.asm_size.is_some() {
-        reaction = discordhelpers::build_reaction(764356794352009246, "checkmark2");
-    } else {
-        reaction = ReactionType::Unicode(String::from("❌"));
-    }
-
-    asm_embed.react(&ctx.http, reaction).await?;
+    // Success/fail react
+    let compilation_successful = asm_embed.embeds[0].colour.0 == COLOR_OKAY;
+    discordhelpers::send_completion_react(ctx, &asm_embed, compilation_successful).await?;
 
     let data_read = ctx.data.read().await;
     let mut message_cache = data_read.get::<MessageCache>().unwrap().lock().await;

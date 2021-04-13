@@ -7,6 +7,7 @@ use crate::cppeval::eval::CppEval;
 use wandbox::CompilationBuilder;
 use crate::cache::{WandboxCache, ConfigCache};
 use crate::utls::discordhelpers;
+use crate::utls::discordhelpers::embeds;
 
 #[command]
 #[aliases("c++")]
@@ -31,7 +32,7 @@ pub async fn cpp(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
 
 
     let start = msg.content.find(' ');
-    if let None = start {
+    if start.is_none() {
         return Err(CommandError::from(
             "Invalid usage. View `;help cpp`",
         ));
@@ -118,8 +119,8 @@ pub async fn cpp(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
         }
     }
 
-    let emb = discordhelpers::build_small_compilation_embed(&msg.author, &mut result);
-    let mut emb_msg = discordhelpers::embed_message(emb);
+    let emb = embeds::build_small_compilation_embed(&msg.author, &mut result);
+    let mut emb_msg = embeds::embed_message(emb);
 
     // Dispatch our request
     let _ = msg
