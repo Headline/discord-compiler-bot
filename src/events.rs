@@ -11,7 +11,6 @@ use serenity::{
         gateway::Ready
     },
     prelude::*,
-    futures::lock::MutexGuard
 };
 
 use chrono::{DateTime, Duration, Utc};
@@ -22,6 +21,7 @@ use crate::stats::statsmanager::StatsManager;
 use serenity::model::id::GuildId;
 use serenity::model::event::MessageUpdateEvent;
 use crate::utls::discordhelpers::embeds;
+use tokio::sync::MutexGuard;
 
 pub struct Handler; // event handler for serenity
 
@@ -54,10 +54,19 @@ impl ShardsReadyHandler for Handler {
 #[async_trait]
 impl EventHandler for Handler {
     async fn message_update(&self, ctx: Context, new_data: MessageUpdateEvent) {
-        let data = ctx.data.read().await;
-        let mut message_cache = data.get::<MessageCache>().unwrap().lock().await;
+        let old_msg;
+        {
+            let data = ctx.data.read().await;
+            let mut message_cache = data.get::<MessageCache>().unwrap().lock().await;
+            if let Some(msg) = message_cache.get_mut(&new_data.id.0) {
+                old_msg = Some(msg.clone());
+            }
+            else {
+                old_msg = None;
+            }
+        }
 
-        if let Some(msg) = message_cache.get_mut(&new_data.id.0) {
+        if let Some(msg) = old_msg {
             if let Some(new_msg) = new_data.content {
                 if let Some (author) = new_data.author {
                     discordhelpers::handle_edit(&ctx, new_msg, author, msg.clone()).await;
