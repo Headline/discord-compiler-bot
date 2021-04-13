@@ -54,22 +54,21 @@ impl ShardsReadyHandler for Handler {
 #[async_trait]
 impl EventHandler for Handler {
     async fn message_update(&self, ctx: Context, new_data: MessageUpdateEvent) {
-        let old_msg;
-        {
+        let old_msg = {
             let data = ctx.data.read().await;
             let mut message_cache = data.get::<MessageCache>().unwrap().lock().await;
             if let Some(msg) = message_cache.get_mut(&new_data.id.0) {
-                old_msg = Some(msg.clone());
+                Some(msg.clone())
             }
             else {
-                old_msg = None;
+                None
             }
-        }
+        };
 
         if let Some(msg) = old_msg {
             if let Some(new_msg) = new_data.content {
                 if let Some (author) = new_data.author {
-                    discordhelpers::handle_edit(&ctx, new_msg, author, msg.clone()).await;
+                    discordhelpers::handle_edit(&ctx, new_msg, author, msg).await;
                 }
             }
         }
