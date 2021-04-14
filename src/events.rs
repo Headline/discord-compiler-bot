@@ -11,7 +11,6 @@ use serenity::{
         gateway::Ready
     },
     prelude::*,
-    futures::lock::MutexGuard
 };
 
 use chrono::{DateTime, Duration, Utc};
@@ -21,6 +20,8 @@ use crate::utls::discordhelpers;
 use crate::stats::statsmanager::StatsManager;
 use serenity::model::id::GuildId;
 use serenity::model::event::MessageUpdateEvent;
+use crate::utls::discordhelpers::embeds;
+use tokio::sync::MutexGuard;
 
 pub struct Handler; // event handler for serenity
 
@@ -53,13 +54,21 @@ impl ShardsReadyHandler for Handler {
 #[async_trait]
 impl EventHandler for Handler {
     async fn message_update(&self, ctx: Context, new_data: MessageUpdateEvent) {
-        let data = ctx.data.read().await;
-        let mut message_cache = data.get::<MessageCache>().unwrap().lock().await;
+        let old_msg = {
+            let data = ctx.data.read().await;
+            let mut message_cache = data.get::<MessageCache>().unwrap().lock().await;
+            if let Some(msg) = message_cache.get_mut(&new_data.id.0) {
+                Some(msg.clone())
+            }
+            else {
+                None
+            }
+        };
 
-        if let Some(msg) = message_cache.get_mut(&new_data.id.0) {
+        if let Some(msg) = old_msg {
             if let Some(new_msg) = new_data.content {
                 if let Some (author) = new_data.author {
-                    discordhelpers::handle_edit(&ctx, new_msg, author, msg.clone()).await;
+                    discordhelpers::handle_edit(&ctx, new_msg, author, msg).await;
                 }
             }
         }
@@ -87,7 +96,7 @@ impl EventHandler for Handler {
 
                 if let Some(log) = info.get("JOIN_LOG") {
                     if let Ok(id) = log.parse::<u64>() {
-                        let emb = discordhelpers::build_join_embed(&guild);
+                        let emb = embeds::build_join_embed(&guild);
                         discordhelpers::manual_dispatch(ctx.http.clone(), id, emb).await;
                     }
                 }
@@ -95,7 +104,7 @@ impl EventHandler for Handler {
 
             // update DBL site
             {
-                let dbl = data.get::<DBLCache>().unwrap().read().await;
+                let dbl = data.get::<DblCache>().unwrap().read().await;
 
                 let new_stats = dbl::types::ShardStats::Cumulative {
                     server_count,
@@ -138,7 +147,7 @@ impl EventHandler for Handler {
         let id = info.get("BOT_ID").unwrap().parse::<u64>().unwrap();
         if let Some(log) = info.get("JOIN_LOG") {
             if let Ok(id) = log.parse::<u64>() {
-                let emb = discordhelpers::build_leave_embed(&incomplete.id);
+                let emb = embeds::build_leave_embed(&incomplete.id);
                 discordhelpers::manual_dispatch(ctx.http.clone(), id, emb).await;
             }
         }
@@ -150,7 +159,7 @@ impl EventHandler for Handler {
                 shard_count: Some(stats.shard_count())
             };
 
-            let dbl = data.get::<DBLCache>().unwrap().read().await;
+            let dbl = data.get::<DblCache>().unwrap().read().await;
             if dbl.update_stats(id, new_stats).await.is_err() {
                 warn!("Failed to post stats to dbl");
             }
@@ -213,12 +222,12 @@ pub async fn before(ctx: &Context, msg : &Message, _: &str) -> bool {
         let guild_blocklisted = blocklist.contains(guild_id);
 
         if author_blocklisted || guild_blocklisted {
-            let emb = discordhelpers::build_fail_embed(&msg.author,
+            let emb = embeds::build_fail_embed(&msg.author,
        "This server or your user is blocked from executing commands.
             This may have happened due to abuse, spam, or other reasons.
             If you feel that this has been done in error, request an unban in the support server.");
 
-            let mut emb_msg = discordhelpers::embed_message(emb);
+            let mut emb_msg = embeds::embed_message(emb);
             if msg.channel_id.send_message(&ctx.http, |_| &mut emb_msg).await.is_ok() {
                 if author_blocklisted {
                     warn!("Blocked user {} [{}]", msg.author.tag(), msg.author.id.0);
@@ -244,8 +253,8 @@ pub async fn after(
     let data = ctx.data.read().await;
 
     if let Err(e) = command_result {
-        let emb = discordhelpers::build_fail_embed(&msg.author, &format!("{}", e));
-        let mut emb_msg = discordhelpers::embed_message(emb);
+        let emb = embeds::build_fail_embed(&msg.author, &format!("{}", e));
+        let mut emb_msg = embeds::embed_message(emb);
         if let Ok(sent) = msg
             .channel_id
             .send_message(&ctx.http, |_| &mut emb_msg)
@@ -268,8 +277,8 @@ pub async fn after(
 pub async fn dispatch_error(ctx: &Context, msg: &Message, error: DispatchError) {
     if let DispatchError::Ratelimited(_) = error {
         let emb =
-            discordhelpers::build_fail_embed(&msg.author, "You are sending requests too fast!");
-        let mut emb_msg = discordhelpers::embed_message(emb);
+            embeds::build_fail_embed(&msg.author, "You are sending requests too fast!");
+        let mut emb_msg = embeds::embed_message(emb);
         if msg
             .channel_id
             .send_message(&ctx.http, |_| &mut emb_msg)

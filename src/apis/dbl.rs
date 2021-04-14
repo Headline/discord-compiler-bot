@@ -13,24 +13,25 @@ use warp::{
 use dbl::types::Webhook;
 use futures_util::future;
 
-use crate::cache::DBLCache;
+use crate::cache::DblCache;
 use crate::utls::discordhelpers;
+use crate::utls::discordhelpers::embeds::*;
 
-pub struct BotsListAPI {
+pub struct BotsListApi {
     password: String,
     port: u16,
     vote_channel: u64,
 }
 
-impl BotsListAPI {
-    pub fn new() -> BotsListAPI {
+impl BotsListApi {
+    pub fn new() -> BotsListApi {
         let webhookpass = env::var("DBL_WEBHOOK_PASSWORD").unwrap_or_default();
         let webhookport = env::var("DBL_WEBHOOK_PORT").unwrap_or_default();
         let port = webhookport.parse::<u16>().unwrap_or_default();
         let vote_channel = env::var("VOTE_CHANNEL").unwrap_or_default();
         let channel_id = vote_channel.parse::<u64>().unwrap_or_default();
 
-        BotsListAPI {
+        BotsListApi {
             password: webhookpass,
             port,
             vote_channel: channel_id,
@@ -43,7 +44,7 @@ impl BotsListAPI {
 
     pub fn spawn(self, http: Arc<Http>, data: Arc<RwLock<TypeMap>>) {
         tokio::spawn(async move {
-            BotsListAPI::start_webhook(
+            BotsListApi::start_webhook(
                 http,
                 data,
                 self.vote_channel,
@@ -79,7 +80,7 @@ impl BotsListAPI {
                 let user_id = hook.user.0;
                 let data = data.clone();
                 let http: Arc<Http> = http.clone();
-                BotsListAPI::send_vote(user_id, vote_channel, http, data);
+                BotsListApi::send_vote(user_id, vote_channel, http, data);
 
                 warp::reply()
             })
@@ -92,7 +93,7 @@ impl BotsListAPI {
     fn send_vote(user_id: u64, vote_channel: u64, http: Arc<Http>, data: Arc<RwLock<TypeMap>>) {
         tokio::spawn(async move {
             let read = data.read().await;
-            let client_lock = read.get::<DBLCache>().expect("Unable to find dbl data");
+            let client_lock = read.get::<DblCache>().expect("Unable to find dbl data");
             let awd = client_lock.read().await;
 
             let usr = match awd.user(user_id).await {
@@ -101,7 +102,7 @@ impl BotsListAPI {
             };
 
             let tag = format!("{}#{}", usr.username, usr.discriminator);
-            let emb = discordhelpers::build_dblvote_embed(tag);
+            let emb = build_dblvote_embed(tag);
             discordhelpers::manual_dispatch(http.clone(), vote_channel, emb).await;
         });
     }

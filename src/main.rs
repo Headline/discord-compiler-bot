@@ -7,6 +7,7 @@ mod events;
 mod stats;
 mod utls;
 mod cppeval;
+//mod managers;
 
 use serenity::{
     client::bridge::gateway::GatewayIntents,
@@ -16,7 +17,7 @@ use serenity::{
 
 use std::{collections::HashSet, env, error::Error};
 
-use crate::apis::dbl::BotsListAPI;
+use crate::apis::dbl::BotsListApi;
 
 #[macro_use]
 extern crate log;
@@ -90,7 +91,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     cache::fill(client.data.clone(), &prefix, &bot_id, client.shard_manager.clone()).await?;
 
-    let dbl = BotsListAPI::new();
+    let dbl = BotsListApi::new();
     if dbl.should_spawn() {
         dbl.spawn(client.cache_and_http.http.clone(), client.data.clone());
     }
