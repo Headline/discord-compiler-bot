@@ -103,7 +103,6 @@ pub fn build_reaction(emoji_id: u64, emoji_name: &str) -> ReactionType {
     }
 }
 
-
 pub async fn handle_edit(ctx : &Context, content : String, author : User, mut old : Message) {
     let prefix = {
         let data = ctx.data.read().await;
@@ -116,38 +115,19 @@ pub async fn handle_edit(ctx : &Context, content : String, author : User, mut ol
 
     if content.starts_with(&format!("{}asm", prefix)) {
         if let Err(e) = handle_edit_asm(&ctx, content, author.clone(), old.clone()).await {
-            let _ = old.edit(&ctx, |m| {
-                let err = embeds::build_fail_embed(&author, &e.to_string());
-                m.embed(|e| {
-                    e.0 = err.0;
-                    e
-                });
-                m
-            }).await;
-
+            let err = embeds::build_fail_embed(&author, &e.to_string());
+            embeds::edit_message_embed(&ctx, & mut old, err).await;
         }
     }
     else if content.starts_with(&format!("{}compile", prefix)) {
         if let Err(e) = handle_edit_compile(&ctx, content, author.clone(), old.clone()).await {
-            let _ = old.edit(&ctx, |m| {
-                let err = embeds::build_fail_embed(&author, &e.to_string());
-                m.embed(|e| {
-                    e.0 = err.0;
-                    e
-                });
-                m
-            }).await;
+            let err = embeds::build_fail_embed(&author, &e.to_string());
+            embeds::edit_message_embed(&ctx, & mut old, err).await;
         }
     }
     else {
-        let _ = old.edit(&ctx, |m| {
-            let err = embeds::build_fail_embed(&author, "Invalid command for edit functionality!");
-            m.embed(|e| {
-                e.0 = err.0;
-                e
-            });
-            m
-        }).await;
+        let err = embeds::build_fail_embed(&author, "Invalid command for edit functionality!");
+        embeds::edit_message_embed(&ctx, & mut old, err).await;
     }
 }
 
@@ -157,31 +137,20 @@ pub async fn handle_edit_compile(ctx : &Context, content : String, author : User
     let compilation_successful = embed.0.get("color").unwrap() == COLOR_OKAY;
     discordhelpers::send_completion_react(ctx, &old, compilation_successful).await?;
 
-    let _ = old.edit(&ctx, |m| {
-        m.embed(|e| {
-            e.0 = embed.0;
-            e
-        });
-        m
-    }).await;
-
+    embeds::edit_message_embed(&ctx, & mut old, embed).await;
     Ok(())
 }
+
 pub async fn handle_edit_asm(ctx : &Context, content : String, author : User, mut old : Message) -> CommandResult {
     let emb = crate::apis::godbolt::send_request(ctx.clone(), content, author, &old).await?;
 
     let success = emb.0.get("color").unwrap() == COLOR_OKAY;
-    let _ = old.edit(&ctx, |m| {
-        m.embed(|e| {
-            e.0 = emb.0;
-            e
-        });
-        m
-    }).await;
+    embeds::edit_message_embed(&ctx, & mut old, emb).await;
 
     send_completion_react(ctx, &old, success).await?;
     Ok(())
 }
+
 pub async fn send_completion_react(ctx: &Context, msg: &Message, success: bool) -> Result<Reaction, serenity::Error> {
     let reaction;
     if success {
@@ -236,7 +205,6 @@ pub fn conform_external_str(input: &str, max_len : usize) -> String {
         str
     }
 }
-
 
 pub async fn manual_dispatch(http: Arc<Http>, id: u64, emb: CreateEmbed) {
     match serenity::model::id::ChannelId(id)

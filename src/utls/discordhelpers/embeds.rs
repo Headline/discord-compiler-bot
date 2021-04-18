@@ -3,12 +3,23 @@ use std::str;
 use serenity::{
     builder::{CreateEmbed, CreateMessage},
     model::prelude::*,
+    client::Context
 };
 
 use wandbox::*;
 
 use crate::utls::constants::*;
 use crate::utls::{discordhelpers};
+
+pub async fn edit_message_embed(ctx : &Context, old : & mut Message, emb : CreateEmbed) {
+    let _ = old.edit(ctx, |m| {
+        m.embed(|e| {
+            e.0 = emb.0;
+            e
+        });
+        m
+    }).await;
+}
 
 pub fn build_compilation_embed(author: &User, res: & mut CompilationResult) -> CreateEmbed {
     let mut embed = CreateEmbed::default();
