@@ -27,7 +27,7 @@ pub async fn send_request(ctx : Context, content : String, author : User, msg : 
 
     // parse user input
     let wandbox_lock = data_read.get::<WandboxCache>().unwrap();
-    let parse_result = parser::get_components(&content, &author, wandbox_lock).await?;
+    let parse_result = parser::get_components(&content, &author, wandbox_lock, &msg.referenced_message).await?;
 
     // build user input
     let mut builder = CompilationBuilder::new();

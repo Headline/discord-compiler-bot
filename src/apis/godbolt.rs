@@ -27,7 +27,7 @@ pub async fn send_request(ctx : Context, content : String, author : User, msg : 
 
     // parse user input
     let godbolt_lock = data_read.get::<GodboltCache>().unwrap();
-    let result: ParserResult = match parser::get_components(&content, &author, godbolt_lock).await {
+    let result: ParserResult = match parser::get_components(&content, &author, godbolt_lock, &msg.referenced_message).await {
         Ok(r) => r,
         Err(e) => {
             return Err(CommandError::from(format!("{}", e)));

@@ -3,6 +3,8 @@ use std::fmt;
 
 use crate::utls::constants::URL_ALLOW_LIST;
 use serenity::model::user::User;
+use serenity::model::channel::Message;
+
 use tokio::sync::RwLock;
 use std::sync::Arc;
 
@@ -68,7 +70,7 @@ pub struct ParserResult {
 }
 
 #[allow(clippy::while_let_on_iterator)]
-pub async fn get_components<T : LanguageResolvable>(input: &str, author : &User, target_api : &Arc<RwLock<T>>) -> Result<ParserResult, ParserError> {
+pub async fn get_components<T : LanguageResolvable>(input: &str, author : &User, target_api : &Arc<RwLock<T>>, reply : &Option<Box<Message>>) -> Result<ParserResult, ParserError> {
 
     let mut result = ParserResult {
         url: Default::default(),
@@ -175,7 +177,28 @@ pub async fn get_components<T : LanguageResolvable>(input: &str, author : &User,
 
         result.code = body;
     } else {
-        find_code_block(&mut result, input)?;
+        match find_code_block(&mut result, input) {
+            Ok(()) => {
+                // If we find a code block from our executor's message, and it's also a reply
+                // let's assume we found the stdin and what they're quoting is the code.
+                // Anything else probably doesn't make sense.
+                if let Some(replied_msg) = reply {
+                    result.stdin = result.code;
+                    result.code = String::default();
+                    find_code_block(&mut result, &replied_msg.content)?;
+                }
+            }
+            // Unable to parse a code block from our executor's message, lets see if we have a
+            // reply to grab some code from.
+            Err(e) => {
+                if let Some(replied_msg) = reply {
+                    find_code_block(&mut result, &replied_msg.content)?;
+                }
+                else { // No replied message, we must fail.
+                    return Err(e);
+                }
+            }
+        }
     }
 
     if result.target.is_empty() {
