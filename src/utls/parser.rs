@@ -1,10 +1,11 @@
 use crate::utls::constants::URL_ALLOW_LIST;
+
 use serenity::model::user::User;
 use serenity::model::channel::Message;
+use serenity::framework::standard::CommandError;
 
 use tokio::sync::RwLock;
 use std::sync::Arc;
-use serenity::framework::standard::CommandError;
 
 //Traits for compiler lookup
 pub trait LanguageResolvable {
@@ -118,63 +119,47 @@ pub async fn get_components<T : LanguageResolvable>(input: &str, author : &User,
     }
 
     if !result.url.is_empty() {
-        let url = match reqwest::Url::parse(&result.url) {
-            Err(e) => {
-                return Err(CommandError::from(format!("Error parsing url: {}", e)))
-            },
-            Ok(url) => url
-        };
+        let code = get_url_code(&result.url, author).await?;
+        result.code = code;
+    }
+    else if find_code_block(&mut result, input) {
+        // If we find a code block from our executor's message, and it's also a reply
+        // let's assume we found the stdin and what they're quoting is the code.
+        // Anything else probably doesn't make sense.
+        if let Some(replied_msg) = reply {
+            result.stdin = result.code;
+            result.code = String::default();
 
-        let host = url.host();
-        if host.is_none() {
-            return Err(CommandError::from("Unable to find host"))
-        }
-
-        let host_str = host.unwrap().to_string();
-        if !URL_ALLOW_LIST.contains(&host_str.as_str()) {
-            warn!("Blocked URL request to: {} by {} [{}]", host_str, author.id.0, author.tag());
-            return Err(CommandError::from("Unknown paste service. Please use pastebin.com, hastebin.com, or GitHub gists.\n\nAlso please be sure to use a 'raw text' link"))
-        }
-
-        let response = match reqwest::get(&result.url).await {
-            Ok(b) => b,
-            Err(_e) => {
+            let attachment = get_message_attachment(replied_msg).await?;
+            if !attachment.is_empty() {
+                result.code = attachment;
+            }
+            else if !find_code_block(&mut result, &replied_msg.content) {
                 return Err(CommandError::from(
-                    "GET request failed, perhaps your link is unreachable?",
+                    "Cannot find code to compile assuming your code block is the program's stdin.",
                 ))
             }
-        };
-
-        let body = match response.text().await {
-            Ok(t) => t,
-            Err(_e) => return Err(CommandError::from("Unable to grab resource")),
-        };
-
-        result.code = body;
-    } else {
-        if find_code_block(&mut result, input) {
-            // If we find a code block from our executor's message, and it's also a reply
-            // let's assume we found the stdin and what they're quoting is the code.
-            // Anything else probably doesn't make sense.
-            if let Some(replied_msg) = reply {
-                result.stdin = result.code;
-                result.code = String::default();
-
-                if !find_code_block(&mut result, &replied_msg.content) {
-                    return Err(CommandError::from(
-                        "Cannot find code to compile assuming your code block is the program's stdin.",
-                    ))
-                }
-            }
         }
-        else {
-            // Unable to parse a code block from our executor's message, lets see if we have a
-            // reply to grab some code from.
-            if reply.is_none() || !find_code_block(&mut result, &reply.as_ref().unwrap().content) {
+    }
+    else {
+        // Unable to parse a code block from our executor's message, lets see if we have a
+        // reply to grab some code from.
+        if let Some(replied_msg) = reply {
+            let attachment = get_message_attachment(replied_msg).await?;
+            if !attachment.is_empty() {
+                result.code = attachment;
+            }
+            // no reply in the attachment, lets check for a code-block..
+            else if !find_code_block(&mut result, &replied_msg.content) {
                 return Err(CommandError::from(
-                    "You must attach a code-block containing code to your message",
+                    "You must attach a code-block containing code to your message or quote a message that has one.",
                 ))
             }
+        }
+        else { // We were really given nothing, lets fail now.
+            return Err(CommandError::from(
+                "You must attach a code-block containing code to your message or quote a message that has one.",
+            ))
         }
     }
 
@@ -183,6 +168,40 @@ pub async fn get_components<T : LanguageResolvable>(input: &str, author : &User,
     }
 
     Ok(result)
+}
+
+async fn get_url_code(url : &str, author : &User) -> Result<String, CommandError> {
+    let url = match reqwest::Url::parse(url) {
+        Err(e) => {
+            return Err(CommandError::from(format!("Error parsing url: {}", e)))
+        },
+        Ok(url) => url
+    };
+
+    let host = url.host();
+    if host.is_none() {
+        return Err(CommandError::from("Unable to find host"))
+    }
+
+    let host_str = host.unwrap().to_string();
+    if !URL_ALLOW_LIST.contains(&host_str.as_str()) {
+        warn!("Blocked URL request to: {} by {} [{}]", host_str, author.id.0, author.tag());
+        return Err(CommandError::from("Unknown paste service. Please use pastebin.com, hastebin.com, or GitHub gists.\n\nAlso please be sure to use a 'raw text' link"))
+    }
+
+    let response = match reqwest::get(url).await {
+        Ok(b) => b,
+        Err(_e) => {
+            return Err(CommandError::from(
+                "GET request failed, perhaps your link is unreachable?",
+            ))
+        }
+    };
+
+    return match response.text().await {
+        Ok(t) => Ok(t),
+        Err(_e) => Err(CommandError::from("Unable to grab resource")),
+    };
 }
 
 fn find_code_block(result: &mut ParserResult, haystack: &str) -> bool {
@@ -221,5 +240,40 @@ fn find_code_block(result: &mut ParserResult, haystack: &str) -> bool {
         }
     }
 
-    Ok(())
+    true
+}
+
+pub async fn get_message_attachment(msg : &Message) -> Result<String, CommandError> {
+    if !msg.attachments.is_empty() {
+        let attachment = msg.attachments.get(0);
+        if attachment.is_none() {
+            return Ok(String::new());
+        }
+        let attached = attachment.unwrap();
+        if attached.size > 512 * 1024  { // 512 KiB seems enough
+            return Err(CommandError::from(format!("Uploaded file too large: `{} MiB`", attached.size)));
+        }
+        return match reqwest::get(&attached.url).await {
+            Ok(r) => {
+                let bytes = r.bytes().await.unwrap();
+                let cnt_type = content_inspector::inspect(&bytes);
+                if cnt_type.is_binary() {
+                    return Err(CommandError::from("Invalid file type"));
+                }
+
+                match String::from_utf8(bytes.to_vec()) {
+                    Ok(str) => {
+                        Ok(str)
+                    }
+                    Err(e) => {
+                        Err(CommandError::from(format!("UTF8 Error occured while parsing file: {}", e)))
+                    }
+                }
+            }
+            Err(e) => {
+                Err(CommandError::from(format!("Failure when downloading attachment: {}", e)))
+            }
+        }
+    }
+    Ok(String::new())
 }

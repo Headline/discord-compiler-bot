@@ -9,7 +9,7 @@ use godbolt::{Godbolt, CompilationFilters};
 use crate::utls::parser::ParserResult;
 use crate::utls::discordhelpers::embeds;
 
-pub async fn send_request(ctx : Context, content : String, author : User, msg : &Message) -> Result<CreateEmbed, CommandError> {
+pub async fn send_request(ctx : Context, mut content : String, author : User, msg : &Message) -> Result<CreateEmbed, CommandError> {
     let data_read = ctx.data.read().await;
     let loading_id;
     let loading_name;
@@ -23,6 +23,12 @@ pub async fn send_request(ctx : Context, content : String, author : User, msg : 
             .parse::<u64>()
             .unwrap();
         loading_name = botinfo.get("LOADING_EMOJI_NAME").unwrap().clone();
+    }
+
+    // Try to load in an attachment
+    let attached = parser::get_message_attachment(&msg).await?;
+    if !attached.is_empty() {
+        content.push_str(&format!("\n```\n{}\n```\n", attached));
     }
 
     // parse user input
