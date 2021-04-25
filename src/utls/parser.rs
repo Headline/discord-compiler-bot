@@ -177,38 +177,40 @@ pub async fn get_components<T : LanguageResolvable>(input: &str, author : &User,
 
         result.code = body;
     } else {
-        match find_code_block(&mut result, input) {
-            Ok(()) => {
-                // If we find a code block from our executor's message, and it's also a reply
-                // let's assume we found the stdin and what they're quoting is the code.
-                // Anything else probably doesn't make sense.
-                if let Some(replied_msg) = reply {
-                    result.stdin = result.code;
-                    result.code = String::default();
-                    find_code_block(&mut result, &replied_msg.content)?;
+        if find_code_block(&mut result, input) {
+            // If we find a code block from our executor's message, and it's also a reply
+            // let's assume we found the stdin and what they're quoting is the code.
+            // Anything else probably doesn't make sense.
+            if let Some(replied_msg) = reply {
+                result.stdin = result.code;
+                result.code = String::default();
+
+                if !find_code_block(&mut result, &replied_msg.content) {
+                    return Err(ParserError::new(
+                        "Cannot find code to compile assuming your code block is the program's stdin.",
+                    ))
                 }
             }
+        }
+        else {
             // Unable to parse a code block from our executor's message, lets see if we have a
             // reply to grab some code from.
-            Err(e) => {
-                if let Some(replied_msg) = reply {
-                    find_code_block(&mut result, &replied_msg.content)?;
-                }
-                else { // No replied message, we must fail.
-                    return Err(e);
-                }
+            if reply.is_none() || !find_code_block(&mut result, &reply.as_ref().unwrap().content) {
+                return Err(ParserError::new(
+                    "You must attach a code-block containing code to your message",
+                ))
             }
         }
     }
 
     if result.target.is_empty() {
-        return Err(ParserError::new("You must provide a valid language or compiler!\n\n;compile c++ \n\\`\\`\\`\nint main() {}\n\\`\\`\\`"));
+        return Err(ParserError::new("You must provide a valid language or compiler!\n\n;compile c++ \n\\`\\`\\`\nint main() {}\n\\`\\`\\`"))
     }
 
     Ok(result)
 }
 
-fn find_code_block(result: &mut ParserResult, haystack: &str) -> Result<(), ParserError> {
+fn find_code_block(result: &mut ParserResult, haystack: &str) -> bool {
     let re = regex::Regex::new(r"```(?:(?P<language>[^\s`]*)\r?\n)?(?P<code>[\s\S]*?)```").unwrap();
     let matches = re.captures_iter(haystack);
 
@@ -233,9 +235,7 @@ fn find_code_block(result: &mut ParserResult, haystack: &str) -> Result<(), Pars
             code_index = 0;
         }
         _ => {
-            return Err(ParserError::new(
-                "You must attach a code-block containing code to your message",
-            ))
+            return false
         }
     }
 
