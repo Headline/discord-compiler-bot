@@ -1,12 +1,10 @@
-use std::error::Error;
-use std::fmt;
-
 use crate::utls::constants::URL_ALLOW_LIST;
 use serenity::model::user::User;
 use serenity::model::channel::Message;
 
 use tokio::sync::RwLock;
 use std::sync::Arc;
+use serenity::framework::standard::CommandError;
 
 //Traits for compiler lookup
 pub trait LanguageResolvable {
@@ -38,29 +36,6 @@ pub fn shortname_to_qualified(language : &str) -> &str {
     }
 }
 
-// Our error type
-#[derive(Debug)]
-pub struct ParserError {
-    details: String,
-}
-impl ParserError {
-    fn new(msg: &str) -> ParserError {
-        ParserError {
-            details: msg.to_string(),
-        }
-    }
-}
-impl fmt::Display for ParserError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}", self.details)
-    }
-}
-impl Error for ParserError {
-    fn description(&self) -> &str {
-        &self.details
-    }
-}
-
 pub struct ParserResult {
     pub url: String,
     pub stdin: String,
@@ -70,7 +45,7 @@ pub struct ParserResult {
 }
 
 #[allow(clippy::while_let_on_iterator)]
-pub async fn get_components<T : LanguageResolvable>(input: &str, author : &User, target_api : &Arc<RwLock<T>>, reply : &Option<Box<Message>>) -> Result<ParserResult, ParserError> {
+pub async fn get_components<T : LanguageResolvable>(input: &str, author : &User, target_api : &Arc<RwLock<T>>, reply : &Option<Box<Message>>) -> Result<ParserResult, CommandError> {
 
     let mut result = ParserResult {
         url: Default::default(),
@@ -118,7 +93,7 @@ pub async fn get_components<T : LanguageResolvable>(input: &str, author : &User,
         if *c == "<" {
             let link = match iter.next() {
                 Some(link) => link,
-                None => return Err(ParserError::new("'<' operator requires a url\n\nUsage: `;compile c++ < http://foo.bar/code.txt`"))
+                None => return Err(CommandError::from("'<' operator requires a url\n\nUsage: `;compile c++ < http://foo.bar/code.txt`"))
             };
             result.url = link.trim().to_string();
         } else if *c == "|" {
@@ -128,7 +103,7 @@ pub async fn get_components<T : LanguageResolvable>(input: &str, author : &User,
                     break;
                 }
                 if *stdin == "<" {
-                    return Err(ParserError::new(
+                    return Err(CommandError::from(
                         "`|`` operator should be last, unable to continue",
                     ));
                 }
@@ -145,26 +120,26 @@ pub async fn get_components<T : LanguageResolvable>(input: &str, author : &User,
     if !result.url.is_empty() {
         let url = match reqwest::Url::parse(&result.url) {
             Err(e) => {
-                return Err(ParserError::new(&format!("Error parsing url: {}", e)))
+                return Err(CommandError::from(format!("Error parsing url: {}", e)))
             },
             Ok(url) => url
         };
 
         let host = url.host();
         if host.is_none() {
-            return Err(ParserError::new("Unable to find host"))
+            return Err(CommandError::from("Unable to find host"))
         }
 
         let host_str = host.unwrap().to_string();
         if !URL_ALLOW_LIST.contains(&host_str.as_str()) {
             warn!("Blocked URL request to: {} by {} [{}]", host_str, author.id.0, author.tag());
-            return Err(ParserError::new("Unknown paste service. Please use pastebin.com, hastebin.com, or GitHub gists.\n\nAlso please be sure to use a 'raw text' link"))
+            return Err(CommandError::from("Unknown paste service. Please use pastebin.com, hastebin.com, or GitHub gists.\n\nAlso please be sure to use a 'raw text' link"))
         }
 
         let response = match reqwest::get(&result.url).await {
             Ok(b) => b,
             Err(_e) => {
-                return Err(ParserError::new(
+                return Err(CommandError::from(
                     "GET request failed, perhaps your link is unreachable?",
                 ))
             }
@@ -172,7 +147,7 @@ pub async fn get_components<T : LanguageResolvable>(input: &str, author : &User,
 
         let body = match response.text().await {
             Ok(t) => t,
-            Err(_e) => return Err(ParserError::new("Unable to grab resource")),
+            Err(_e) => return Err(CommandError::from("Unable to grab resource")),
         };
 
         result.code = body;
@@ -186,7 +161,7 @@ pub async fn get_components<T : LanguageResolvable>(input: &str, author : &User,
                 result.code = String::default();
 
                 if !find_code_block(&mut result, &replied_msg.content) {
-                    return Err(ParserError::new(
+                    return Err(CommandError::from(
                         "Cannot find code to compile assuming your code block is the program's stdin.",
                     ))
                 }
@@ -196,7 +171,7 @@ pub async fn get_components<T : LanguageResolvable>(input: &str, author : &User,
             // Unable to parse a code block from our executor's message, lets see if we have a
             // reply to grab some code from.
             if reply.is_none() || !find_code_block(&mut result, &reply.as_ref().unwrap().content) {
-                return Err(ParserError::new(
+                return Err(CommandError::from(
                     "You must attach a code-block containing code to your message",
                 ))
             }
@@ -204,7 +179,7 @@ pub async fn get_components<T : LanguageResolvable>(input: &str, author : &User,
     }
 
     if result.target.is_empty() {
-        return Err(ParserError::new("You must provide a valid language or compiler!\n\n;compile c++ \n\\`\\`\\`\nint main() {}\n\\`\\`\\`"))
+        return Err(CommandError::from("You must provide a valid language or compiler!\n\n;compile c++ \n\\`\\`\\`\nint main() {}\n\\`\\`\\`"))
     }
 
     Ok(result)
