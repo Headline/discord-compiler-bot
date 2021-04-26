@@ -5,7 +5,6 @@ use serenity::{
     },
     model::{
         channel::Message,
-        event::ResumedEvent,
         guild::{Guild, GuildUnavailable},
         id::{ChannelId, MessageId},
         gateway::Ready
@@ -79,15 +78,6 @@ impl EventHandler for Handler {
         if guild.joined_at + Duration::seconds(30) > now {
             let data = ctx.data.read().await;
 
-            // publish new server to stats
-            let mut stats = data.get::<StatsManagerCache>().unwrap().lock().await;
-            if stats.should_track() {
-                stats.new_server().await;
-            }
-            let server_count = stats.server_count();
-            let shard_count = stats.shard_count();
-
-
             // post new server to join log
             let id;
             {
@@ -102,23 +92,29 @@ impl EventHandler for Handler {
                 }
             }
 
-            // update DBL site
-            {
-                let dbl = data.get::<DblCache>().unwrap().read().await;
-
-                let new_stats = dbl::types::ShardStats::Cumulative {
-                    server_count,
-                    shard_count: Some(shard_count)
-                };
-
-                if dbl.update_stats(id, new_stats).await.is_err() {
-                    warn!("Failed to post stats to dbl");
-                }
+            // publish/queue new server to stats
+            let mut stats = data.get::<StatsManagerCache>().unwrap().lock().await;
+            if stats.should_track() {
+                stats.new_server().await;
             }
 
-            // update shard guild count & presence
-            let shard_manager = data.get::<ShardManagerCache>().unwrap().lock().await;
-            discordhelpers::send_global_presence(&shard_manager, server_count).await;
+            // ensure we're actually loaded in before we start posting our server counts
+            if stats.server_count() > 0
+            {
+                let new_stats = dbl::types::ShardStats::Cumulative {
+                    server_count: stats.server_count(),
+                    shard_count: Some(stats.shard_count())
+                };
+
+                let dbl = data.get::<DblCache>().unwrap().read().await;
+                if let Err(e) = dbl.update_stats(id, new_stats).await {
+                    warn!("Failed to post stats to dbl: {}", e);
+                }
+
+                // update guild count in presence
+                let shard_manager = data.get::<ShardManagerCache>().unwrap().lock().await;
+                discordhelpers::send_global_presence(&shard_manager, stats.server_count()).await;
+            }
 
             info!("Joining {}", guild.name);
         }
@@ -137,10 +133,6 @@ impl EventHandler for Handler {
 
     async fn guild_delete(&self, ctx: Context, incomplete: GuildUnavailable) {
         let data = ctx.data.read().await;
-        let mut stats = data.get::<StatsManagerCache>().unwrap().lock().await;
-        if stats.should_track() {
-            stats.leave_server().await;
-        }
 
         // post new server to join log
         let info = data.get::<ConfigCache>().unwrap().read().await;
@@ -152,7 +144,14 @@ impl EventHandler for Handler {
             }
         }
 
-        // update DBL site
+        // publish/queue new server to stats
+        let mut stats = data.get::<StatsManagerCache>().unwrap().lock().await;
+        if stats.should_track() {
+            stats.leave_server().await;
+        }
+
+        // ensure we're actually loaded in before we start posting our server counts
+        if stats.server_count() > 0
         {
             let new_stats = dbl::types::ShardStats::Cumulative {
                 server_count: stats.server_count(),
@@ -160,14 +159,14 @@ impl EventHandler for Handler {
             };
 
             let dbl = data.get::<DblCache>().unwrap().read().await;
-            if dbl.update_stats(id, new_stats).await.is_err() {
-                warn!("Failed to post stats to dbl");
+            if let Err(e) = dbl.update_stats(id, new_stats).await {
+                warn!("Failed to post stats to dbl: {}", e);
             }
-        }
 
-        // update shard guild count & presence
-        let shard_manager = data.get::<ShardManagerCache>().unwrap().lock().await;
-        discordhelpers::send_global_presence(&shard_manager, stats.server_count()).await;
+            // update guild count in presence
+            let shard_manager = data.get::<ShardManagerCache>().unwrap().lock().await;
+            discordhelpers::send_global_presence(&shard_manager, stats.server_count()).await;
+        }
 
         info!("Leaving {}", &incomplete.id);
     }
@@ -192,10 +191,6 @@ impl EventHandler for Handler {
         if stats.shard_count() == total_shards_to_spawn {
             self.all_shards_ready(&ctx, & mut stats, &ready).await;
         }
-    }
-
-    async fn resume(&self, _: Context, _: ResumedEvent) {
-        info!("Resumed");
     }
 }
 

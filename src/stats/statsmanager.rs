@@ -11,7 +11,8 @@ pub struct StatsManager {
     servers: u64,
     shards: u64,
     boot_count: Vec<u64>,
-    leave_queue: u64
+    leave_queue: u64,
+    join_queue: u64
 }
 
 impl StatsManager {
@@ -22,6 +23,7 @@ impl StatsManager {
             pass: env::var("STATS_API_KEY").unwrap_or_default(),
             servers: 0,
             leave_queue: 0,
+            join_queue: 0,
             shards: 0,
             boot_count: Vec::new()
         }
@@ -43,29 +45,39 @@ impl StatsManager {
 
     pub async fn post_servers(&mut self, amount: u64) {
         self.servers = amount;
+
+        // in the connect phase it's entirely possible for our server count to be
+        // zero while we receive a guild left or guild joined event, since they were
+        // queued we can now modify the server count safely
+
+        // join queue
+        self.servers += self.join_queue;
+        self.join_queue = 0;
+
+        // leave queue
+        self.servers -= self.leave_queue;
+        self.leave_queue = 0;
+
+        // update our stats
         let mut legacy = LegacyRequest::new(Some(amount));
         self.send_request::<LegacyRequest>(&mut legacy).await;
     }
 
     pub async fn new_server(&mut self) {
+        if self.servers < 1 { // not all shards have loaded in yet - queue the join for post_servers
+            self.join_queue += 1;
+            return
+        }
+
         self.servers += 1;
         let mut legacy = LegacyRequest::new(Some(self.servers));
         self.send_request::<LegacyRequest>(&mut legacy).await;
     }
 
     pub async fn leave_server(&mut self) {
-        // in the connect phase it's entirely possible for our server count to be
-        // zero while we receive a guild left event, let's queue these and handle
-        // them later to prevent underflow
-        if self.servers < 1 {
+        if self.servers < 1 { // not loaded in - queue leave for post_servers
             self.leave_queue += 1;
-            return;
-        }
-
-        // process queue?
-        if self.leave_queue > 0 && (self.servers - self.leave_queue) > 1 {
-            self.servers -= self.leave_queue;
-            self.leave_queue = 0;
+            return
         }
 
         self.servers -= 1;
