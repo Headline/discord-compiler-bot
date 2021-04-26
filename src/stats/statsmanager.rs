@@ -59,7 +59,7 @@ impl StatsManager {
         self.leave_queue = 0;
 
         // update our stats
-        let mut legacy = LegacyRequest::new(Some(amount));
+        let mut legacy = LegacyRequest::new(Some(self.servers));
         self.send_request::<LegacyRequest>(&mut legacy).await;
     }
 

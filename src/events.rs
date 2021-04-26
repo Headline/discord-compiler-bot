@@ -44,9 +44,9 @@ impl ShardsReadyHandler for Handler {
             stats.post_servers(guild_count).await;
         }
 
-        discordhelpers::send_global_presence(&shard_manager, guild_count).await;
+        discordhelpers::send_global_presence(&shard_manager, stats.server_count()).await;
 
-        info!("Ready in {} guilds", guild_count);
+        info!("Ready in {} guilds", stats.server_count());
     }
 }
 
