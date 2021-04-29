@@ -71,28 +71,25 @@ pub fn build_compilation_embed(author: &User, res: & mut CompilationResult) -> C
 pub fn build_asm_embed(author: &User, res: &godbolt::CompilationResult) -> CreateEmbed {
     let mut embed = CreateEmbed::default();
 
-    match res.asm_size {
-        Some(size) => {
-            embed.color(COLOR_OKAY);
-            size
-        }
-        None => {
-            embed.color(COLOR_FAIL);
+    if res.code == 0 {
+        embed.color(COLOR_OKAY);
+    }
+    else {
+        embed.color(COLOR_FAIL);
 
-            let mut errs = String::new();
-            for err_res in &res.stderr {
-                let line = format!("{}\n", &err_res.text);
-                errs.push_str(&line);
-            }
-
-            let compliant_str = discordhelpers::conform_external_str(&errs, MAX_ERROR_LEN);
-            embed.field(
-                "Compilation Errors",
-                format!("```\n{}```", compliant_str),
-                false,
-            );
-            return embed;
+        let mut errs = String::new();
+        for err_res in &res.stderr {
+            let line = format!("{}\n", &err_res.text);
+            errs.push_str(&line);
         }
+
+        let compliant_str = discordhelpers::conform_external_str(&errs, MAX_ERROR_LEN);
+        embed.field(
+            "Compilation Errors",
+            format!("```\n{}```", compliant_str),
+            false,
+        );
+        return embed;
     };
 
     let mut pieces: Vec<String> = Vec::new();
