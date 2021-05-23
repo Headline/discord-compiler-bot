@@ -10,4 +10,4 @@ pub static COMPILER_EXPLORER_ICON: &str = "https://i.imgur.com/GIgATFr.png";
 pub static MAX_OUTPUT_LEN: usize = 250;
 pub static MAX_ERROR_LEN: usize = 500;
 
-pub static URL_ALLOW_LIST : [&str; 3] = ["pastebin.com", "gist.githubusercontent.com", "hastebin.com"];
+pub static URL_ALLOW_LIST : [&str; 4] = ["pastebin.com", "gist.githubusercontent.com", "hastebin.com", "raw.githubusercontent.com"];
