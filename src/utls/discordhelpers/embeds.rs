@@ -195,7 +195,6 @@ pub fn build_join_embed(guild: &Guild) -> CreateEmbed {
     if let Some(icon) = guild.icon_url() {
         embed.thumbnail(icon);
     }
-    embed.field("Region", guild.region.clone(), true);
     embed.field("Guild ID", guild.id, true);
     embed
 }
