@@ -37,6 +37,7 @@ pub fn shortname_to_qualified(language : &str) -> &str {
     }
 }
 
+#[derive(Debug)]
 pub struct ParserResult {
     pub url: String,
     pub stdin: String,
@@ -65,7 +66,7 @@ pub async fn get_components<T : LanguageResolvable>(input: &str, author : &User,
         code_block = input.len();
     }
 
-    let mut args: Vec<&str> = input[..code_block].split(' ').collect();
+    let mut args: Vec<&str> = input[..code_block].split_whitespace().collect();
 
     // ditch command str (;compile, ;asm)
     args.remove(0);
