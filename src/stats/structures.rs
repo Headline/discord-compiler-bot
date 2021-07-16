@@ -3,6 +3,7 @@ use reqwest::Response;
 use serde::*;
 use serenity::async_trait;
 use std::sync::Arc;
+use serenity::model::id::GuildId;
 
 #[async_trait]
 pub trait Sendable: Serialize {
@@ -29,12 +30,18 @@ pub trait Sendable: Serialize {
 pub struct CommandRequest {
     key: String,
     command: String,
+    guild: String,
 }
 impl CommandRequest {
-    pub fn new(command: &str) -> CommandRequest {
+    pub fn new(command: &str, guild: Option<GuildId>) -> CommandRequest {
+        let mut guild_str = String::default();
+        if let Some(g) = guild {
+            guild_str = g.0.to_string();
+        }
         CommandRequest {
             key: String::from(""),
             command: String::from(command),
+            guild: guild_str
         }
     }
 }

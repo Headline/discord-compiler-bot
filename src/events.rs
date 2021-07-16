@@ -264,7 +264,7 @@ pub async fn after(
     // push command executed to api
     let stats = data.get::<StatsManagerCache>().unwrap().lock().await;
     if stats.should_track() {
-        stats.command_executed(command_name).await;
+        stats.command_executed(command_name, msg.guild_id).await;
     }
 }
 

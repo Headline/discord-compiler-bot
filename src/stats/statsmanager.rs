@@ -3,6 +3,7 @@ use std::sync::Arc;
 use std::env;
 
 use crate::stats::structures::*;
+use serenity::model::id::GuildId;
 
 pub struct StatsManager {
     client: Arc<reqwest::Client>,
@@ -38,8 +39,8 @@ impl StatsManager {
         self.send_request::<LanguageRequest>(&mut cmd).await;
     }
 
-    pub async fn command_executed(&self, command: &str) {
-        let mut cmd = CommandRequest::new(command);
+    pub async fn command_executed(&self, command: &str, guild: Option<GuildId>) {
+        let mut cmd = CommandRequest::new(command, guild);
         self.send_request::<CommandRequest>(&mut cmd).await;
     }
 
