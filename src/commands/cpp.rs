@@ -5,7 +5,7 @@ use serenity::prelude::*;
 use crate::cppeval::eval::CppEval;
 
 use wandbox::CompilationBuilder;
-use crate::cache::{WandboxCache, ConfigCache};
+use crate::cache::{WandboxCache, ConfigCache, MessageCache};
 use crate::utls::discordhelpers;
 use crate::utls::discordhelpers::embeds;
 
@@ -123,10 +123,14 @@ pub async fn cpp(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
     let mut emb_msg = embeds::embed_message(emb);
 
     // Dispatch our request
-    let _ = msg
+    let compilation_embed = msg
         .channel_id
         .send_message(&ctx.http, |_| &mut emb_msg)
         .await?;
+
+    // add delete cache
+    let mut delete_cache = data_read.get::<MessageCache>().unwrap().lock().await;
+    delete_cache.insert(msg.id.0, compilation_embed);
 
     Ok(())
 }
