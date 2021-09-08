@@ -9,6 +9,7 @@ use crate::cache::{GodboltCache, ConfigCache, MessageCache};
 use crate::utls::constants::*;
 use crate::utls::{discordhelpers};
 use crate::utls::discordhelpers::embeds;
+use crate::utls::parser::shortname_to_qualified;
 
 #[command]
 #[sub_commands(compilers, languages)]
@@ -50,16 +51,24 @@ async fn compilers(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
         ));
     }
 
-    let language = args.parse::<String>().unwrap();
-
+    let user_lang = args.parse::<String>().unwrap();
+    let language = shortname_to_qualified(&user_lang);
+    let mut found = false;
     let godbolt = godbolt_lock.read().await;
     let mut vec: Vec<String> = Vec::new();
     for cache_entry in &godbolt.cache {
         if cache_entry.language.id == language {
+            found = true;
             for compiler in &cache_entry.compilers {
                 vec.push(format!("{} -> **{}**", &compiler.name, &compiler.id));
             }
         }
+    }
+
+    if !found {
+        return Err(CommandError::from(
+            format!("Unable to find compilers for language '{}'", language)
+        ));
     }
 
     let success_id;

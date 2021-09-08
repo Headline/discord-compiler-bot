@@ -6,6 +6,7 @@ use serenity_utils::menu::*;
 
 use crate::cache::{WandboxCache, ConfigCache};
 use crate::utls::discordhelpers;
+use crate::utls::parser::shortname_to_qualified;
 
 #[command]
 pub async fn compilers(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
@@ -30,7 +31,7 @@ pub async fn compilers(ctx: &Context, msg: &Message, _args: Args) -> CommandResu
 
     // Get our list of compilers
     let wbox = wandbox_lock.read().await;
-    let lang = match wbox.get_compilers(&language) {
+    let lang = match wbox.get_compilers(&shortname_to_qualified(&language)) {
         Some(s) => s,
         None => {
             return Err(CommandError::from(format!(
