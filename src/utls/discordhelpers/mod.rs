@@ -125,10 +125,26 @@ pub async fn handle_edit(ctx : &Context, content : String, author : User, mut ol
             embeds::edit_message_embed(&ctx, & mut old, err).await;
         }
     }
+    else if content.starts_with(&format!("{}cpp", prefix)) {
+        if let Err(e) = handle_edit_cpp(&ctx, content, author.clone(), old.clone()).await {
+            let err = embeds::build_fail_embed(&author, &e.to_string());
+            embeds::edit_message_embed(&ctx, & mut old, err).await;
+        }
+    }
     else {
         let err = embeds::build_fail_embed(&author, "Invalid command for edit functionality!");
         embeds::edit_message_embed(&ctx, & mut old, err).await;
     }
+}
+
+pub async fn handle_edit_cpp(ctx : &Context, content : String, author : User, mut old : Message) -> CommandResult {
+    let embed = crate::apis::wandbox::send_cpp_request(ctx.clone(), content, author, &old).await?;
+
+    let compilation_successful = embed.0.get("color").unwrap() == COLOR_OKAY;
+    discordhelpers::send_completion_react(ctx, &old, compilation_successful).await?;
+
+    embeds::edit_message_embed(&ctx, & mut old, embed).await;
+    Ok(())
 }
 
 pub async fn handle_edit_compile(ctx : &Context, content : String, author : User, mut old : Message) -> CommandResult {
