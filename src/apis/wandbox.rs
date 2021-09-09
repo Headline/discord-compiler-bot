@@ -27,7 +27,7 @@ pub async fn send_request(ctx : Context, mut content : String, author : User, ms
     }
 
     // Try to load in an attachment
-    let attached = parser::get_message_attachment(&msg).await?;
+    let attached = parser::get_message_attachment(&msg.attachments).await?;
     if !attached.is_empty() {
         content.push_str(&format!("\n```\n{}\n```\n", attached));
     }

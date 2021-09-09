@@ -89,6 +89,13 @@ pub async fn help(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
                 emb.field("Example", format!("{}botinfo", prefix), false);
                 "Outputs information about the bot"
             }
+            "format" => {
+                emb.title("Format command");
+                emb.field("Example", format!("{}format clang Google", prefix), false);
+                emb.field("Example", format!("{}format clang Mozilla", prefix), false);
+                emb.field("Example", format!("{}format rustfmt", prefix), false);
+                "Formats the input code with the formatter specified. Defaults to clang-format WebKit\n\n*(see .formats command for all formats)*\n\n"
+            }
             _ => {
                 emb.title("Command not found");
                 emb.color(COLOR_FAIL);
@@ -121,6 +128,8 @@ pub async fn help(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
             e.field("asm", "```\nOutputs the assembly for the input code```", false);
             e.field("botinfo", "``` Displays information about the bot ```", false);
             e.field("cpp", format!("``` Executes c++ code using geordi-like syntax\n See {}help cpp for more info ```", prefix), false);
+            e.field("format", "``` Formats code using a code formatter (i.e. clang-format or rustfmt) ```", false);
+            e.field("formats", "``` Displays all formatting options & styles ```", false);
             e
         })
     }).await?;

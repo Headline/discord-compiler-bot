@@ -37,6 +37,7 @@ version = "0.1"
 
 [dependencies.godbolt]
 git = "https://github.com/Headline/godbolt-rs"
+#path = '../godbolt-rs'
 
 [dependencies.serenity_utils]
 default-features = false

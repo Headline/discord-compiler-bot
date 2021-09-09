@@ -1,7 +1,7 @@
 use crate::utls::constants::URL_ALLOW_LIST;
 
 use serenity::model::user::User;
-use serenity::model::channel::Message;
+use serenity::model::channel::{Message, Attachment};
 use serenity::framework::standard::CommandError;
 
 use tokio::sync::RwLock;
@@ -37,7 +37,7 @@ pub fn shortname_to_qualified(language : &str) -> &str {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct ParserResult {
     pub url: String,
     pub stdin: String,
@@ -49,13 +49,7 @@ pub struct ParserResult {
 #[allow(clippy::while_let_on_iterator)]
 pub async fn get_components<T : LanguageResolvable>(input: &str, author : &User, target_api : &Arc<RwLock<T>>, reply : &Option<Box<Message>>) -> Result<ParserResult, CommandError> {
 
-    let mut result = ParserResult {
-        url: Default::default(),
-        stdin: Default::default(),
-        target: Default::default(),
-        code: Default::default(),
-        options: Default::default(),
-    };
+    let mut result = ParserResult::default();
 
     // we grab the index for the first code block - this will help us
     // know when to stop parsing arguments
@@ -131,7 +125,7 @@ pub async fn get_components<T : LanguageResolvable>(input: &str, author : &User,
             result.stdin = result.code;
             result.code = String::default();
 
-            let attachment = get_message_attachment(replied_msg).await?;
+            let attachment = get_message_attachment(&replied_msg.attachments).await?;
             if !attachment.is_empty() {
                 result.code = attachment;
             }
@@ -146,7 +140,7 @@ pub async fn get_components<T : LanguageResolvable>(input: &str, author : &User,
         // Unable to parse a code block from our executor's message, lets see if we have a
         // reply to grab some code from.
         if let Some(replied_msg) = reply {
-            let attachment = get_message_attachment(replied_msg).await?;
+            let attachment = get_message_attachment(&replied_msg.attachments).await?;
             if !attachment.is_empty() {
                 result.code = attachment;
             }
@@ -205,7 +199,7 @@ async fn get_url_code(url : &str, author : &User) -> Result<String, CommandError
     };
 }
 
-fn find_code_block(result: &mut ParserResult, haystack: &str) -> bool {
+pub fn find_code_block(result: &mut ParserResult, haystack: &str) -> bool {
     let re = regex::Regex::new(r"```(?:(?P<language>[^\s`]*)\r?\n)?(?P<code>[\s\S]*?)```").unwrap();
     let matches = re.captures_iter(haystack);
 
@@ -244,9 +238,9 @@ fn find_code_block(result: &mut ParserResult, haystack: &str) -> bool {
     true
 }
 
-pub async fn get_message_attachment(msg : &Message) -> Result<String, CommandError> {
-    if !msg.attachments.is_empty() {
-        let attachment = msg.attachments.get(0);
+pub async fn get_message_attachment(attachments : & Vec<Attachment>) -> Result<String, CommandError> {
+    if !attachments.is_empty() {
+        let attachment = attachments.get(0);
         if attachment.is_none() {
             return Ok(String::new());
         }
