@@ -82,7 +82,7 @@ pub async fn send_request(ctx : Context, mut content : String, author : User, ms
             Ok(resp) => resp,
             Err(e) => {
                 // we failed, lets remove the loading react before leaving so it doesn't seem like we're still processing
-                msg.delete_reaction_emoji(&ctx.http, reaction.emoji.clone())
+                msg.delete_reaction_emoji(&ctx.http, reaction.emoji)
                     .await?;
                 return Err(CommandError::from(format!(
                     "Godbolt request failed!\n\n{}",
@@ -93,7 +93,7 @@ pub async fn send_request(ctx : Context, mut content : String, author : User, ms
 
     // remove our loading emote
     match msg
-        .delete_reaction_emoji(&ctx.http, reaction.emoji.clone())
+        .delete_reaction_emoji(&ctx.http, reaction.emoji)
         .await
     {
         Ok(()) => (),

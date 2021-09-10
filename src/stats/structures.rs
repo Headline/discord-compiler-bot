@@ -27,6 +27,32 @@ pub trait Sendable: Serialize {
 }
 
 #[derive(Serialize)]
+pub struct SettingsRequest {
+    key: String,
+    guild: String,
+}
+
+impl SettingsRequest {
+    pub fn new(guild: GuildId) -> Self {
+        SettingsRequest {
+            key: String::from(""),
+            guild: guild.0.to_string()
+        }
+    }
+}
+
+impl Sendable for SettingsRequest {
+    #[inline]
+    fn endpoint(&self) -> &'static str {
+        "discord/settings/retrieve"
+    }
+
+    fn set_key(&mut self, key: &str) {
+        self.key = String::from(key);
+    }
+}
+
+#[derive(Serialize)]
 pub struct CommandRequest {
     key: String,
     command: String,

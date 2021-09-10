@@ -1,14 +1,18 @@
-use crate::utls::{parser, discordhelpers};
-use wandbox::CompilationBuilder;
+use std::env;
+
 use serenity::framework::standard::CommandError;
 use serenity::builder::{CreateEmbed};
 use serenity::client::Context;
 use serenity::model::channel::Message;
-use crate::cache::{WandboxCache, ConfigCache, StatsManagerCache};
-use std::env;
 use serenity::model::user::User;
+use wandbox::CompilationBuilder;
+
+
+use crate::utls::{parser, discordhelpers};
+use crate::cache::{WandboxCache, ConfigCache, StatsManagerCache};
 use crate::utls::discordhelpers::embeds;
 use crate::cppeval::eval::CppEval;
+use crate::utls::constants::MAX_OUTPUT_LEN;
 
 pub async fn send_request(ctx : Context, mut content : String, author : User, msg : &Message) -> Result<CreateEmbed, CommandError> {
     let data_read = ctx.data.read().await;
@@ -72,14 +76,14 @@ pub async fn send_request(ctx : Context, mut content : String, author : User, ms
         Ok(r) => r,
         Err(e) => {
             // we failed, lets remove the loading react so it doesn't seem like we're still processing
-            msg.delete_reaction_emoji(&ctx.http, reaction.emoji.clone()).await?;
+            msg.delete_reaction_emoji(&ctx.http, reaction.emoji).await?;
 
             return Err(CommandError::from(format!("{}", e)));
         }
     };
 
     // remove our loading emote
-    if msg.delete_reaction_emoji(&ctx.http, reaction.emoji.clone()).await
+    if msg.delete_reaction_emoji(&ctx.http, reaction.emoji).await
         .is_err()
     {
         return Err(CommandError::from(
@@ -87,9 +91,11 @@ pub async fn send_request(ctx : Context, mut content : String, author : User, ms
             ));
     }
 
-    let stats = data_read.get::<StatsManagerCache>().unwrap().lock().await;
+    let mut settings = None;
+    let mut stats = data_read.get::<StatsManagerCache>().unwrap().lock().await;
     if stats.should_track() {
         stats.compilation(&builder.lang, result.status == "1").await;
+        settings = stats.get_settings(msg.guild_id).await;
     }
 
     let mut guild = String::from("<unknown>");
@@ -106,11 +112,21 @@ pub async fn send_request(ctx : Context, mut content : String, author : User, ms
                 author.id.0,
                 &guild,
             );
-            discordhelpers::manual_dispatch(ctx.http.clone(), id, emb).await;
+            discordhelpers::manual_dispatch(ctx.http, id, emb).await;
         }
     }
 
-    let emb = embeds::build_compilation_embed(&author, &mut result);
+    if let Some(setting) = settings {
+        let max_len = setting.maxlen as usize;
+        debug!("maxlen: {}", max_len);
+
+        return if setting.output_style == "small" {
+            Ok(embeds::build_small_compilation_embed(&author, &mut result, max_len))
+        } else {
+            Ok(embeds::build_compilation_embed(&author, &mut result, max_len))
+        }
+    }
+    let emb = embeds::build_compilation_embed(&author, &mut result, MAX_OUTPUT_LEN);
     Ok(emb)
 }
 
@@ -218,5 +234,5 @@ pub async fn send_cpp_request(ctx : Context, content : String, author : User, ms
         }
     }
 
-    return Ok(embeds::build_small_compilation_embed(&author, &mut result));
+    return Ok(embeds::build_small_compilation_embed(&author, &mut result, MAX_OUTPUT_LEN));
 }

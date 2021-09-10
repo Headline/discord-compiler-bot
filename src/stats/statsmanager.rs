@@ -4,6 +4,7 @@ use std::env;
 
 use crate::stats::structures::*;
 use serenity::model::id::GuildId;
+use lru_cache::LruCache;
 
 pub struct StatsManager {
     client: Arc<reqwest::Client>,
@@ -13,7 +14,16 @@ pub struct StatsManager {
     shards: u64,
     boot_count: Vec<u64>,
     leave_queue: u64,
-    join_queue: u64
+    join_queue: u64,
+    settings_cache: LruCache<u64, SettingsResponse>
+}
+
+#[derive(serde::Deserialize, Clone, Debug)]
+pub struct SettingsResponse {
+    pub prefix : String,
+    pub maxlen : i32,
+    #[serde(rename = "outputStyle")]
+    pub output_style: String,
 }
 
 impl StatsManager {
@@ -26,8 +36,13 @@ impl StatsManager {
             leave_queue: 0,
             join_queue: 0,
             shards: 0,
-            boot_count: Vec::new()
+            boot_count: Vec::new(),
+            settings_cache: LruCache::new(10)
         }
+    }
+
+    pub fn clear_user(&mut self, id : u64) {
+        self.settings_cache.remove(&id);
     }
 
     pub fn should_track(&self) -> bool {
@@ -42,6 +57,32 @@ impl StatsManager {
     pub async fn command_executed(&self, command: &str, guild: Option<GuildId>) {
         let mut cmd = CommandRequest::new(command, guild);
         self.send_request::<CommandRequest>(&mut cmd).await;
+    }
+
+    pub async fn get_settings(&mut self, guild: Option<GuildId>) -> Option<SettingsResponse> {
+        debug!("Getting settings");
+        if let Some(id) = guild {
+            if let Some(settings) = self.settings_cache.get_mut(&id.0) {
+                debug!("Found from cache: {}", id.0);
+                return Some(settings.clone())
+            }
+            else { // not in cache :(
+                let mut req = SettingsRequest::new(id);
+                if let Some(response) = self.send_request::<SettingsRequest>(& mut req).await {
+                    match response.json::<SettingsResponse>().await {
+                        Ok(prefix_resp) => {
+                            self.settings_cache.insert(id.0, prefix_resp.clone());
+                            debug!("Inserting from cache: {:?}", prefix_resp.clone());
+                            return Some(prefix_resp);
+                        }
+                        Err(e) => {
+                            error!("Unable to parse settings response: {}", e);
+                        }
+                    }
+                }
+            }
+        }
+        None
     }
 
     pub async fn post_servers(&mut self, amount: u64) {
@@ -108,11 +149,14 @@ impl StatsManager {
         self.boot_count.iter().sum()
     }
 
-    async fn send_request<T: Sendable + std::marker::Sync>(&self, sendable: &mut T) {
+    async fn send_request<T: Sendable + std::marker::Sync>(&self, sendable: &mut T) -> Option<reqwest::Response> {
         sendable.set_key(&self.pass);
-        match sendable.send(self.client.clone(), &self.url).await {
-            Ok(_) => (),
-            Err(e) => warn!("Request failed to {}: {}", sendable.endpoint(), e),
+        return match sendable.send(self.client.clone(), &self.url).await {
+            Ok(r) => Some(r),
+            Err(e) => {
+                warn!("Request failed to {}: {}", sendable.endpoint(), e);
+                None
+            },
         }
     }
 }

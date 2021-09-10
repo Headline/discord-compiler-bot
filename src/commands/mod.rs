@@ -11,3 +11,4 @@ pub mod invite;
 pub mod cpp;
 pub mod format;
 pub mod formats;
+pub mod cache;

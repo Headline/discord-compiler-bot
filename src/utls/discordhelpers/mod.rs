@@ -215,7 +215,7 @@ pub fn conform_external_str(input: &str, max_len : usize) -> String {
     str = str.replace("`", "\u{200B}`");
 
     // Conform our string.
-    if str.len() > MAX_OUTPUT_LEN {
+    if str.len() > max_len {
         str.chars().take(max_len).collect()
     } else {
         str
