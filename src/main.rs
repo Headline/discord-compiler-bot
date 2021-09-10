@@ -26,11 +26,14 @@ extern crate pretty_env_logger;
 use crate::commands::{
     asm::ASM_COMMAND, botinfo::*, compile::*, compilers::*,
     help::*, languages::*, ping::*, block::*, unblock::*,
-    invite::*, cpp::*, format::*, formats::*
+    invite::*, cpp::*, format::*, formats::*, cache::*
 };
+use crate::stats::statsmanager::StatsManager;
+use tokio::sync::{MutexGuard};
+use crate::cache::{StatsManagerCache, ConfigCache};
 
 #[group]
-#[commands(botinfo, compile, languages, compilers, ping, help, asm, block, unblock, invite, cpp, formats, format)]
+#[commands(botinfo, compile, languages, compilers, ping, help, asm, block, unblock, invite, cpp, formats, format, cache)]
 struct General;
 
 /** Spawn bot **/
@@ -75,7 +78,23 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     let prefix = env::var("BOT_PREFIX")?;
     let framework = StandardFramework::new()
-        .configure(|c| c.owners(owners).prefix(&prefix))
+        .configure(|c| c.owners(owners).dynamic_prefix(|ctx, msg| Box::pin(async move {
+            let data = ctx.data.read().await;
+            let mut stats : MutexGuard<StatsManager> = data.get::<StatsManagerCache>().unwrap().lock().await;
+            if stats.should_track() {
+                if let Some(settings) = stats.get_settings(msg.guild_id).await {
+                    return Some(settings.prefix);
+                }
+            }
+
+
+            return {
+                let botinfo_lock = data.get::<ConfigCache>()
+                    .expect("Expected ConfigCache in global cache");
+                let botinfo = botinfo_lock.read().await;
+                Some(botinfo.get("BOT_PREFIX").unwrap().clone())
+            };
+        })))
         .before(events::before)
         .after(events::after)
         .group(&GENERAL_GROUP)

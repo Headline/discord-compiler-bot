@@ -87,7 +87,7 @@ impl EventHandler for Handler {
                 if let Some(log) = info.get("JOIN_LOG") {
                     if let Ok(id) = log.parse::<u64>() {
                         let emb = embeds::build_join_embed(&guild);
-                        discordhelpers::manual_dispatch(ctx.http.clone(), id, emb).await;
+                        discordhelpers::manual_dispatch(ctx.http, id, emb).await;
                     }
                 }
             }
@@ -140,7 +140,7 @@ impl EventHandler for Handler {
         if let Some(log) = info.get("JOIN_LOG") {
             if let Ok(id) = log.parse::<u64>() {
                 let emb = embeds::build_leave_embed(&incomplete.id);
-                discordhelpers::manual_dispatch(ctx.http.clone(), id, emb).await;
+                discordhelpers::manual_dispatch(ctx.http, id, emb).await;
             }
         }
 

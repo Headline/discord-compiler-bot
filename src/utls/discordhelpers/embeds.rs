@@ -21,7 +21,7 @@ pub async fn edit_message_embed(ctx : &Context, old : & mut Message, emb : Creat
     }).await;
 }
 
-pub fn build_compilation_embed(author: &User, res: & mut CompilationResult) -> CreateEmbed {
+pub fn build_compilation_embed(author: &User, res: & mut CompilationResult, maxlen : usize) -> CreateEmbed {
     let mut embed = CreateEmbed::default();
 
     if !res.status.is_empty() {
@@ -51,7 +51,7 @@ pub fn build_compilation_embed(author: &User, res: & mut CompilationResult) -> C
         embed.field("Compiler Output", format!("```{}\n```", str), false);
     }
     if !res.program_all.is_empty() {
-        let str = discordhelpers::conform_external_str(&res.program_all, MAX_OUTPUT_LEN);
+        let str = discordhelpers::conform_external_str(&res.program_all, maxlen);
         embed.field("Program Output", format!("```\n{}\n```", str), false);
     }
     if !res.url.is_empty() {
@@ -132,7 +132,7 @@ pub fn build_asm_embed(author: &User, res: &godbolt::CompilationResult) -> Creat
     embed
 }
 
-pub fn build_small_compilation_embed(author: &User, res: & mut CompilationResult) -> CreateEmbed {
+pub fn build_small_compilation_embed(author: &User, res: & mut CompilationResult, maxlen : usize) -> CreateEmbed {
     let mut embed = CreateEmbed::default();
     if res.status != "0" {
         embed.color(COLOR_FAIL);
@@ -145,7 +145,7 @@ pub fn build_small_compilation_embed(author: &User, res: & mut CompilationResult
         embed.field("Compiler Output", format!("```{}\n```", str), false);
     }
     if !res.program_all.is_empty() {
-        let str = discordhelpers::conform_external_str(&res.program_all, MAX_OUTPUT_LEN);
+        let str = discordhelpers::conform_external_str(&res.program_all, maxlen);
         embed.description(format!("```\n{}\n```", str));
     }
     embed.footer(|f| {
