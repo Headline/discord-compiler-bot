@@ -13,7 +13,7 @@ pub async fn compile(ctx: &Context, msg: &Message, _args: Args) -> CommandResult
     let data_read = ctx.data.read().await;
 
     // Handle wandbox request logic
-    let embed = crate::apis::wandbox::send_request(ctx.clone(), msg.content.clone(), msg.author.clone(), msg).await?;
+    let embed = crate::apis::wandbox::handle_request(ctx.clone(), msg.content.clone(), msg.author.clone(), msg).await?;
 
     // Send our final embed
     let mut message = embeds::embed_message(embed);

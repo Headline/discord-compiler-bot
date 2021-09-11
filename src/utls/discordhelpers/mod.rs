@@ -148,7 +148,7 @@ pub async fn handle_edit_cpp(ctx : &Context, content : String, author : User, mu
 }
 
 pub async fn handle_edit_compile(ctx : &Context, content : String, author : User, mut old : Message) -> CommandResult {
-    let embed = crate::apis::wandbox::send_request(ctx.clone(), content, author, &old).await?;
+    let embed = crate::apis::wandbox::handle_request(ctx.clone(), content, author, &old).await?;
 
     let compilation_successful = embed.0.get("color").unwrap() == COLOR_OKAY;
     discordhelpers::send_completion_react(ctx, &old, compilation_successful).await?;
@@ -158,13 +158,17 @@ pub async fn handle_edit_compile(ctx : &Context, content : String, author : User
 }
 
 pub async fn handle_edit_asm(ctx : &Context, content : String, author : User, mut old : Message) -> CommandResult {
-    let emb = crate::apis::godbolt::send_request(ctx.clone(), content, author, &old).await?;
+    let emb = crate::apis::godbolt::handle_request(ctx.clone(), content, author, &old, true).await?;
 
     let success = emb.0.get("color").unwrap() == COLOR_OKAY;
     embeds::edit_message_embed(&ctx, & mut old, emb).await;
 
     send_completion_react(ctx, &old, success).await?;
     Ok(())
+}
+
+pub fn is_success_embed(embed : &CreateEmbed) -> bool {
+    embed.0.get("color").unwrap() == COLOR_OKAY
 }
 
 pub async fn send_completion_react(ctx: &Context, msg: &Message, success: bool) -> Result<Reaction, serenity::Error> {
@@ -192,7 +196,6 @@ pub async fn send_completion_react(ctx: &Context, msg: &Message, success: bool) 
         reaction = ReactionType::Unicode(String::from("❌"));
     }
     msg.react(&ctx.http, reaction).await
-
 }
 
 // Certain compiler outputs use unicode control characters that

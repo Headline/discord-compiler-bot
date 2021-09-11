@@ -5,7 +5,7 @@ use serenity::{
 };
 use serenity_utils::menu::Menu;
 
-use crate::cache::{GodboltCache, ConfigCache, MessageCache};
+use crate::cache::{ConfigCache, MessageCache, CompilerCache};
 use crate::utls::constants::*;
 use crate::utls::{discordhelpers};
 use crate::utls::discordhelpers::embeds;
@@ -15,7 +15,7 @@ use crate::utls::parser::shortname_to_qualified;
 #[sub_commands(compilers, languages)]
 #[bucket = "nospam"]
 pub async fn asm(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
-    let emb = crate::apis::godbolt::send_request(ctx.clone(), msg.content.clone(), msg.author.clone(), msg).await?;
+    let emb = crate::apis::godbolt::handle_request(ctx.clone(), msg.content.clone(), msg.author.clone(), msg, true).await?;
     let mut emb_msg = embeds::embed_message(emb);
     let asm_embed = msg
         .channel_id
@@ -35,28 +35,21 @@ pub async fn asm(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
 
 #[command]
 async fn compilers(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
-    let data_read = ctx.data.read().await;
-    let godbolt_lock = match data_read.get::<GodboltCache>() {
-        Some(l) => l,
-        None => {
-            return Err(CommandError::from(
-                "Internal request failure\nGodbolt cache is uninitialized, please file a bug.",
-            ));
-        }
-    };
-
     if args.is_empty() {
         return Err(CommandError::from(
             "No language specified, did you mean to supply one?",
         ));
     }
 
+    let data_read = ctx.data.read().await;
+    let compiler_cache = data_read.get::<CompilerCache>().unwrap();
+    let compiler_manager = compiler_cache.read().await;
+
     let user_lang = args.parse::<String>().unwrap();
     let language = shortname_to_qualified(&user_lang);
     let mut found = false;
-    let godbolt = godbolt_lock.read().await;
     let mut vec: Vec<String> = Vec::new();
-    for cache_entry in &godbolt.cache {
+    for cache_entry in &compiler_manager.gbolt.cache {
         if cache_entry.language.id == language {
             found = true;
             for compiler in &cache_entry.compilers {
@@ -134,19 +127,11 @@ async fn compilers(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
 #[command]
 async fn languages(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
     let data_read = ctx.data.read().await;
-    let godbolt_lock = match data_read.get::<GodboltCache>() {
-        Some(l) => l,
-        None => {
-            return Err(CommandError::from(
-                "Internal request failure\nGodbolt cache is uninitialized, please file a bug.",
-            ));
-        }
-    };
-
-    let godbolt = godbolt_lock.read().await;
+    let compiler_cache = data_read.get::<CompilerCache>().unwrap();
+    let compiler_manager = compiler_cache.read().await;
 
     let mut vec: Vec<String> = Vec::new();
-    for cache_entry in &godbolt.cache {
+    for cache_entry in &compiler_manager.gbolt.cache {
         let lang = &cache_entry.language;
         vec.push(String::from(&lang.id));
     }

@@ -1,15 +1,13 @@
-use crate::utls::{parser, discordhelpers};
 use serenity::framework::standard::CommandError;
 use serenity::builder::{CreateEmbed};
 use serenity::client::Context;
 use serenity::model::channel::Message;
-use crate::cache::{ConfigCache, GodboltCache};
 use serenity::model::user::User;
-use godbolt::{Godbolt, CompilationFilters};
-use crate::utls::parser::ParserResult;
-use crate::utls::discordhelpers::embeds;
 
-pub async fn send_request(ctx : Context, mut content : String, author : User, msg : &Message) -> Result<CreateEmbed, CommandError> {
+use crate::cache::{ConfigCache, CompilerCache};
+use crate::utls::{parser, discordhelpers};
+
+pub async fn handle_request(ctx : Context, mut content : String, author : User, msg : &Message, assembly : bool) -> Result<CreateEmbed, CommandError> {
     let data_read = ctx.data.read().await;
     let loading_id;
     let loading_name;
@@ -32,22 +30,11 @@ pub async fn send_request(ctx : Context, mut content : String, author : User, ms
     }
 
     // parse user input
-    let godbolt_lock = data_read.get::<GodboltCache>().unwrap();
-    let result: ParserResult = match parser::get_components(&content, &author, godbolt_lock, &msg.referenced_message).await {
+    let comp_mngr = data_read.get::<CompilerCache>().unwrap();
+    let result = match parser::get_components(&content, &author, comp_mngr, &msg.referenced_message).await {
         Ok(r) => r,
         Err(e) => {
             return Err(CommandError::from(format!("{}", e)));
-        }
-    };
-
-    let godbolt = godbolt_lock.read().await;
-    let c = match godbolt.resolve(&result.target) {
-        Some(c) => c,
-        None => {
-            return Err(CommandError::from(format!(
-                "Unable to find valid compiler or language '{}'\n",
-                &result.target
-            )));
         }
     };
 
@@ -64,21 +51,10 @@ pub async fn send_request(ctx : Context, mut content : String, author : User, ms
             return Err(CommandError::from(format!(" Unable to react to message, am I missing permissions to react or use external emoji?\n{}", e)));
         }
     };
+    let comp_mngr_lock = comp_mngr.read().await;
 
-    let filters = CompilationFilters {
-        binary: None,
-        comment_only: Some(true),
-        demangle: Some(true),
-        directives: Some(true),
-        execute: None,
-        intel: Some(true),
-        labels: Some(true),
-        library_code: None,
-        trim: Some(true),
-    };
 
-    let response =
-        match Godbolt::send_request(&c, &result.code, &result.options.join(" "), &filters).await {
+    let response = match comp_mngr_lock.assembly(&result, &author).await {
             Ok(resp) => resp,
             Err(e) => {
                 // we failed, lets remove the loading react before leaving so it doesn't seem like we're still processing
@@ -104,6 +80,6 @@ pub async fn send_request(ctx : Context, mut content : String, author : User, ms
         }
     }
 
-    Ok(embeds::build_asm_embed(&author, &response))
+    Ok(response.1)
 }
 

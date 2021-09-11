@@ -4,7 +4,7 @@ use serenity::prelude::*;
 
 use serenity_utils::menu::*;
 
-use crate::cache::{WandboxCache, ConfigCache};
+use crate::cache::{ConfigCache, CompilerCache};
 use crate::utls::discordhelpers;
 use crate::utls::parser::shortname_to_qualified;
 
@@ -20,18 +20,14 @@ pub async fn compilers(ctx: &Context, msg: &Message, _args: Args) -> CommandResu
         }
     };
 
+
     // y lock on wandbox cache
     let data_read = ctx.data.read().await;
-    let wandbox_lock = match data_read.get::<WandboxCache>() {
-        Some(l) => l,
-        None => {
-            return Err(CommandError::from("Internal request failure.\nWandbox cache is uninitialized, please file a bug if this error persists"));
-        }
-    };
+    let compiler_cache = data_read.get::<CompilerCache>().unwrap();
+    let compiler_manager = compiler_cache.read().await;
 
     // Get our list of compilers
-    let wbox = wandbox_lock.read().await;
-    let lang = match wbox.get_compilers(&shortname_to_qualified(&language)) {
+    let lang = match compiler_manager.wbox.get_compilers(&shortname_to_qualified(&language)) {
         Some(s) => s,
         None => {
             return Err(CommandError::from(format!(

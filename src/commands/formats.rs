@@ -1,7 +1,7 @@
 use serenity::framework::standard::{macros::command, Args, CommandResult};
 use serenity::model::prelude::*;
 use serenity::prelude::*;
-use crate::cache::{GodboltCache, ConfigCache};
+use crate::cache::{ConfigCache, CompilerCache};
 use serenity::builder::CreateEmbed;
 
 use crate::utls::constants::{ICON_HELP, COLOR_OKAY};
@@ -10,7 +10,6 @@ use crate::utls::discordhelpers::embeds;
 #[command]
 pub async fn formats(ctx: &Context, msg: &Message, _args : Args) -> CommandResult {
     let data = ctx.data.read().await;
-    let gbolt = data.get::<GodboltCache>().unwrap().read().await;
     let prefix = {
         let botinfo_lock = data
             .get::<ConfigCache>()
@@ -20,12 +19,14 @@ pub async fn formats(ctx: &Context, msg: &Message, _args : Args) -> CommandResul
         botinfo.get("BOT_PREFIX").unwrap().clone()
     };
 
+    let compiler_manager = data.get::<CompilerCache>().unwrap().read().await;
+
     let mut emb = CreateEmbed::default();
     emb.thumbnail(ICON_HELP);
     emb.color(COLOR_OKAY);
     emb.title("Formatters:");
     emb.description(format!("Below is the list of all formatters currently supported, an valid example request can be `{}format rust`, or `{}format clang mozilla`", prefix, prefix));
-    for format in &gbolt.formats {
+    for format in &compiler_manager.gbolt.formats {
         let mut output = String::new();
         output.push_str("Styles:\n");
         if format.styles.is_empty() {

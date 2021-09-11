@@ -11,6 +11,84 @@ use wandbox::*;
 use crate::utls::constants::*;
 use crate::utls::{discordhelpers};
 
+pub trait ToEmbed<T> {
+    fn to_embed(self, author : &User, any : T) -> CreateEmbed;
+}
+
+impl ToEmbed<bool> for godbolt::CompilationResult {
+    fn to_embed(self, author: &User, assembly : bool) -> CreateEmbed {
+        let mut embed = CreateEmbed::default();
+
+        if self.code == 0 {
+            embed.color(COLOR_OKAY);
+        }
+        else {
+            embed.color(COLOR_FAIL);
+
+            // if it's an assembly request let's just handle the error case here.
+            if assembly {
+                let mut errs = String::new();
+                for err_res in &self.stderr {
+                    let line = format!("{}\n", &err_res.text);
+                    errs.push_str(&line);
+                }
+
+                let compliant_str = discordhelpers::conform_external_str(&errs, MAX_ERROR_LEN);
+                embed.field(
+                    "Compilation Errors",
+                    format!("```\n{}```", compliant_str),
+                    false,
+                );
+                return embed;
+            }
+        };
+
+        if assembly {
+            let mut pieces: Vec<String> = Vec::new();
+            let mut append: String = String::new();
+            if let Some(vec) = &self.asm {
+                for asm in vec {
+                    if let Some(text) = &asm.text {
+                        if append.len() + text.len() > 1000 {
+                            pieces.push(append.clone());
+                            append.clear()
+                        }
+                        append.push_str(&format!("{}\n", text));
+                    }
+                }
+            }
+
+            let mut i = 1;
+            for str in pieces {
+                let title = format!("Assembly Output Pt. {}", i);
+                embed.field(&title, format!("```x86asm\n{}\n```", &str), false);
+                i += 1;
+            }
+            if !append.is_empty() {
+                let title;
+                if i > 1 {
+                    title = format!("Assembly Output Pt. {}", i);
+                } else {
+                    title = String::from("Assembly Output")
+                }
+                embed.field(&title, format!("```x86asm\n{}\n```", &append), false);
+            }
+        }
+        else {
+            debug!("{:?}", self.stdout);
+        }
+
+        embed.title("Results");
+        embed.footer(|f| {
+            f.text(format!(
+                "Requested by: {} | Powered by godbolt.org",
+                author.tag()
+            ))
+        });
+        embed
+    }
+}
+
 pub async fn edit_message_embed(ctx : &Context, old : & mut Message, emb : CreateEmbed) {
     let _ = old.edit(ctx, |m| {
         m.embed(|e| {
@@ -62,70 +140,6 @@ pub fn build_compilation_embed(author: &User, res: & mut CompilationResult) -> C
     embed.footer(|f| {
         f.text(format!(
             "Requested by: {} | Powered by wandbox.org",
-            author.tag()
-        ))
-    });
-    embed
-}
-
-pub fn build_asm_embed(author: &User, res: &godbolt::CompilationResult) -> CreateEmbed {
-    let mut embed = CreateEmbed::default();
-
-    if res.code == 0 {
-        embed.color(COLOR_OKAY);
-    }
-    else {
-        embed.color(COLOR_FAIL);
-
-        let mut errs = String::new();
-        for err_res in &res.stderr {
-            let line = format!("{}\n", &err_res.text);
-            errs.push_str(&line);
-        }
-
-        let compliant_str = discordhelpers::conform_external_str(&errs, MAX_ERROR_LEN);
-        embed.field(
-            "Compilation Errors",
-            format!("```\n{}```", compliant_str),
-            false,
-        );
-        return embed;
-    };
-
-    let mut pieces: Vec<String> = Vec::new();
-    let mut append: String = String::new();
-    if let Some(vec) = &res.asm {
-        for asm in vec {
-            if let Some(text) = &asm.text {
-                if append.len() + text.len() > 1000 {
-                    pieces.push(append.clone());
-                    append.clear()
-                }
-                append.push_str(&format!("{}\n", text));
-            }
-        }
-    }
-
-    let mut i = 1;
-    for str in pieces {
-        let title = format!("Assembly Output Pt. {}", i);
-        embed.field(&title, format!("```x86asm\n{}\n```", &str), false);
-        i += 1;
-    }
-    if !append.is_empty() {
-        let title;
-        if i > 1 {
-            title = format!("Assembly Output Pt. {}", i);
-        } else {
-            title = String::from("Assembly Output")
-        }
-        embed.field(&title, format!("```x86asm\n{}\n```", &append), false);
-    }
-
-    embed.title("Assembly Results");
-    embed.footer(|f| {
-        f.text(format!(
-            "Requested by: {} | Powered by godbolt.org",
             author.tag()
         ))
     });

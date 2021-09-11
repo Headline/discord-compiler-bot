@@ -4,24 +4,17 @@ use serenity::prelude::*;
 
 use serenity_utils::menu::*;
 
-use crate::cache::{WandboxCache, ConfigCache};
+use crate::cache::{ConfigCache, CompilerCache};
 use crate::utls::discordhelpers;
 
 #[command]
 pub async fn languages(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
     let data_read = ctx.data.read().await;
-    let wandbox_lock = match data_read.get::<WandboxCache>() {
-        Some(l) => l,
-        None => {
-            return Err(CommandError::from(
-                "Internal request failure\nWandbox cache is uninitialized, please file a bug.",
-            ));
-        }
-    };
-    let wbox = wandbox_lock.read().await;
+    let compiler_cache = data_read.get::<CompilerCache>().unwrap();
+    let compiler_manager = compiler_cache.read().await;
 
     let mut items: Vec<String> = Vec::new();
-    let langs = wbox.get_languages();
+    let langs = compiler_manager.wbox.get_languages();
     for lang in langs {
         items.push(lang.name);
     }

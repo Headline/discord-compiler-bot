@@ -1,16 +1,21 @@
-use crate::utls::{parser, discordhelpers};
-use wandbox::CompilationBuilder;
+use std::env;
+use tokio::sync::RwLockReadGuard;
+
 use serenity::framework::standard::CommandError;
 use serenity::builder::{CreateEmbed};
 use serenity::client::Context;
 use serenity::model::channel::Message;
-use crate::cache::{WandboxCache, ConfigCache, StatsManagerCache};
-use std::env;
 use serenity::model::user::User;
-use crate::utls::discordhelpers::embeds;
-use crate::cppeval::eval::CppEval;
 
-pub async fn send_request(ctx : Context, mut content : String, author : User, msg : &Message) -> Result<CreateEmbed, CommandError> {
+use crate::utls::{parser, discordhelpers};
+use crate::cache::{ConfigCache, StatsManagerCache, CompilerCache};
+use crate::utls::discordhelpers::{embeds, is_success_embed};
+use crate::cppeval::eval::CppEval;
+use crate::utls::compilation_manager::CompilationManager;
+use crate::utls::parser::ParserResult;
+
+
+pub async fn handle_request(ctx : Context, mut content : String, author : User, msg : &Message) -> Result<CreateEmbed, CommandError> {
     let data_read = ctx.data.read().await;
     let loading_id;
     let loading_name;
@@ -33,28 +38,8 @@ pub async fn send_request(ctx : Context, mut content : String, author : User, ms
     }
 
     // parse user input
-    let wandbox_lock = data_read.get::<WandboxCache>().unwrap();
-    let parse_result = parser::get_components(&content, &author, wandbox_lock, &msg.referenced_message).await?;
-
-    // build user input
-    let mut builder = CompilationBuilder::new();
-    builder.code(&parse_result.code);
-    builder.target(&parse_result.target);
-    builder.stdin(&parse_result.stdin);
-    builder.save(true);
-    builder.options(parse_result.options);
-
-    // build request
-    {
-        let wbox = wandbox_lock.read().await;
-        builder.build(&wbox)?;
-    }
-
-    // lets see if we can manually fix botched java compilations...
-    // for wandbox, "public class" is invalid, so lets do a quick replacement
-    if builder.lang == "java" {
-        builder.code(&parse_result.code.replacen("public class", "class", 1));
-    }
+    let compilation_manager = data_read.get::<CompilerCache>().unwrap();
+    let parse_result = parser::get_components(&content, &author, &compilation_manager, &msg.referenced_message).await?;
 
     // send out loading emote
     let reaction = match msg
@@ -68,7 +53,9 @@ pub async fn send_request(ctx : Context, mut content : String, author : User, ms
     };
 
     // dispatch our req
-    let mut result = match builder.dispatch().await {
+    let compilation_manager_lock : RwLockReadGuard<CompilationManager> = compilation_manager.read().await;
+    let awd = compilation_manager_lock.compile(&parse_result, &author).await;
+    let result = match awd {
         Ok(r) => r,
         Err(e) => {
             // we failed, lets remove the loading react so it doesn't seem like we're still processing
@@ -89,7 +76,7 @@ pub async fn send_request(ctx : Context, mut content : String, author : User, ms
 
     let stats = data_read.get::<StatsManagerCache>().unwrap().lock().await;
     if stats.should_track() {
-        stats.compilation(&builder.lang, result.status == "1").await;
+        stats.compilation(&result.0, !is_success_embed(&result.1)).await;
     }
 
     let mut guild = String::from("<unknown>");
@@ -99,9 +86,9 @@ pub async fn send_request(ctx : Context, mut content : String, author : User, ms
     if let Ok(log) = env::var("COMPILE_LOG") {
         if let Ok(id) = log.parse::<u64>() {
             let emb = embeds::build_complog_embed(
-                result.status == "1",
+                is_success_embed(&result.1),
                 &parse_result.code,
-                &builder.lang,
+                &parse_result.target,
                 &author.tag(),
                 author.id.0,
                 &guild,
@@ -110,8 +97,7 @@ pub async fn send_request(ctx : Context, mut content : String, author : User, ms
         }
     }
 
-    let emb = embeds::build_compilation_embed(&author, &mut result);
-    Ok(emb)
+    Ok(result.1)
 }
 
 pub async fn send_cpp_request(ctx : Context, content : String, author : User, msg : &Message) -> Result<CreateEmbed, CommandError> {
@@ -132,7 +118,6 @@ pub async fn send_cpp_request(ctx : Context, content : String, author : User, ms
             .unwrap();
         loading_name = botinfo.get("LOADING_EMOJI_NAME").unwrap().clone();
     }
-
 
     let start = content.find(' ');
     if start.is_none() {
@@ -164,37 +149,17 @@ pub async fn send_cpp_request(ctx : Context, content : String, author : User, ms
         }
     };
 
-    let output = out.unwrap();
-    let mut builder = CompilationBuilder::new();
-    builder.code(&output);
-    builder.target("gcc-10.1.0");
-    builder.stdin("");
-    builder.save(false);
-    builder.options(vec![String::from("-O2"), String::from("-std=gnu++2a")]);
+    let fake_parse = ParserResult {
+        url: "".to_string(),
+        stdin: "".to_string(),
+        target: "gcc-10.1.0".to_string(),
+        code: out.unwrap(),
+        options: vec![String::from("-O2"), String::from("-std=gnu++2a")]
+    };
 
     let data_read = ctx.data.read().await;
-    let wandbox_lock = match data_read.get::<WandboxCache>() {
-        Some(l) => l,
-        None => {
-            return Err(CommandError::from(
-                "Internal request failure\nWandbox cache is uninitialized, please file a bug.",
-            ));
-        }
-    };
-
-    let wbox = wandbox_lock.read().await;
-    // build request
-    match builder.build(&wbox) {
-        Ok(()) => (),
-        Err(e) => {
-            return Err(CommandError::from(format!(
-                "An internal error has occurred while building request.\n{}",
-                e
-            )));
-        }
-    };
-
-    let mut result = match builder.dispatch().await {
+    let compiler_lock = data_read.get::<CompilerCache>().unwrap().read().await;
+    let mut result = match compiler_lock.wandbox(&fake_parse).await {
         Ok(r) => r,
         Err(e) => {
             // we failed, lets remove the loading react so it doesn't seem like we're still processing
@@ -218,5 +183,5 @@ pub async fn send_cpp_request(ctx : Context, content : String, author : User, ms
         }
     }
 
-    return Ok(embeds::build_small_compilation_embed(&author, &mut result));
+    return Ok(embeds::build_small_compilation_embed(&author, &mut result.1));
 }
