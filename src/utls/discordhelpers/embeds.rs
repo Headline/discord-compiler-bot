@@ -15,7 +15,7 @@ pub trait ToEmbed<T> {
     fn to_embed(self, author : &User, any : T) -> CreateEmbed;
 }
 
-impl ToEmbed<bool> for godbolt::CompilationResult {
+impl ToEmbed<bool> for godbolt::GodboltResponse {
     fn to_embed(self, author: &User, assembly : bool) -> CreateEmbed {
         let mut embed = CreateEmbed::default();
 
@@ -75,10 +75,37 @@ impl ToEmbed<bool> for godbolt::CompilationResult {
             }
         }
         else {
-            debug!("{:?}", self.stdout);
+            let mut stdout = String::default();
+            for line in self.stdout {
+                stdout.push_str(&format!("{}\n", line.text));
+            }
+
+            let mut stderr = String::default();
+            if let Some(errors) = self.build_result.unwrap().stderr {
+                for line in errors {
+                    stderr.push_str(&format!("{}\n", line.text));
+                }
+            }
+            else {
+                for line in self.stderr {
+                    stderr.push_str(&format!("{}\n", line.text));
+                }
+            }
+
+            if !stdout.is_empty() {
+                let str = discordhelpers::conform_external_str(&stdout,  MAX_ERROR_LEN);
+                embed.field("Program Output", format!("```{}\n```", str), false);
+            }
+            if !stderr.is_empty() {
+                let str = discordhelpers::conform_external_str(&stderr, MAX_OUTPUT_LEN);
+                embed.field("Compiler Output", format!("```\n{}\n```", str), false);
+            }
+
+            // Execution time can be displayed here, but I don't think it's useful enough
+            // to show...
+            //embed.field("Execution Time", format!("`{}ms`", self.execution_time), true);
         }
 
-        embed.title("Results");
         embed.footer(|f| {
             f.text(format!(
                 "Requested by: {} | Powered by godbolt.org",

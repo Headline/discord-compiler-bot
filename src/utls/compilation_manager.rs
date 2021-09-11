@@ -5,7 +5,7 @@ use serenity::model::user::User;
 use serenity::builder::CreateEmbed;
 
 use wandbox::{Wandbox, CompilationBuilder, WandboxError};
-use godbolt::{Godbolt, GodboltError, CompilationFilters};
+use godbolt::{Godbolt, GodboltError, CompilationFilters, RequestOptions, CompilerOptions};
 
 use crate::utls::parser::ParserResult;
 use crate::utls::discordhelpers::embeds;
@@ -57,17 +57,17 @@ impl CompilationManager {
     }
 
     pub async fn compile(&self, parser_result : &ParserResult, author : &User) -> Result<(String, CreateEmbed), CommandError> {
-        match self.resolve_target(&parser_result.target) {
+        return match self.resolve_target(&parser_result.target) {
             RequestHandler::CompilerExplorer => {
                 let result = self.compiler_explorer(parser_result).await?;
-                return Ok((result.0, result.1.to_embed(author, false)))
+                Ok((result.0, result.1.to_embed(author, false)))
             }
             RequestHandler::WandBox => {
                 let mut result = self.wandbox(&parser_result).await?;
-                return Ok((result.0, embeds::build_compilation_embed(author, & mut result.1)))
+                Ok((result.0, embeds::build_compilation_embed(author, &mut result.1)))
             }
             RequestHandler::None => {
-                return Err(CommandError::from(
+                Err(CommandError::from(
                     format!("Unable to find compiler or language for target '{}'.", &parser_result.target),
                 ))
             }
@@ -87,12 +87,21 @@ impl CompilationManager {
             trim: Some(true),
         };
 
+        let options = RequestOptions {
+            user_arguments: parse_result.options.join(" "),
+            compiler_options: CompilerOptions {
+                skip_asm: false,
+                executor_request: false
+            },
+            filters
+        };
+
         let compiler = self.gbolt.resolve(&parse_result.target).unwrap();
-        let response = Godbolt::send_request(&compiler, &parse_result.code, &parse_result.options.join(" "), &filters).await?;
+        let response = Godbolt::send_request(&compiler, &parse_result.code, options).await?;
         Ok((compiler.lang, response.to_embed(author, true)))
     }
 
-    pub async fn compiler_explorer(&self, parse_result : &ParserResult) -> Result<(String, godbolt::CompilationResult), GodboltError> {
+    pub async fn compiler_explorer(&self, parse_result : &ParserResult) -> Result<(String, godbolt::GodboltResponse), GodboltError> {
         let filters = CompilationFilters {
             binary: None,
             comment_only: Some(true),
@@ -105,9 +114,16 @@ impl CompilationManager {
             trim: Some(true),
         };
 
+        let options = RequestOptions {
+            user_arguments: parse_result.options.join(" "),
+            compiler_options: CompilerOptions {
+                skip_asm: true,
+                executor_request: true
+            },
+            filters
+        };
         let compiler = self.gbolt.resolve(&parse_result.target).unwrap();
-        let response = Godbolt::send_request(&compiler, &parse_result.code, &parse_result.options.join(" "), &filters).await?;
-        let compiler = self.gbolt.resolve(&parse_result.target).unwrap();
+        let response = Godbolt::send_request(&compiler, &parse_result.code,  options).await?;
         Ok((compiler.lang, response))
     }
 

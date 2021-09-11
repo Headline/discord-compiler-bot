@@ -15,7 +15,7 @@ use crate::utls::parser::shortname_to_qualified;
 #[sub_commands(compilers, languages)]
 #[bucket = "nospam"]
 pub async fn asm(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
-    let emb = crate::apis::godbolt::handle_request(ctx.clone(), msg.content.clone(), msg.author.clone(), msg, true).await?;
+    let emb = crate::apis::godbolt::handle_request(ctx.clone(), msg.content.clone(), msg.author.clone(), msg).await?;
     let mut emb_msg = embeds::embed_message(emb);
     let asm_embed = msg
         .channel_id

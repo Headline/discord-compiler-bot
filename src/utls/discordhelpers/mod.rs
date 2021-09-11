@@ -158,7 +158,7 @@ pub async fn handle_edit_compile(ctx : &Context, content : String, author : User
 }
 
 pub async fn handle_edit_asm(ctx : &Context, content : String, author : User, mut old : Message) -> CommandResult {
-    let emb = crate::apis::godbolt::handle_request(ctx.clone(), content, author, &old, true).await?;
+    let emb = crate::apis::godbolt::handle_request(ctx.clone(), content, author, &old).await?;
 
     let success = emb.0.get("color").unwrap() == COLOR_OKAY;
     embeds::edit_message_embed(&ctx, & mut old, emb).await;

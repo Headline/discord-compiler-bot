@@ -7,7 +7,7 @@ use serenity::model::user::User;
 use crate::cache::{ConfigCache, CompilerCache};
 use crate::utls::{parser, discordhelpers};
 
-pub async fn handle_request(ctx : Context, mut content : String, author : User, msg : &Message, assembly : bool) -> Result<CreateEmbed, CommandError> {
+pub async fn handle_request(ctx : Context, mut content : String, author : User, msg : &Message) -> Result<CreateEmbed, CommandError> {
     let data_read = ctx.data.read().await;
     let loading_id;
     let loading_name;
@@ -51,9 +51,8 @@ pub async fn handle_request(ctx : Context, mut content : String, author : User, 
             return Err(CommandError::from(format!(" Unable to react to message, am I missing permissions to react or use external emoji?\n{}", e)));
         }
     };
+
     let comp_mngr_lock = comp_mngr.read().await;
-
-
     let response = match comp_mngr_lock.assembly(&result, &author).await {
             Ok(resp) => resp,
             Err(e) => {
