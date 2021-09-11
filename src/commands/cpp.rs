@@ -8,6 +8,7 @@ use crate::utls::discordhelpers;
 use crate::cppeval::eval::CppEval;
 use crate::utls::parser::ParserResult;
 use serenity::builder::CreateEmbed;
+use crate::utls::discordhelpers::embeds::ToEmbed;
 
 #[command]
 #[aliases("c++")]
@@ -82,14 +83,14 @@ pub async fn handle_request(ctx : Context, content : String, author : User, msg 
     let fake_parse = ParserResult {
         url: "".to_string(),
         stdin: "".to_string(),
-        target: "gcc-10.1.0".to_string(),
+        target: "g101".to_string(),
         code: out.unwrap(),
         options: vec![String::from("-O2"), String::from("-std=gnu++2a")]
     };
 
     let data_read = ctx.data.read().await;
     let compiler_lock = data_read.get::<CompilerCache>().unwrap().read().await;
-    let mut result = match compiler_lock.wandbox(&fake_parse).await {
+    let result = match compiler_lock.compiler_explorer(&fake_parse).await {
         Ok(r) => r,
         Err(e) => {
             // we failed, lets remove the loading react so it doesn't seem like we're still processing
@@ -113,5 +114,5 @@ pub async fn handle_request(ctx : Context, content : String, author : User, msg 
         }
     }
 
-    return Ok(embeds::build_small_compilation_embed(&author, &mut result.1));
+    return Ok(result.1.to_embed(&author, false));
 }

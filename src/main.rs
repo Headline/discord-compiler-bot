@@ -24,7 +24,7 @@ extern crate pretty_env_logger;
 
 /** Command Registration **/
 use crate::commands::{
-    asm::ASM_COMMAND, botinfo::*, compile::*, compilers::*,
+    asm::*, botinfo::*, compile::*, compilers::*,
     help::*, languages::*, ping::*, block::*, unblock::*,
     invite::*, cpp::*, format::*, formats::*
 };

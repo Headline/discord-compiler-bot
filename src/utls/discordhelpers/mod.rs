@@ -25,6 +25,7 @@ pub fn build_menu_items(
     title: &str,
     avatar: &str,
     author: &str,
+    desc: &str
 ) -> Vec<CreateMessage<'static>> {
     let mut pages: Vec<CreateMessage> = Vec::new();
     let num_pages = items.len() / items_per_page;
@@ -38,7 +39,7 @@ pub fn build_menu_items(
         }
         let mut page = CreateMessage::default();
         page.embed(|e| {
-            let mut description = String::new();
+            let mut description = format!("{}\n", desc);
             for (i, item) in items[current_page * items_per_page..end].iter().enumerate() {
                 if i > items_per_page {
                     break;

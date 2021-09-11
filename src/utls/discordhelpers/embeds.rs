@@ -173,6 +173,7 @@ pub fn build_compilation_embed(author: &User, res: & mut CompilationResult) -> C
     embed
 }
 
+#[allow(dead_code)]
 pub fn build_small_compilation_embed(author: &User, res: & mut CompilationResult) -> CreateEmbed {
     let mut embed = CreateEmbed::default();
     if res.status != "0" {
