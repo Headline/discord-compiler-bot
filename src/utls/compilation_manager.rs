@@ -93,6 +93,7 @@ impl CompilationManager {
                 skip_asm: false,
                 executor_request: false
             },
+            execute_parameters: Default::default(),
             filters
         };
 
@@ -119,6 +120,10 @@ impl CompilationManager {
             compiler_options: CompilerOptions {
                 skip_asm: true,
                 executor_request: true
+            },
+            execute_parameters: godbolt::ExecuteParameters {
+                args: parse_result.args.clone(),
+                stdin: parse_result.stdin.clone()
             },
             filters
         };

@@ -85,7 +85,8 @@ pub async fn handle_request(ctx : Context, content : String, author : User, msg 
         stdin: "".to_string(),
         target: "g101".to_string(),
         code: out.unwrap(),
-        options: vec![String::from("-O2"), String::from("-std=gnu++2a")]
+        options: vec![String::from("-O2"), String::from("-std=gnu++2a")],
+        args: vec![]
     };
 
     let data_read = ctx.data.read().await;

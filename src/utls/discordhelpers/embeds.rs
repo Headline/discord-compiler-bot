@@ -94,7 +94,7 @@ impl ToEmbed<bool> for godbolt::GodboltResponse {
 
             if !stdout.is_empty() {
                 let str = discordhelpers::conform_external_str(&stdout,  MAX_ERROR_LEN);
-                embed.field("Program Output", format!("```{}\n```", str), false);
+                embed.field("Program Output", format!("```\n{}\n```", str), false);
             }
             if !stderr.is_empty() {
                 let str = discordhelpers::conform_external_str(&stderr, MAX_OUTPUT_LEN);

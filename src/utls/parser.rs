@@ -30,22 +30,28 @@ pub struct ParserResult {
     pub target: String,
     pub code: String,
     pub options: Vec<String>,
+    pub args: Vec<String>,
 }
 
 #[allow(clippy::while_let_on_iterator)]
 pub async fn get_components(input: &str, author : &User, compilation_manager : &Arc<RwLock<CompilationManager>>, reply : &Option<Box<Message>>) -> Result<ParserResult, CommandError> {
     let mut result = ParserResult::default();
 
-    // we grab the index for the first code block - this will help us
-    // know when to stop parsing arguments
-    let code_block: usize;
-    if let Some(index) = input.find('`') {
-        code_block = index;
-    } else {
-        code_block = input.len();
+    // Find the index for where we should stop parsing user input
+    let end_point: usize;
+    if let Some(parse_stop) = input.find("\n") {
+        end_point = parse_stop;
+    }
+    else {
+        if let Some(index) = input.find('`') {
+            end_point = index;
+        } else {
+            end_point = input.len();
+        }
     }
 
-    let mut args: Vec<&str> = input[..code_block].split_whitespace().collect();
+
+    let mut args: Vec<&str> = input[..end_point].split_whitespace().collect();
 
     // ditch command str (;compile, ;asm)
     args.remove(0);
@@ -67,7 +73,7 @@ pub async fn get_components(input: &str, author : &User, compilation_manager : &
     // looping every argument
     let mut iter = args.iter();
     while let Some(c) = iter.next() {
-        if c.contains("```") {
+        if c.contains("\n") || c.contains("`") {
             break;
         }
 
@@ -97,6 +103,16 @@ pub async fn get_components(input: &str, author : &User, compilation_manager : &
             result.options.push(c.trim().to_string());
         }
     }
+
+    let cmdline_args;
+    if let Some(codeblock_start) = input.find("`") {
+        cmdline_args = String::from(input[end_point..codeblock_start].trim());
+    }
+    else {
+        cmdline_args = String::from(input[end_point..].trim());
+    }
+    result.args = shell_words::split(&cmdline_args)?;
+
 
     if !result.url.is_empty() {
         let code = get_url_code(&result.url, author).await?;
@@ -147,6 +163,7 @@ pub async fn get_components(input: &str, author : &User, compilation_manager : &
         return Err(CommandError::from("You must provide a valid language or compiler!\n\n;compile c++ \n\\`\\`\\`\nint main() {}\n\\`\\`\\`"))
     }
 
+    //println!("Parse object: {:?}", result);
     Ok(result)
 }
 
