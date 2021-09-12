@@ -38,16 +38,17 @@ pub async fn get_components(input: &str, author : &User, compilation_manager : &
     let mut result = ParserResult::default();
 
     // Find the index for where we should stop parsing user input
-    let end_point: usize;
+    let mut end_point: usize = 0;
     if let Some(parse_stop) = input.find("\n") {
         end_point = parse_stop;
     }
-    else {
-        if let Some(index) = input.find('`') {
+    if let Some(index) = input.find('`') {
+        // if the ` character is found before \n we should use the ` as our parse stop point
+        if index < end_point {
             end_point = index;
-        } else {
-            end_point = input.len();
         }
+    } else {
+        end_point = input.len();
     }
 
 
@@ -106,7 +107,12 @@ pub async fn get_components(input: &str, author : &User, compilation_manager : &
 
     let cmdline_args;
     if let Some(codeblock_start) = input.find("`") {
-        cmdline_args = String::from(input[end_point..codeblock_start].trim());
+        if end_point < codeblock_start {
+            cmdline_args = String::from(input[end_point..codeblock_start].trim());
+        }
+        else {
+            cmdline_args = String::default();
+        }
     }
     else {
         cmdline_args = String::from(input[end_point..].trim());

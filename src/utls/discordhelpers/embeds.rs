@@ -117,27 +117,30 @@ impl ToEmbed<bool> for godbolt::GodboltResponse {
             }
         }
         else {
-            let mut stdout = String::default();
+            let mut output = String::default();
             for line in &self.stdout {
-                stdout.push_str(&format!("{}\n", line.text));
+                output.push_str(&format!("{}\n", line.text));
             }
 
-            let mut stderr = String::default();
+            let mut errs = String::default();
             if let Some(errors) = self.build_result.unwrap().stderr {
                 for line in errors {
-                    stderr.push_str(&format!("{}\n", line.text));
+                    errs.push_str(&format!("{}\n", line.text));
                 }
             }
             for line in &self.stderr {
-                stderr.push_str(&format!("{}\n", line.text));
+                errs.push_str(&format!("{}\n", line.text));
             }
 
+            let stdout = output.trim();
+            let stderr = output.trim();
+
             if !stdout.is_empty() {
-                let str = discordhelpers::conform_external_str(&stdout,  MAX_ERROR_LEN);
+                let str = discordhelpers::conform_external_str(stdout,  MAX_ERROR_LEN);
                 embed.field("Program Output", format!("```\n{}\n```", str), false);
             }
             if !stderr.is_empty() {
-                let str = discordhelpers::conform_external_str(&stderr, MAX_OUTPUT_LEN);
+                let str = discordhelpers::conform_external_str(stderr, MAX_OUTPUT_LEN);
                 embed.field("Compiler Output", format!("```\n{}\n```", str), false);
             }
 
