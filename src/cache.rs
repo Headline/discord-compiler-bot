@@ -89,8 +89,8 @@ pub async fn fill(
     data.insert::<MessageCache>(Arc::new(tokio::sync::Mutex::new(LruCache::new(25))));
 
     // Compiler manager
-    info!("Compilation manager");
     data.insert::<CompilerCache>(Arc::new(RwLock::new(CompilationManager::new().await?)));
+    info!("Compilation manager loaded");
 
     // DBL
     let token = env::var("DBL_TOKEN")?;

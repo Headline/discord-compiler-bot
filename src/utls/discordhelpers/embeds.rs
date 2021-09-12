@@ -133,7 +133,7 @@ impl ToEmbed<bool> for godbolt::GodboltResponse {
             }
 
             let stdout = output.trim();
-            let stderr = output.trim();
+            let stderr = errs.trim();
 
             if !stdout.is_empty() {
                 let str = discordhelpers::conform_external_str(stdout,  MAX_ERROR_LEN);
