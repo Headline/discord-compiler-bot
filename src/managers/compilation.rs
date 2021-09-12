@@ -9,6 +9,7 @@ use godbolt::{Godbolt, GodboltError, CompilationFilters, RequestOptions, Compile
 
 use crate::utls::parser::ParserResult;
 use crate::utls::discordhelpers::embeds::ToEmbed;
+use crate::utls::constants::USER_AGENT;
 
 //Traits for compiler lookup
 pub trait LanguageResolvable {
@@ -95,9 +96,8 @@ impl CompilationManager {
             execute_parameters: Default::default(),
             filters
         };
-
         let compiler = self.gbolt.resolve(&parse_result.target).unwrap();
-        let response = Godbolt::send_request(&compiler, &parse_result.code, options).await?;
+        let response = Godbolt::send_request(&compiler, &parse_result.code, options, USER_AGENT).await?;
         Ok((compiler.lang, response.to_embed(author, true)))
     }
 
@@ -127,7 +127,7 @@ impl CompilationManager {
             filters
         };
         let compiler = self.gbolt.resolve(&parse_result.target).unwrap();
-        let response = Godbolt::send_request(&compiler, &parse_result.code,  options).await?;
+        let response = Godbolt::send_request(&compiler, &parse_result.code,  options, USER_AGENT).await?;
         Ok((compiler.lang, response))
     }
 

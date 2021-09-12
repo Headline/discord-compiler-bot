@@ -20,6 +20,7 @@ lru-cache = "0.1"
 async-trait = "0.1"
 content_inspector = "0.2"
 shell-words = "0.1"
+const_format = "0.2"
 
 #dbl
 dbl-rs = "0.3"
@@ -37,9 +38,9 @@ features = ["collector", "gateway", "builder", "standard_framework", "http", "mo
 version = "0.1"
 
 [dependencies.godbolt]
-git = "https://github.com/Headline/godbolt-rs"
-branch = "breaking-change"
-#path = '../godbolt-rs'
+#git = "https://github.com/Headline/godbolt-rs"
+#branch = "breaking-change"
+path = '../godbolt-rs'
 
 [dependencies.serenity_utils]
 default-features = false
