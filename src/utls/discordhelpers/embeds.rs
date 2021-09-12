@@ -128,10 +128,8 @@ impl ToEmbed<bool> for godbolt::GodboltResponse {
                     stderr.push_str(&format!("{}\n", line.text));
                 }
             }
-            else {
-                for line in &self.stderr {
-                    stderr.push_str(&format!("{}\n", line.text));
-                }
+            for line in &self.stderr {
+                stderr.push_str(&format!("{}\n", line.text));
             }
 
             if !stdout.is_empty() {
