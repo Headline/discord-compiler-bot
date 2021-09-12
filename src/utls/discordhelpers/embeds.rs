@@ -15,6 +15,48 @@ pub trait ToEmbed<T> {
     fn to_embed(self, author : &User, any : T) -> CreateEmbed;
 }
 
+impl ToEmbed<bool> for wandbox::CompilationResult {
+    fn to_embed(self, author: &User, _ : bool) -> CreateEmbed {
+        let mut embed = CreateEmbed::default();
+
+        if !self.status.is_empty() {
+            if self.status != "0" {
+                embed.color(COLOR_FAIL);
+            } else {
+                embed.color(COLOR_OKAY);
+            }
+        }
+
+        if !self.signal.is_empty() {
+            // If we received 'Signal', then the application successfully ran, but was timed out
+            // by wandbox. We should skin this as successful, so we set status to 0 (success).
+            // This is done to ensure that the checkmark is added at the end of the compile
+            // command hook.
+            embed.color(COLOR_OKAY);
+        }
+        if !self.compiler_all.is_empty() {
+            let str = discordhelpers::conform_external_str(&self.compiler_all,  MAX_ERROR_LEN);
+            embed.field("Compiler Output", format!("```{}\n```", str), false);
+        }
+        if !self.program_all.is_empty() {
+            let str = discordhelpers::conform_external_str(&self.program_all, MAX_OUTPUT_LEN);
+            embed.field("Program Output", format!("```\n{}\n```", str), false);
+        }
+        if !self.url.is_empty() {
+            embed.field("URL", &self.url, false);
+        }
+
+        embed.footer(|f| {
+            f.text(format!(
+                "{} | wandbox.org",
+                author.tag()
+            ))
+        });
+        embed
+    }
+}
+
+
 impl ToEmbed<bool> for godbolt::GodboltResponse {
     fn to_embed(self, author: &User, assembly : bool) -> CreateEmbed {
         let mut embed = CreateEmbed::default();
@@ -76,7 +118,7 @@ impl ToEmbed<bool> for godbolt::GodboltResponse {
         }
         else {
             let mut stdout = String::default();
-            for line in self.stdout {
+            for line in &self.stdout {
                 stdout.push_str(&format!("{}\n", line.text));
             }
 
@@ -87,7 +129,7 @@ impl ToEmbed<bool> for godbolt::GodboltResponse {
                 }
             }
             else {
-                for line in self.stderr {
+                for line in &self.stderr {
                     stderr.push_str(&format!("{}\n", line.text));
                 }
             }
@@ -106,10 +148,15 @@ impl ToEmbed<bool> for godbolt::GodboltResponse {
             //embed.field("Execution Time", format!("`{}ms`", self.execution_time), true);
         }
 
+        let mut appendstr = String::default();
+        if let Some(time) = self.execution_time {
+            appendstr = format!(" | {} ms", time);
+        }
+
         embed.footer(|f| {
             f.text(format!(
-                "Requested by: {} | Powered by godbolt.org",
-                author.tag()
+                "{} | godbolt.org{}",
+                author.tag(), appendstr
             ))
         });
         embed
@@ -124,53 +171,6 @@ pub async fn edit_message_embed(ctx : &Context, old : & mut Message, emb : Creat
         });
         m
     }).await;
-}
-
-pub fn build_compilation_embed(author: &User, res: & mut CompilationResult) -> CreateEmbed {
-    let mut embed = CreateEmbed::default();
-
-    if !res.status.is_empty() {
-        if res.status != "0" {
-            embed.color(COLOR_FAIL);
-        } else {
-            embed.field(
-                "Status",
-                format!("Finished with exit code: {}", &res.status),
-                false,
-            );
-            embed.color(COLOR_OKAY);
-        }
-    }
-    if !res.signal.is_empty() {
-        embed.field("Signal", &res.signal, false);
-
-        // If we received 'Signal', then the application successfully ran, but was timed out
-        // by wandbox. We should skin this as successful, so we set status to 0 (success).
-        // This is done to ensure that the checkmark is added at the end of the compile
-        // command hook.
-        embed.color(COLOR_OKAY);
-        res.status = String::from('0');
-    }
-    if !res.compiler_all.is_empty() {
-        let str = discordhelpers::conform_external_str(&res.compiler_all,  MAX_ERROR_LEN);
-        embed.field("Compiler Output", format!("```{}\n```", str), false);
-    }
-    if !res.program_all.is_empty() {
-        let str = discordhelpers::conform_external_str(&res.program_all, MAX_OUTPUT_LEN);
-        embed.field("Program Output", format!("```\n{}\n```", str), false);
-    }
-    if !res.url.is_empty() {
-        embed.field("URL", &res.url, false);
-    }
-
-    embed.title("Compilation Results");
-    embed.footer(|f| {
-        f.text(format!(
-            "Requested by: {} | Powered by wandbox.org",
-            author.tag()
-        ))
-    });
-    embed
 }
 
 #[allow(dead_code)]

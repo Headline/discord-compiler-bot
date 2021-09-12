@@ -10,12 +10,12 @@ use serenity::prelude::{TypeMap, TypeMapKey};
 use serenity::model::id::UserId;
 use serenity::client::bridge::gateway::ShardManager;
 
-use crate::stats::statsmanager::StatsManager;
+use crate::managers::stats::StatsManager;
 use crate::utls::blocklist::Blocklist;
 
 use lru_cache::LruCache;
 use serenity::model::channel::Message;
-use crate::utls::compilation_manager::CompilationManager;
+use crate::managers::compilation::CompilationManager;
 
 /** Caching **/
 

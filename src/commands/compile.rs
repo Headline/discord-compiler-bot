@@ -15,7 +15,7 @@ use serenity::model::channel::Message;
 use serenity::model::user::User;
 
 use crate::cache::{ConfigCache, StatsManagerCache, CompilerCache};
-use crate::utls::compilation_manager::CompilationManager;
+use crate::managers::compilation::CompilationManager;
 
 #[command]
 #[bucket = "nospam"]

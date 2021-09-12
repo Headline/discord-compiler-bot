@@ -7,6 +7,7 @@ mod events;
 mod stats;
 mod utls;
 mod cppeval;
+mod managers;
 
 use serenity::{
     client::bridge::gateway::GatewayIntents,

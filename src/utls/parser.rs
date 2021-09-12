@@ -6,7 +6,7 @@ use serenity::framework::standard::CommandError;
 
 use tokio::sync::RwLock;
 use std::sync::Arc;
-use crate::utls::compilation_manager::{CompilationManager, RequestHandler};
+use crate::managers::compilation::{CompilationManager, RequestHandler};
 
 
 // Allows us to convert some common aliases to other programming languages

@@ -16,7 +16,7 @@ use chrono::{DateTime, Duration, Utc};
 
 use crate::cache::*;
 use crate::utls::discordhelpers;
-use crate::stats::statsmanager::StatsManager;
+use crate::managers::stats::StatsManager;
 use serenity::model::id::GuildId;
 use serenity::model::event::MessageUpdateEvent;
 use crate::utls::discordhelpers::embeds;
