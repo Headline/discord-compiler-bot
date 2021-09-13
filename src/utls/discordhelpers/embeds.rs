@@ -100,10 +100,12 @@ impl ToEmbed<bool> for godbolt::GodboltResponse {
                 }
             }
 
+            let mut output = false;
             let mut i = 1;
             for str in pieces {
                 let title = format!("Assembly Output Pt. {}", i);
                 embed.field(&title, format!("```x86asm\n{}\n```", &str), false);
+                output = true;
                 i += 1;
             }
             if !append.is_empty() {
@@ -114,7 +116,14 @@ impl ToEmbed<bool> for godbolt::GodboltResponse {
                     title = String::from("Assembly Output")
                 }
                 embed.field(&title, format!("```x86asm\n{}\n```", &append), false);
+                output = true;
             }
+
+            if !output {
+                embed.title("Compilation successful");
+                embed.description("No assembly generated.");
+            }
+
         }
         else {
             let mut output = String::default();
@@ -134,14 +143,21 @@ impl ToEmbed<bool> for godbolt::GodboltResponse {
 
             let stdout = output.trim();
             let stderr = errs.trim();
-
+            let mut output = false;
             if !stdout.is_empty() {
                 let str = discordhelpers::conform_external_str(stdout,  MAX_ERROR_LEN);
                 embed.field("Program Output", format!("```\n{}\n```", str), false);
+                output = true;
             }
             if !stderr.is_empty() {
+                output = true;
                 let str = discordhelpers::conform_external_str(stderr, MAX_OUTPUT_LEN);
                 embed.field("Compiler Output", format!("```\n{}\n```", str), false);
+            }
+
+            if !output {
+                embed.title("Compilation successful");
+                embed.description("No output.");
             }
 
             // Execution time can be displayed here, but I don't think it's useful enough
