@@ -218,6 +218,20 @@ pub fn build_dblvote_embed(tag: String) -> CreateEmbed {
     embed
 }
 
+pub fn build_welcome_embed() -> CreateEmbed {
+    let mut embed = CreateEmbed::default();
+    embed.title("Discord Compiler");
+    embed.color(COLOR_OKAY);
+    embed.thumbnail(COMPILER_ICON);
+    embed.description("Thanks for inviting me to your discord server!");
+    embed.field("Introduction", "I can take code that you give me and execute it, display generated assembly, or format it!", true);
+    embed.field("Example Request", ";compile python\n```py\nprint('hello world')\n```", true);
+    embed.field("Learning Time!", "If you like reading the manuals of things, read our [getting started](https://github.com/Headline/discord-compiler-bot/wiki/Getting-Started) wiki or if you are confident type `;help` to view all commands.", false);
+    embed.field("Support", "If you ever run into any issues please stop by our [support server](https://discord.com/invite/nNNEZ6s) and we'll give you a hand.", true);
+    embed.footer(|f| f.text("powered by godbolt.org & wandbox.org // created by Michael Flaherty (Headline#9999)"));
+    embed
+}
+
 pub fn build_invite_embed(invite_link : &str) -> CreateEmbed {
     let mut embed = CreateEmbed::default();
     embed.title("Invite Link");
