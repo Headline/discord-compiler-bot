@@ -132,6 +132,10 @@ impl CompilationManager {
     }
 
     pub fn resolve_target(&self, target : &str) -> RequestHandler {
+        if target == "scala" {
+            return RequestHandler::WandBox
+        }
+
         if self.gbolt.resolve(target).is_some() {
             RequestHandler::CompilerExplorer
         }
