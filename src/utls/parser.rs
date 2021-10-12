@@ -32,6 +32,7 @@ pub fn shortname_to_qualified(language : &str) -> &str {
         "rs" => "rust",
         "js" => "javascript",
         "csharp" => "c#",
+        "cs" => "c#",
         "py" => "python",
         _ => language
     }
