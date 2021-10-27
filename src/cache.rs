@@ -71,10 +71,17 @@ pub async fn fill(
 
     // Lets map some common things in BotInfo
     let mut map = HashMap::<&str, String>::new();
-    map.insert("SUCCESS_EMOJI_ID", env::var("SUCCESS_EMOJI_ID")?);
-    map.insert("SUCCESS_EMOJI_NAME", env::var("SUCCESS_EMOJI_NAME")?);
-    map.insert("LOADING_EMOJI_ID", env::var("LOADING_EMOJI_ID")?);
-    map.insert("LOADING_EMOJI_NAME", env::var("LOADING_EMOJI_NAME")?);
+
+    // optional additions
+    let emoji_identifiers = ["SUCCESS_EMOJI_ID", "SUCCESS_EMOJI_NAME", "LOADING_EMOJI_ID", "LOADING_EMOJI_NAME"];
+    for id in emoji_identifiers{
+        if let Ok(envvar) = env::var(id) {
+            if !envvar.is_empty() {
+                map.insert(id, envvar);
+            }
+        }
+    }
+
     map.insert("GIT_HASH_LONG", String::from(env!("GIT_HASH_LONG")));
     map.insert("GIT_HASH_SHORT", String::from(env!("GIT_HASH_SHORT")));
     map.insert("JOIN_LOG", env::var("JOIN_LOG")?);
