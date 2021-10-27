@@ -16,7 +16,7 @@ use chrono::{DateTime, Duration, Utc};
 
 use crate::cache::*;
 use crate::utls::discordhelpers;
-use crate::stats::statsmanager::StatsManager;
+use crate::managers::stats::StatsManager;
 use serenity::model::id::GuildId;
 use serenity::model::event::MessageUpdateEvent;
 use crate::utls::discordhelpers::embeds;
@@ -117,6 +117,19 @@ impl EventHandler for Handler {
             }
 
             info!("Joining {}", guild.name);
+
+            if let Some(system_channel) = guild.system_channel_id {
+                let mut message = embeds::embed_message(embeds::build_welcome_embed());
+                let _ = system_channel.send_message(&ctx.http, |_| &mut message).await;
+            }
+            else {
+                for (_, channel) in guild.channels {
+                    if channel.name.contains("general") {
+                        let mut message = embeds::embed_message(embeds::build_welcome_embed());
+                        let _ = channel.send_message(&ctx.http, |_| &mut message).await;
+                    }
+                }
+            }
         }
     }
 

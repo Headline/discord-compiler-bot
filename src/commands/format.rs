@@ -1,7 +1,7 @@
 use serenity::framework::standard::{macros::command, Args, CommandResult, CommandError, Delimiter};
 use serenity::model::prelude::*;
 use serenity::prelude::*;
-use crate::cache::GodboltCache;
+use crate::cache::{CompilerCache};
 use crate::utls::parser::{ParserResult, get_message_attachment};
 use godbolt::Godbolt;
 use std::io::Write;
@@ -31,7 +31,8 @@ pub async fn format(ctx: &Context, msg: &Message, mut args : Args) -> CommandRes
     }
 
     let data = ctx.data.read().await;
-    let gbolt = data.get::<GodboltCache>().unwrap().read().await;
+    let comp_mgr = data.get::<CompilerCache>().unwrap().read().await;
+    let gbolt = &comp_mgr.gbolt;
 
     // validate user input
     for format in &gbolt.formats {
@@ -92,17 +93,17 @@ pub async fn format(ctx: &Context, msg: &Message, mut args : Args) -> CommandRes
 
     let answer;
     {
-        let result = Godbolt::format_code(&fmt, &style, &code).await;
+        let result = Godbolt::format_code(&fmt, &style, &code, false, 4).await;
         match result {
             Ok(res) => {
                 if res.exit != 0 {
-                    return Err(CommandError::from(format!("{}", res.answer)));
+                    return Err(CommandError::from("Formatter returned a non-zero exit code"));
                 } else {
                     answer = res.answer;
                 }
             }
             Err(err) => {
-                return Err(CommandError::from(format!("{}", err)));
+                return Err(CommandError::from(format!("An error occurred while formatting code: `{}`", err)));
             }
         }
     }

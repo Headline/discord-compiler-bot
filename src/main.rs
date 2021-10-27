@@ -7,6 +7,7 @@ mod events;
 mod stats;
 mod utls;
 mod cppeval;
+mod managers;
 
 use serenity::{
     client::bridge::gateway::GatewayIntents,
@@ -24,7 +25,7 @@ extern crate pretty_env_logger;
 
 /** Command Registration **/
 use crate::commands::{
-    asm::ASM_COMMAND, botinfo::*, compile::*, compilers::*,
+    asm::*, botinfo::*, compile::*, compilers::*,
     help::*, languages::*, ping::*, block::*, unblock::*,
     invite::*, cpp::*, format::*, formats::*
 };

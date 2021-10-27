@@ -4,14 +4,14 @@ use serenity::prelude::*;
 
 use serenity_utils::menu::*;
 
-use crate::cache::{WandboxCache, ConfigCache};
+use crate::cache::{ConfigCache, CompilerCache};
 use crate::utls::discordhelpers;
 use crate::utls::parser::shortname_to_qualified;
 
 #[command]
 pub async fn compilers(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
     // grab language arg
-    let language = match _args.parse::<String>() {
+    let user_lang = match _args.parse::<String>() {
         Ok(s) => s,
         Err(_e) => {
             return Err(CommandError::from(
@@ -20,27 +20,38 @@ pub async fn compilers(ctx: &Context, msg: &Message, _args: Args) -> CommandResu
         }
     };
 
-    // y lock on wandbox cache
     let data_read = ctx.data.read().await;
-    let wandbox_lock = match data_read.get::<WandboxCache>() {
-        Some(l) => l,
-        None => {
-            return Err(CommandError::from("Internal request failure.\nWandbox cache is uninitialized, please file a bug if this error persists"));
-        }
-    };
+    let compiler_cache = data_read.get::<CompilerCache>().unwrap();
+    let compiler_manager = compiler_cache.read().await;
 
     // Get our list of compilers
-    let wbox = wandbox_lock.read().await;
-    let lang = match wbox.get_compilers(&shortname_to_qualified(&language)) {
-        Some(s) => s,
-        None => {
-            return Err(CommandError::from(format!(
-                "Could not find language '{}'",
-                &language
-            )));
+    let language = shortname_to_qualified(&user_lang);
+    let mut found = false;
+    let mut langs: Vec<String> = Vec::new();
+    for cache_entry in &compiler_manager.gbolt.cache {
+        if cache_entry.language.id == language {
+            found = true;
+            for compiler in &cache_entry.compilers {
+                langs.push(format!("{} -> **{}**", &compiler.name, &compiler.id));
+            }
         }
-    };
+    }
 
+    if !found {
+        match compiler_manager.wbox.get_compilers(&shortname_to_qualified(&language)) {
+            Some(s) =>  {
+                for lang in s {
+                    langs.push(lang.name);
+                }
+            },
+            None => {
+                return Err(CommandError::from(
+                    format!("Unable to find compilers for language '{}'", language)
+                ));
+            }
+        };
+    }
+    
     let avatar;
     let success_id;
     let success_name;
@@ -61,20 +72,15 @@ pub async fn compilers(ctx: &Context, msg: &Message, _args: Args) -> CommandResu
         success_name = botinfo.get("SUCCESS_EMOJI_NAME").unwrap().clone();
     }
 
-    // time to build the menu item list
-    let mut items: Vec<String> = Vec::new();
-    for c in lang {
-        items.push(c.name);
-    }
-
     // build menu
     let options = discordhelpers::build_menu_controls();
     let pages = discordhelpers::build_menu_items(
-        items,
+        langs,
         15,
         "Supported Compilers",
         &avatar,
         &msg.author.tag(),
+        ""
     );
     let menu = Menu::new(ctx, msg, &pages, options);
     match menu.run().await {

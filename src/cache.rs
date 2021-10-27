@@ -10,13 +10,12 @@ use serenity::prelude::{TypeMap, TypeMapKey};
 use serenity::model::id::UserId;
 use serenity::client::bridge::gateway::ShardManager;
 
-use crate::stats::statsmanager::StatsManager;
+use crate::managers::stats::StatsManager;
 use crate::utls::blocklist::Blocklist;
 
-use godbolt::Godbolt;
-use wandbox::Wandbox;
 use lru_cache::LruCache;
 use serenity::model::channel::Message;
+use crate::managers::compilation::CompilationManager;
 
 /** Caching **/
 
@@ -26,16 +25,10 @@ impl TypeMapKey for ConfigCache {
     type Value = Arc<RwLock<HashMap<&'static str, String>>>;
 }
 
-/// The cache of all compilers/languages from wandbox - along with our bindings for their api
-pub struct WandboxCache;
-impl TypeMapKey for WandboxCache {
-    type Value = Arc<RwLock<Wandbox>>;
-}
-
-/// Same as WandBox cache, but this time it's Matthew's toys
-pub struct GodboltCache;
-impl TypeMapKey for GodboltCache {
-    type Value = Arc<RwLock<Godbolt>>;
+/// Main interface for compiler options for either Compiler Explorer or WandBox
+pub struct CompilerCache;
+impl TypeMapKey for CompilerCache {
+    type Value = Arc<RwLock<CompilationManager>>;
 }
 
 /// Contains our top.gg api client for server count updates
@@ -92,23 +85,12 @@ pub async fn fill(
     // Shard manager for universal presence
     data.insert::<ShardManagerCache>(shard_manager);
 
-    // Wandbox
-    let mut broken_compilers = std::collections::HashSet::new();
-    broken_compilers.insert(String::from("ghc-head"));
-    broken_compilers.insert(String::from("go-head"));
-    let mut broken_languages = std::collections::HashSet::new();
-    broken_languages.insert(String::from("cpp"));
-    let wbox = wandbox::Wandbox::new(Some(broken_compilers), Some(broken_languages)).await?;
-    info!("WandBox cache loaded");
-    data.insert::<WandboxCache>(Arc::new(RwLock::new(wbox)));
-
     // Message delete cache
     data.insert::<MessageCache>(Arc::new(tokio::sync::Mutex::new(LruCache::new(25))));
 
-    // Godbolt
-    let godbolt = Godbolt::new().await?;
-    info!("Godbolt cache loaded");
-    data.insert::<GodboltCache>(Arc::new(RwLock::new(godbolt)));
+    // Compiler manager
+    data.insert::<CompilerCache>(Arc::new(RwLock::new(CompilationManager::new().await?)));
+    info!("Compilation manager loaded");
 
     // DBL
     let token = env::var("DBL_TOKEN")?;

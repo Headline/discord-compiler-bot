@@ -4,26 +4,25 @@ use serenity::prelude::*;
 
 use serenity_utils::menu::*;
 
-use crate::cache::{WandboxCache, ConfigCache};
+use crate::cache::{ConfigCache, CompilerCache};
 use crate::utls::discordhelpers;
 
 #[command]
 pub async fn languages(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
     let data_read = ctx.data.read().await;
-    let wandbox_lock = match data_read.get::<WandboxCache>() {
-        Some(l) => l,
-        None => {
-            return Err(CommandError::from(
-                "Internal request failure\nWandbox cache is uninitialized, please file a bug.",
-            ));
-        }
-    };
-    let wbox = wandbox_lock.read().await;
+    let compiler_cache = data_read.get::<CompilerCache>().unwrap();
+    let compiler_manager = compiler_cache.read().await;
 
-    let mut items: Vec<String> = Vec::new();
-    let langs = wbox.get_languages();
+    let mut items = Vec::new();
+
+    for cache_entry in &compiler_manager.gbolt.cache {
+        items.push(format!("{}*", cache_entry.language.id));
+    }
+    let langs = compiler_manager.wbox.get_languages();
     for lang in langs {
-        items.push(lang.name);
+        if !items.contains(&lang.name) && !items.contains(&format!("{}*", &lang.name)) {
+            items.push(lang.name);
+        }
     }
 
     let avatar;
@@ -46,13 +45,17 @@ pub async fn languages(ctx: &Context, msg: &Message, _args: Args) -> CommandResu
         success_name = botinfo.get("SUCCESS_EMOJI_NAME").unwrap().clone();
     }
 
+    let mut items_vec : Vec<String> = items.into_iter().collect();
+    items_vec.sort();
+
     let options = discordhelpers::build_menu_controls();
     let pages = discordhelpers::build_menu_items(
-        items,
+        items_vec,
         15,
         "Supported Languages",
         &avatar,
         &msg.author.tag(),
+        "*\\* = supports assembly output*"
     );
     let menu = Menu::new(ctx, msg, &pages, options);
     match menu.run().await {

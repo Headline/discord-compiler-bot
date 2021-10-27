@@ -6,22 +6,8 @@ use serenity::framework::standard::CommandError;
 
 use tokio::sync::RwLock;
 use std::sync::Arc;
+use crate::managers::compilation::{CompilationManager, RequestHandler};
 
-//Traits for compiler lookup
-pub trait LanguageResolvable {
-    fn resolve(&self, language : &str) -> bool;
-}
-
-impl LanguageResolvable for wandbox::Wandbox {
-    fn resolve(&self, language : &str) -> bool {
-        self.is_valid_language(language) || self.is_valid_compiler_str(language)
-    }
-}
-impl LanguageResolvable for godbolt::Godbolt {
-    fn resolve(&self, language : &str) -> bool {
-        self.resolve(language).is_some()
-    }
-}
 
 // Allows us to convert some common aliases to other programming languages
 pub fn shortname_to_qualified(language : &str) -> &str {
@@ -32,6 +18,7 @@ pub fn shortname_to_qualified(language : &str) -> &str {
         "rs" => "rust",
         "js" => "javascript",
         "csharp" => "c#",
+        "cs" => "c#",
         "py" => "python",
         _ => language
     }
@@ -44,23 +31,29 @@ pub struct ParserResult {
     pub target: String,
     pub code: String,
     pub options: Vec<String>,
+    pub args: Vec<String>,
 }
 
 #[allow(clippy::while_let_on_iterator)]
-pub async fn get_components<T : LanguageResolvable>(input: &str, author : &User, target_api : &Arc<RwLock<T>>, reply : &Option<Box<Message>>) -> Result<ParserResult, CommandError> {
-
+pub async fn get_components(input: &str, author : &User, compilation_manager : &Arc<RwLock<CompilationManager>>, reply : &Option<Box<Message>>) -> Result<ParserResult, CommandError> {
     let mut result = ParserResult::default();
 
-    // we grab the index for the first code block - this will help us
-    // know when to stop parsing arguments
-    let code_block: usize;
+    // Find the index for where we should stop parsing user input
+    let mut end_point: usize = 0;
+    if let Some(parse_stop) = input.find("\n") {
+        end_point = parse_stop;
+    }
     if let Some(index) = input.find('`') {
-        code_block = index;
+        // if the ` character is found before \n we should use the ` as our parse stop point
+        if index < end_point {
+            end_point = index;
+        }
     } else {
-        code_block = input.len();
+        end_point = input.len();
     }
 
-    let mut args: Vec<&str> = input[..code_block].split_whitespace().collect();
+
+    let mut args: Vec<&str> = input[..end_point].split_whitespace().collect();
 
     // ditch command str (;compile, ;asm)
     args.remove(0);
@@ -68,11 +61,11 @@ pub async fn get_components<T : LanguageResolvable>(input: &str, author : &User,
     // Check to see if we were given a valid target... if not we'll check
     // the syntax highlighting str later.
     {
-        let lang_lookup = target_api.read().await;
+        let lang_lookup = compilation_manager.read().await;
         if let Some(param) = args.get(0) {
             let lower_param = param.trim().to_lowercase();
             let language = shortname_to_qualified(&lower_param);
-            if lang_lookup.resolve(&language) {
+            if !matches!(lang_lookup.resolve_target( language), RequestHandler::None) {
                 args.remove(0);
                 result.target = language.to_owned();
             }
@@ -82,7 +75,7 @@ pub async fn get_components<T : LanguageResolvable>(input: &str, author : &User,
     // looping every argument
     let mut iter = args.iter();
     while let Some(c) = iter.next() {
-        if c.contains("```") {
+        if c.contains("\n") || c.contains("`") {
             break;
         }
 
@@ -112,6 +105,21 @@ pub async fn get_components<T : LanguageResolvable>(input: &str, author : &User,
             result.options.push(c.trim().to_string());
         }
     }
+
+    let cmdline_args;
+    if let Some(codeblock_start) = input.find("`") {
+        if end_point < codeblock_start {
+            cmdline_args = String::from(input[end_point..codeblock_start].trim());
+        }
+        else {
+            cmdline_args = String::default();
+        }
+    }
+    else {
+        cmdline_args = String::from(input[end_point..].trim());
+    }
+    result.args = shell_words::split(&cmdline_args)?;
+
 
     if !result.url.is_empty() {
         let code = get_url_code(&result.url, author).await?;
@@ -162,6 +170,7 @@ pub async fn get_components<T : LanguageResolvable>(input: &str, author : &User,
         return Err(CommandError::from("You must provide a valid language or compiler!\n\n;compile c++ \n\\`\\`\\`\nint main() {}\n\\`\\`\\`"))
     }
 
+    //println!("Parse object: {:?}", result);
     Ok(result)
 }
 

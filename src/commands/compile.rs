@@ -1,11 +1,21 @@
 use serenity::framework::standard::{macros::command, Args, CommandResult};
-use serenity::model::prelude::*;
-use serenity::prelude::*;
 
 use crate::cache::{MessageCache};
-use crate::utls::{discordhelpers};
+use crate::utls::{parser, discordhelpers};
 use crate::utls::constants::COLOR_OKAY;
-use crate::utls::discordhelpers::embeds;
+use crate::utls::discordhelpers::{embeds, is_success_embed};
+
+use std::env;
+use tokio::sync::RwLockReadGuard;
+
+use serenity::framework::standard::CommandError;
+use serenity::builder::{CreateEmbed};
+use serenity::client::Context;
+use serenity::model::channel::Message;
+use serenity::model::user::User;
+
+use crate::cache::{ConfigCache, StatsManagerCache, CompilerCache};
+use crate::managers::compilation::CompilationManager;
 
 #[command]
 #[bucket = "nospam"]
@@ -13,7 +23,7 @@ pub async fn compile(ctx: &Context, msg: &Message, _args: Args) -> CommandResult
     let data_read = ctx.data.read().await;
 
     // Handle wandbox request logic
-    let embed = crate::apis::wandbox::send_request(ctx.clone(), msg.content.clone(), msg.author.clone(), msg).await?;
+    let embed = handle_request(ctx.clone(), msg.content.clone(), msg.author.clone(), msg).await?;
 
     // Send our final embed
     let mut message = embeds::embed_message(embed);
@@ -30,4 +40,89 @@ pub async fn compile(ctx: &Context, msg: &Message, _args: Args) -> CommandResult
     delete_cache.insert(msg.id.0, compilation_embed);
     debug!("Command executed");
     Ok(())
+}
+
+pub async fn handle_request(ctx : Context, mut content : String, author : User, msg : &Message) -> Result<CreateEmbed, CommandError> {
+    let data_read = ctx.data.read().await;
+    let loading_id;
+    let loading_name;
+    {
+        let botinfo_lock = data_read.get::<ConfigCache>().unwrap();
+        let botinfo = botinfo_lock.read().await;
+        loading_id = botinfo
+            .get("LOADING_EMOJI_ID")
+            .unwrap()
+            .clone()
+            .parse::<u64>()
+            .unwrap();
+        loading_name = botinfo.get("LOADING_EMOJI_NAME").unwrap().clone();
+    }
+
+    // Try to load in an attachment
+    let attached = parser::get_message_attachment(&msg.attachments).await?;
+    if !attached.is_empty() {
+        content.push_str(&format!("\n```\n{}\n```\n", attached));
+    }
+
+    // parse user input
+    let compilation_manager = data_read.get::<CompilerCache>().unwrap();
+    let parse_result = parser::get_components(&content, &author, &compilation_manager, &msg.referenced_message).await?;
+
+    // send out loading emote
+    let reaction = match msg
+        .react(&ctx.http, discordhelpers::build_reaction(loading_id, &loading_name))
+        .await
+    {
+        Ok(r) => r,
+        Err(e) => {
+            return Err(CommandError::from(format!(" Unable to react to message, am I missing permissions to react or use external emoji?\n{}", e)));
+        }
+    };
+
+    // dispatch our req
+    let compilation_manager_lock : RwLockReadGuard<CompilationManager> = compilation_manager.read().await;
+    let awd = compilation_manager_lock.compile(&parse_result, &author).await;
+    let result = match awd {
+        Ok(r) => r,
+        Err(e) => {
+            // we failed, lets remove the loading react so it doesn't seem like we're still processing
+            msg.delete_reaction_emoji(&ctx.http, reaction.emoji.clone()).await?;
+
+            return Err(CommandError::from(format!("{}", e)));
+        }
+    };
+
+    // remove our loading emote
+    if msg.delete_reaction_emoji(&ctx.http, reaction.emoji.clone()).await
+        .is_err()
+    {
+        return Err(CommandError::from(
+            "Unable to remove reactions!\nAm I missing permission to manage messages?",
+        ));
+    }
+
+    let stats = data_read.get::<StatsManagerCache>().unwrap().lock().await;
+    if stats.should_track() {
+        stats.compilation(&result.0, !is_success_embed(&result.1)).await;
+    }
+
+    let mut guild = String::from("<unknown>");
+    if let Some(g) = msg.guild_id {
+        guild = g.to_string()
+    }
+    if let Ok(log) = env::var("COMPILE_LOG") {
+        if let Ok(id) = log.parse::<u64>() {
+            let emb = embeds::build_complog_embed(
+                is_success_embed(&result.1),
+                &parse_result.code,
+                &parse_result.target,
+                &author.tag(),
+                author.id.0,
+                &guild,
+            );
+            discordhelpers::manual_dispatch(ctx.http.clone(), id, emb).await;
+        }
+    }
+
+    Ok(result.1)
 }
