@@ -175,28 +175,22 @@ pub fn is_success_embed(embed : &CreateEmbed) -> bool {
 pub async fn send_completion_react(ctx: &Context, msg: &Message, success: bool) -> Result<Reaction, serenity::Error> {
     let reaction;
     if success {
-        let success_id;
-        let success_name;
         {
-            let botinfo_lock = ctx.data.read().await
-                .get::<ConfigCache>()
-                .expect("Expected ConfigCache in global cache")
-                .clone();
+            let data = ctx.data.read().await;
+            let botinfo_lock = data.get::<ConfigCache>().unwrap();
             let botinfo = botinfo_lock.read().await;
-            success_id = botinfo
-                .get("SUCCESS_EMOJI_ID")
-                .unwrap()
-                .clone()
-                .parse::<u64>()
-                .unwrap();
-            success_name = botinfo.get("SUCCESS_EMOJI_NAME").unwrap().clone();
+            if let Some(success_id) = botinfo.get("SUCCESS_EMOJI_ID") {
+                let success_name = botinfo.get("SUCCESS_EMOJI_NAME").expect("Unable to find success emoji name").clone();
+                reaction = discordhelpers::build_reaction(success_id.parse::<u64>()?, &success_name);
+            }
+            else {
+                reaction = ReactionType::Unicode(String::from("✅"));
+            }
         }
-
-        reaction = discordhelpers::build_reaction(success_id, &success_name);
     } else {
         reaction = ReactionType::Unicode(String::from("❌"));
     }
-    msg.react(&ctx.http, reaction).await
+    return msg.react(&ctx.http, reaction).await
 }
 
 // Certain compiler outputs use unicode control characters that
