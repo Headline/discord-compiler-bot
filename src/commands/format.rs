@@ -93,17 +93,17 @@ pub async fn format(ctx: &Context, msg: &Message, mut args : Args) -> CommandRes
 
     let answer;
     {
-        let result = Godbolt::format_code(&fmt, &style, &code).await;
+        let result = Godbolt::format_code(&fmt, &style, &code, false, 4).await;
         match result {
             Ok(res) => {
                 if res.exit != 0 {
-                    return Err(CommandError::from(format!("{}", res.answer)));
+                    return Err(CommandError::from("Formatter returned a non-zero exit code"));
                 } else {
                     answer = res.answer;
                 }
             }
             Err(err) => {
-                return Err(CommandError::from(format!("{}", err)));
+                return Err(CommandError::from(format!("An error occurred while formatting code: `{}`", err)));
             }
         }
     }
