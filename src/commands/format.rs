@@ -67,7 +67,7 @@ pub async fn format(ctx: &Context, msg: &Message, mut args : Args) -> CommandRes
         else {
             if msgref.attachments.len() > 0 {
                 attachment_name = msgref.attachments[0].filename.clone();
-                let (program_code, language) = get_message_attachment(&msg.attachments).await?;
+                let (program_code, _) = get_message_attachment(&msg.attachments).await?;
                 code = program_code;
             }
             else {
@@ -78,7 +78,7 @@ pub async fn format(ctx: &Context, msg: &Message, mut args : Args) -> CommandRes
     else {
         if !msg.attachments.is_empty() {
             attachment_name = msg.attachments[0].filename.clone();
-            let (program_code, language) = get_message_attachment(&msg.attachments).await?;
+            let (program_code, _) = get_message_attachment(&msg.attachments).await?;
             code = program_code;
         } else {
             let mut result = ParserResult::default();
@@ -124,16 +124,4 @@ pub async fn format(ctx: &Context, msg: &Message, mut args : Args) -> CommandRes
         msg.reply(&ctx.http, format!("\n```{}\n{}```\n*Powered by godbolt.org*", lang_code, answer)).await?;
     }
     Ok(())
-}
-
-fn file_extension_to_formatter(ext : &str) -> &str {
-    return match ext {
-        "cpp" => "clang",
-        "c" => "clang",
-        "cxx" => "clang",
-        "sp" => "clang",
-        "inc" => "clang",
-        "rs" => "rustfmt",
-        ext => ""
-    };
 }

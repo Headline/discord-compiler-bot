@@ -17,17 +17,12 @@ use chrono::{DateTime, Duration, Utc};
 use crate::cache::*;
 use crate::utls::discordhelpers;
 use crate::managers::stats::StatsManager;
-use serenity::model::id::{GuildId, EmojiId, RoleId, IntegrationId, ApplicationId};
-use serenity::model::event::{MessageUpdateEvent, ChannelPinsUpdateEvent, GuildMemberUpdateEvent, GuildMembersChunkEvent, InviteCreateEvent, InviteDeleteEvent, PresenceUpdateEvent, ResumedEvent, TypingStartEvent, VoiceServerUpdateEvent, ThreadListSyncEvent, ThreadMembersUpdateEvent};
+use serenity::model::id::{GuildId};
+use serenity::model::event::{MessageUpdateEvent};
 use crate::utls::discordhelpers::embeds;
 use tokio::sync::MutexGuard;
-use serenity::model::channel::{GuildChannel, ChannelCategory, Channel, Reaction, StageInstance, PartialGuildChannel, ReactionType};
-use serenity::model::prelude::{User, CurrentUser, VoiceState};
-use std::collections::HashMap;
-use serenity::model::guild::{Emoji, Member, Role, PartialGuild, Integration, ThreadMember};
-use serenity::model::gateway::Presence;
-use serenity::client::bridge::gateway::event::ShardStageUpdateEvent;
-use serde_json::Value;
+use serenity::model::channel::{ReactionType};
+
 use crate::utls::parser::{get_message_attachment, shortname_to_qualified};
 use crate::managers::compilation::RequestHandler;
 use serenity::collector::CollectReaction;
@@ -219,7 +214,7 @@ println!("lang: {}", language);
                         }
                     };
 
-                    if let Err(e) = new_message.react(&ctx.http, reaction.clone()).await {
+                    if let Err(_) = new_message.react(&ctx.http, reaction.clone()).await {
                         return;
                     }
 

@@ -1,10 +1,6 @@
 #[cfg(test)]
 
 use serenity::model::user::User;
-use crate::utls::parser::get_components;
-use std::sync::{Arc};
-use tokio::sync::RwLock;
-use crate::managers::compilation::CompilationManager;
 
 #[tokio::test]
 async fn standard_parse() {
