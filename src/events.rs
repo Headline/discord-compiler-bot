@@ -193,16 +193,14 @@ impl EventHandler for Handler {
 
     async fn message(&self, ctx: Context, new_message: Message) {
         if !new_message.attachments.is_empty() {
-println!("FOund attachment");
             if let Ok((code, language)) = get_message_attachment(&new_message.attachments).await {
                 let data = ctx.data.read().await;
                 let target = {
                     let cm = data.get::<CompilerCache>().unwrap().read().await;
                     cm.resolve_target(shortname_to_qualified(&language))
                 };
-println!("lang: {}", language);
 
-                if  !matches!(target,  RequestHandler::None) {
+                if !matches!(target,  RequestHandler::None) {
                     let reaction = {
                         let botinfo = data.get::<ConfigCache>().unwrap().read().await;
                         if let Some(id) = botinfo.get("LOGO_EMOJI_ID") {
