@@ -8,6 +8,7 @@ mod stats;
 mod utls;
 mod cppeval;
 mod managers;
+mod tests;
 
 use serenity::{
     client::bridge::gateway::GatewayIntents,

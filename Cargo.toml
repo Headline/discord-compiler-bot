@@ -21,7 +21,9 @@ async-trait = "0.1"
 content_inspector = "0.2"
 shell-words = "0.1"
 const_format = "0.2"
-
+#tests
+indoc = "1.0.3"
+test-context = "0.1"
 #dbl
 dbl-rs = "0.3"
 futures-util = "0.3.6"

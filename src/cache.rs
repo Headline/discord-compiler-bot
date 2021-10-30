@@ -73,7 +73,7 @@ pub async fn fill(
     let mut map = HashMap::<&str, String>::new();
 
     // optional additions
-    let emoji_identifiers = ["SUCCESS_EMOJI_ID", "SUCCESS_EMOJI_NAME", "LOADING_EMOJI_ID", "LOADING_EMOJI_NAME"];
+    let emoji_identifiers = ["SUCCESS_EMOJI_ID", "SUCCESS_EMOJI_NAME", "LOADING_EMOJI_ID", "LOADING_EMOJI_NAME", "LOGO_EMOJI_NAME", "LOGO_EMOJI_ID"];
     for id in emoji_identifiers{
         if let Ok(envvar) = env::var(id) {
             if !envvar.is_empty() {

@@ -52,14 +52,14 @@ pub async fn handle_request(ctx : Context, mut content : String, author : User, 
     }
 
     // Try to load in an attachment
-    let attached = parser::get_message_attachment(&msg.attachments).await?;
-    if !attached.is_empty() {
-        content.push_str(&format!("\n```\n{}\n```\n", attached));
+    let (code, ext) = parser::get_message_attachment(&msg.attachments).await?;
+    if !code.is_empty() {
+        content.push_str(&format!("\n```{}\n{}\n```\n", ext, code));
     }
 
     // parse user input
     let comp_mngr = data_read.get::<CompilerCache>().unwrap();
-    let result = match parser::get_components(&content, &author, comp_mngr, &msg.referenced_message).await {
+    let result = match parser::get_components(&content, &author, Some(comp_mngr), &msg.referenced_message).await {
         Ok(r) => r,
         Err(e) => {
             return Err(CommandError::from(format!("{}", e)));
