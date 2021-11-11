@@ -1,3 +1,5 @@
+#[cfg(test)]
+
 use serenity::model::user::User;
 use crate::utls::parser::get_components;
 use crate::managers::compilation::CompilationManager;
