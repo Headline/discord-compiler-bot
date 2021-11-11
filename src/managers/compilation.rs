@@ -135,7 +135,7 @@ impl CompilationManager {
         if target == "scala" {
             return RequestHandler::WandBox
         }
-        else if parser_result.target == "nim" {
+        else if target == "nim" {
             return RequestHandler::WandBox
         }
 

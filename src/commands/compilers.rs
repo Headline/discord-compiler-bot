@@ -7,6 +7,7 @@ use serenity_utils::menu::*;
 use crate::cache::{ConfigCache, CompilerCache};
 use crate::utls::discordhelpers;
 use crate::utls::parser::shortname_to_qualified;
+use crate::managers::compilation::RequestHandler;
 
 #[command]
 pub async fn compilers(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
@@ -25,33 +26,41 @@ pub async fn compilers(ctx: &Context, msg: &Message, _args: Args) -> CommandResu
     let compiler_manager = compiler_cache.read().await;
 
     // Get our list of compilers
-    let language = shortname_to_qualified(&user_lang);
-    let mut found = false;
     let mut langs: Vec<String> = Vec::new();
-    for cache_entry in &compiler_manager.gbolt.cache {
-        if cache_entry.language.id == language {
-            found = true;
-            for compiler in &cache_entry.compilers {
-                langs.push(format!("{} -> **{}**", &compiler.name, &compiler.id));
+
+    let language = shortname_to_qualified(&user_lang);
+    match compiler_manager.resolve_target(language) {
+        RequestHandler::CompilerExplorer => {
+            for cache_entry in &compiler_manager.gbolt.cache {
+                if cache_entry.language.id == language {
+                    for compiler in &cache_entry.compilers {
+                        langs.push(format!("{} -> **{}**", &compiler.name, &compiler.id));
+                    }
+                }
             }
+        }
+        RequestHandler::WandBox => {
+            match compiler_manager.wbox.get_compilers(&shortname_to_qualified(&language)) {
+                Some(s) =>  {
+                    for lang in s {
+                        langs.push(lang.name);
+                    }
+                },
+                None => {
+                    return Err(CommandError::from(
+                        format!("Unable to find compilers for target '{}'.", language),
+                    ));
+                }
+            };
+        }
+        RequestHandler::None => {
+            return Err(CommandError::from(
+                format!("Unable to find compilers for target '{}'.", language),
+            ));
         }
     }
 
-    if !found {
-        match compiler_manager.wbox.get_compilers(&shortname_to_qualified(&language)) {
-            Some(s) =>  {
-                for lang in s {
-                    langs.push(lang.name);
-                }
-            },
-            None => {
-                return Err(CommandError::from(
-                    format!("Unable to find compilers for language '{}'", language)
-                ));
-            }
-        };
-    }
-    
+
     let avatar;
     let success_id;
     let success_name;
