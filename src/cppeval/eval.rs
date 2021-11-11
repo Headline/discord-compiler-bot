@@ -97,11 +97,11 @@ impl CppEval {
         let mut balance = 0;
         let mut stop_idx = 0;
         let mut ignore = false;
+        let mut inline_comment = false;
+        let mut multiline_comment = false;
         let mut last = '\0';
         for (index, char) in self.input.chars().enumerate() {
-            // prevent }  in print statements from messing up our balance, we keep track of the
-            // last character parsed in order to detect escaped quotes that way we know which
-            // quotes indicate the start of a string and which ones do not.
+            // prevent non-syntactic }'s from messing up our balance
             if (char == '\'' || char == '"') && last != '\\' {
                 ignore = !ignore;
             }
@@ -109,6 +109,32 @@ impl CppEval {
                 last = char;
                 continue;
             }
+
+            if char == '/' && last == '/' {
+                inline_comment = true;
+            }
+
+            if inline_comment {
+                if char == '\n' {
+                    inline_comment = false;
+                }
+                last = char;
+                continue;
+            }
+
+            /* awd */
+            if char == '*' && last == '/' {
+                multiline_comment = true;
+            }
+
+            if multiline_comment {
+                if char == '/' && last == '*' {
+                    multiline_comment = false;
+                }
+                last = char;
+                continue;
+            }
+
             // balance our braces
             if char == '{' {
                 balance += 1;
