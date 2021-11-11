@@ -55,3 +55,18 @@ async fn eval_output_conditional() {
     let mut eval = CppEval::new("{ int a = 4; if (a > 3) { cout << \"true\"; } }");
     assert!(eval.evaluate().is_ok());
 }
+
+#[tokio::test]
+async fn eval_output_balance_inline() {
+    let mut eval = CppEval::new("{ // {{{{\n }");
+    assert!(eval.evaluate().is_ok());
+}
+
+#[tokio::test]
+async fn eval_output_balance() {
+    let mut eval = CppEval::new("{ /* {{{ */ }");
+    if let Err(e) = eval.evaluate() {
+        println!("{}", e);
+        assert!(false, "Parser failed")
+    }
+}
