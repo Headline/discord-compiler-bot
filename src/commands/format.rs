@@ -67,7 +67,8 @@ pub async fn format(ctx: &Context, msg: &Message, mut args : Args) -> CommandRes
         else {
             if msgref.attachments.len() > 0 {
                 attachment_name = msgref.attachments[0].filename.clone();
-                code = get_message_attachment(&msgref.attachments).await?;
+                let (program_code, _) = get_message_attachment(&msg.attachments).await?;
+                code = program_code;
             }
             else {
                 return Err(CommandError::from("Referenced message has no code or attachment"));
@@ -77,7 +78,8 @@ pub async fn format(ctx: &Context, msg: &Message, mut args : Args) -> CommandRes
     else {
         if !msg.attachments.is_empty() {
             attachment_name = msg.attachments[0].filename.clone();
-            code = get_message_attachment(&msg.attachments).await?;
+            let (program_code, _) = get_message_attachment(&msg.attachments).await?;
+            code = program_code;
         } else {
             let mut result = ParserResult::default();
             if crate::utls::parser::find_code_block(& mut result, &msg.content) {

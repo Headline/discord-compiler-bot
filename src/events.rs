@@ -17,10 +17,17 @@ use chrono::{DateTime, Duration, Utc};
 use crate::cache::*;
 use crate::utls::discordhelpers;
 use crate::managers::stats::StatsManager;
-use serenity::model::id::GuildId;
-use serenity::model::event::MessageUpdateEvent;
+use serenity::model::id::{GuildId};
+use serenity::model::event::{MessageUpdateEvent};
 use crate::utls::discordhelpers::embeds;
 use tokio::sync::MutexGuard;
+use serenity::model::channel::{ReactionType};
+
+use crate::utls::parser::{get_message_attachment, shortname_to_qualified};
+use crate::managers::compilation::RequestHandler;
+use serenity::collector::CollectReaction;
+use crate::commands::compile::handle_request;
+use crate::utls::discordhelpers::embeds::embed_message;
 
 pub struct Handler; // event handler for serenity
 
@@ -182,6 +189,66 @@ impl EventHandler for Handler {
         }
 
         info!("Leaving {}", &incomplete.id);
+    }
+
+    async fn message(&self, ctx: Context, new_message: Message) {
+        if !new_message.attachments.is_empty() {
+            if let Ok((code, language)) = get_message_attachment(&new_message.attachments).await {
+                let data = ctx.data.read().await;
+                let target = {
+                    let cm = data.get::<CompilerCache>().unwrap().read().await;
+                    cm.resolve_target(shortname_to_qualified(&language))
+                };
+
+                if !matches!(target,  RequestHandler::None) {
+                    let reaction = {
+                        let botinfo = data.get::<ConfigCache>().unwrap().read().await;
+                        if let Some(id) = botinfo.get("LOGO_EMOJI_ID") {
+                            let name = botinfo.get("LOGO_EMOJI_NAME").expect("Unable to find loading emoji name").clone();
+                            discordhelpers::build_reaction(id.parse::<u64>().unwrap(), &name)
+                        }
+                        else {
+                            ReactionType::Unicode(String::from("💻"))
+                        }
+                    };
+
+                    if let Err(_) = new_message.react(&ctx.http, reaction.clone()).await {
+                        return;
+                    }
+
+                    let collector = CollectReaction::new(ctx.clone())
+                        .message_id(new_message.id)
+                        .timeout(core::time::Duration::new(30, 0))
+                        .filter(move |r| r.emoji.eq(&reaction)).await;
+                    let _ = new_message.delete_reactions(&ctx.http).await;
+                    if let Some(_) = collector {
+                        let emb = match handle_request(ctx.clone(), format!(";compile\n```{}\n{}\n```", language, code), new_message.author.clone(), &new_message).await {
+                            Ok(emb) => emb,
+                            Err(e) => {
+                                let emb = embeds::build_fail_embed(&new_message.author, &format!("{}", e));
+                                let mut emb_msg = embeds::embed_message(emb);
+                                if let Ok(sent) = new_message
+                                    .channel_id
+                                    .send_message(&ctx.http, |_| &mut emb_msg)
+                                    .await
+                                {
+                                    let mut message_cache = data.get::<MessageCache>().unwrap().lock().await;
+                                    message_cache.insert(new_message.id.0, sent);
+                                }
+                                return;
+                            }
+                        };
+                        let mut emb_msg = embed_message(emb);
+                        emb_msg.reference_message(&new_message);
+                        let _= new_message
+                            .channel_id
+                            .send_message(&ctx.http, |_| &mut emb_msg)
+                            .await;
+
+                    }
+                }
+            }
+        }
     }
 
     async fn ready(&self, ctx: Context, ready: Ready) {

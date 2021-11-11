@@ -7,6 +7,7 @@ use serenity::framework::standard::CommandError;
 use tokio::sync::RwLock;
 use std::sync::Arc;
 use crate::managers::compilation::{CompilationManager, RequestHandler};
+use std::path::Path;
 
 
 // Allows us to convert some common aliases to other programming languages
@@ -35,7 +36,7 @@ pub struct ParserResult {
 }
 
 #[allow(clippy::while_let_on_iterator)]
-pub async fn get_components(input: &str, author : &User, compilation_manager : &Arc<RwLock<CompilationManager>>, reply : &Option<Box<Message>>) -> Result<ParserResult, CommandError> {
+pub async fn get_components(input: &str, author : &User, compilation_manager : Option<&Arc<RwLock<CompilationManager>>>, reply : &Option<Box<Message>>) -> Result<ParserResult, CommandError> {
     let mut result = ParserResult::default();
 
     // Find the index for where we should stop parsing user input
@@ -60,8 +61,8 @@ pub async fn get_components(input: &str, author : &User, compilation_manager : &
 
     // Check to see if we were given a valid target... if not we'll check
     // the syntax highlighting str later.
-    {
-        let lang_lookup = compilation_manager.read().await;
+    if let Some(comp_mngr) = compilation_manager {
+        let lang_lookup = comp_mngr.read().await;
         if let Some(param) = args.get(0) {
             let lower_param = param.trim().to_lowercase();
             let language = shortname_to_qualified(&lower_param);
@@ -69,6 +70,14 @@ pub async fn get_components(input: &str, author : &User, compilation_manager : &
                 args.remove(0);
                 result.target = language.to_owned();
             }
+        }
+    }
+    else { // no compilation manager, just assume target is supplied
+        if let Some(param) = args.get(0) {
+            let lower_param = param.trim().to_lowercase();
+            let language = shortname_to_qualified(&lower_param);
+            args.remove(0);
+            result.target = language.to_owned();
         }
     }
 
@@ -134,8 +143,11 @@ pub async fn get_components(input: &str, author : &User, compilation_manager : &
             result.code = String::default();
 
             let attachment = get_message_attachment(&replied_msg.attachments).await?;
-            if !attachment.is_empty() {
-                result.code = attachment;
+            if !attachment.0.is_empty() {
+                if !result.target.is_empty() {
+                    result.target = attachment.1;
+                }
+                result.code = attachment.0;
             }
             else if !find_code_block(&mut result, &replied_msg.content) {
                 return Err(CommandError::from(
@@ -149,8 +161,11 @@ pub async fn get_components(input: &str, author : &User, compilation_manager : &
         // reply to grab some code from.
         if let Some(replied_msg) = reply {
             let attachment = get_message_attachment(&replied_msg.attachments).await?;
-            if !attachment.is_empty() {
-                result.code = attachment;
+            if !attachment.0.is_empty() {
+                if !result.target.is_empty() {
+                    result.target = attachment.1;
+                }
+                result.code = attachment.0;
             }
             // no reply in the attachment, lets check for a code-block..
             else if !find_code_block(&mut result, &replied_msg.content) {
@@ -247,11 +262,11 @@ pub fn find_code_block(result: &mut ParserResult, haystack: &str) -> bool {
     true
 }
 
-pub async fn get_message_attachment(attachments : & Vec<Attachment>) -> Result<String, CommandError> {
+pub async fn get_message_attachment(attachments : & Vec<Attachment>) -> Result<(String, String), CommandError> {
     if !attachments.is_empty() {
         let attachment = attachments.get(0);
         if attachment.is_none() {
-            return Ok(String::new());
+            return Ok((String::new(), String::new()));
         }
         let attached = attachment.unwrap();
         if attached.size > 512 * 1024  { // 512 KiB seems enough
@@ -267,7 +282,11 @@ pub async fn get_message_attachment(attachments : & Vec<Attachment>) -> Result<S
 
                 match String::from_utf8(bytes.to_vec()) {
                     Ok(str) => {
-                        Ok(str)
+                        let mut extension = String::from("");
+                        if let Some(ext) = Path::new(&attached.filename).extension() {
+                            extension = ext.to_string_lossy().to_string();
+                        }
+                        Ok((str, extension))
                     }
                     Err(e) => {
                         Err(CommandError::from(format!("UTF8 Error occured while parsing file: {}", e)))
@@ -279,5 +298,5 @@ pub async fn get_message_attachment(attachments : & Vec<Attachment>) -> Result<S
             }
         }
     }
-    Ok(String::new())
+    Ok((String::new(),String::new()))
 }

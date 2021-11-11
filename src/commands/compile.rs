@@ -44,33 +44,33 @@ pub async fn compile(ctx: &Context, msg: &Message, _args: Args) -> CommandResult
 
 pub async fn handle_request(ctx : Context, mut content : String, author : User, msg : &Message) -> Result<CreateEmbed, CommandError> {
     let data_read = ctx.data.read().await;
-    let loading_react =  {
-        let reaction;
+    let reaction = {
         let botinfo_lock = data_read.get::<ConfigCache>().unwrap();
         let botinfo = botinfo_lock.read().await;
         if let Some(loading_id) = botinfo.get("LOADING_EMOJI_ID") {
-            let loading_name = botinfo.get("LOADING_EMOJI_ID").expect("Unable to find loading emoji name").clone();
-            reaction = discordhelpers::build_reaction(loading_id.parse::<u64>()?, &loading_name);
+            let loading_name = botinfo.get("LOADING_EMOJI_NAME").expect("Unable to find loading emoji name").clone();
+            discordhelpers::build_reaction(loading_id.parse::<u64>()?, &loading_name)
         }
         else {
-            reaction = ReactionType::Unicode(String::from("⏳"));
+            ReactionType::Unicode(String::from("⏳"))
         }
-
-        reaction
     };
 
     // Try to load in an attachment
-    let attached = parser::get_message_attachment(&msg.attachments).await?;
-    if !attached.is_empty() {
-        content.push_str(&format!("\n```\n{}\n```\n", attached));
+    let (code, ext) = parser::get_message_attachment(&msg.attachments).await?;
+    if !code.is_empty() {
+        content.push_str(&format!("\n```{}\n{}\n```\n", ext, code));
     }
 
     // parse user input
     let compilation_manager = data_read.get::<CompilerCache>().unwrap();
-    let parse_result = parser::get_components(&content, &author, &compilation_manager, &msg.referenced_message).await?;
+    let parse_result = parser::get_components(&content, &author, Some(&compilation_manager), &msg.referenced_message).await?;
 
     // send out loading emote
-    let reaction = match msg.react(&ctx.http, loading_react).await {
+    let reaction = match msg
+        .react(&ctx.http, reaction)
+        .await
+    {
         Ok(r) => r,
         Err(e) => {
             return Err(CommandError::from(format!(" Unable to react to message, am I missing permissions to react or use external emoji?\n{}", e)));
