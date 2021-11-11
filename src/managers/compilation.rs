@@ -135,6 +135,9 @@ impl CompilationManager {
         if target == "scala" {
             return RequestHandler::WandBox
         }
+        else if parser_result.target == "nim" {
+            return RequestHandler::WandBox
+        }
 
         if self.gbolt.resolve(target).is_some() {
             RequestHandler::CompilerExplorer
