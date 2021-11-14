@@ -74,7 +74,18 @@ pub async fn format(ctx: &Context, msg: &Message, mut args : Args) -> CommandRes
                 code = program_code;
             }
             else {
-                return Err(CommandError::from("Referenced message has no code or attachment"));
+                if let Ok(var) = std::env::var("LINGUIST_ENABLE") {
+                    if var == "1" {
+                        lang_code = get_language_from(&msg.content).await?;
+                        code = msg.content.clone();
+                    }
+                    else {
+                        return Err(CommandError::from("Referenced message has no code or attachment"));
+                    }
+                }
+                else {
+                    return Err(CommandError::from("Referenced message has no code or attachment"));
+                }
             }
         }
     }
@@ -90,18 +101,7 @@ pub async fn format(ctx: &Context, msg: &Message, mut args : Args) -> CommandRes
                 code = result.code
             }
             else {
-                if let Ok(var) = std::env::var("LINGUIST_ENABLE") {
-                    if var == "1" {
-                        lang_code = get_language_from(&msg.content).await?;
-                        code = msg.content.clone();
-                    }
-                    else {
-                        return Err(CommandError::from("Unable to find code to format!\n\nPlease reply to a message when executing this command or supply the code yourself in a code block or message attachment."));
-                    }
-                }
-                else {
-                    return Err(CommandError::from("Unable to find code to format!\n\nPlease reply to a message when executing this command or supply the code yourself in a code block or message attachment."));
-                }
+                return Err(CommandError::from("Unable to find code to format!\n\nPlease reply to a message when executing this command or supply the code yourself in a code block or message attachment."));
             }
         }
     }
