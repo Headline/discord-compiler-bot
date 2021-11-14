@@ -8,6 +8,7 @@ use tokio::sync::RwLock;
 use std::sync::Arc;
 use crate::managers::compilation::{CompilationManager, RequestHandler};
 use std::path::Path;
+use crate::apis::linguist::get_language_from;
 
 
 // Allows us to convert some common aliases to other programming languages
@@ -183,7 +184,20 @@ pub async fn get_components(input: &str, author : &User, compilation_manager : O
     }
 
     if result.target.is_empty() {
-        return Err(CommandError::from("You must provide a valid language or compiler!\n\n;compile c++ \n\\`\\`\\`\nint main() {}\n\\`\\`\\`"))
+        if let Ok(var) = std::env::var("LINGUIST_ENABLE") {
+            if var == "1" {
+                let language = get_language_from(&result.code).await?;
+                if let Some(comp_mngr) = compilation_manager {
+                    let lang_lookup = comp_mngr.read().await;
+                    if !matches!(lang_lookup.resolve_target( &language), RequestHandler::None) {
+                        result.target = language.to_owned();
+                        return Ok(result)
+                    }
+                }
+            }
+        }
+
+        return Err(CommandError::from("You must provide a valid language or compiler!\n\n;compile c++ \n\\`\\`\\`\nint main() {}\n\\`\\`\\`"));
     }
 
     //println!("Parse object: {:?}", result);

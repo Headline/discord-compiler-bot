@@ -5,6 +5,9 @@ use crate::cache::{CompilerCache};
 use crate::utls::parser::{ParserResult, get_message_attachment};
 use godbolt::Godbolt;
 use std::io::Write;
+use crate::apis::linguist::get_language_from;
+use uuid::Uuid;
+
 
 #[command]
 pub async fn format(ctx: &Context, msg: &Message, mut args : Args) -> CommandResult {
@@ -87,7 +90,18 @@ pub async fn format(ctx: &Context, msg: &Message, mut args : Args) -> CommandRes
                 code = result.code
             }
             else {
-                return Err(CommandError::from("Unable to find code to format!\n\nPlease reply to a message when executing this command or supply the code yourself in a code block or message attachment."));
+                if let Ok(var) = std::env::var("LINGUIST_ENABLE") {
+                    if var == "1" {
+                        lang_code = get_language_from(&msg.content).await?;
+                        code = msg.content.clone();
+                    }
+                    else {
+                        return Err(CommandError::from("Unable to find code to format!\n\nPlease reply to a message when executing this command or supply the code yourself in a code block or message attachment."));
+                    }
+                }
+                else {
+                    return Err(CommandError::from("Unable to find code to format!\n\nPlease reply to a message when executing this command or supply the code yourself in a code block or message attachment."));
+                }
             }
         }
     }
@@ -111,14 +125,14 @@ pub async fn format(ctx: &Context, msg: &Message, mut args : Args) -> CommandRes
     }
 
     if !attachment_name.is_empty() {
-        let _ = std::fs::create_dir("temp");
-        let path = format!("temp/{}", attachment_name);
-        let mut file = std::fs::File::create(&path)?;
+        let mut dir = std::env::temp_dir();
+        dir.push(format!("{}", Uuid::new_v4()));
+        let mut file = std::fs::File::create(&dir)?;
         let _ = file.write_all(answer.as_bytes());
         let _ = file.flush();
 
-        msg.channel_id.send_message(&ctx.http, |msg| msg.add_file(path.as_str()).content("Powered by godbolt.org")).await?;
-        let _ = std::fs::remove_file(&path);
+        msg.channel_id.send_message(&ctx.http, |msg| msg.add_file(&dir).content("Powered by godbolt.org")).await?;
+        let _ = std::fs::remove_file(&dir);
     }
     else {
         msg.reply(&ctx.http, format!("\n```{}\n{}```\n*Powered by godbolt.org*", lang_code, answer)).await?;

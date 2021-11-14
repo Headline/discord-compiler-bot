@@ -73,8 +73,8 @@ pub async fn fill(
     let mut map = HashMap::<&str, String>::new();
 
     // optional additions
-    let emoji_identifiers = ["SUCCESS_EMOJI_ID", "SUCCESS_EMOJI_NAME", "LOADING_EMOJI_ID", "LOADING_EMOJI_NAME", "LOGO_EMOJI_NAME", "LOGO_EMOJI_ID"];
-    for id in emoji_identifiers{
+    let optional_vars = ["SUCCESS_EMOJI_ID", "SUCCESS_EMOJI_NAME", "LOADING_EMOJI_ID", "LOADING_EMOJI_NAME", "LOGO_EMOJI_NAME", "LOGO_EMOJI_ID", "LINGUIST_ENABLE", "JOIN_LOG"];
+    for id in optional_vars {
         if let Ok(envvar) = env::var(id) {
             if !envvar.is_empty() {
                 map.insert(id, envvar);
@@ -84,7 +84,6 @@ pub async fn fill(
 
     map.insert("GIT_HASH_LONG", String::from(env!("GIT_HASH_LONG")));
     map.insert("GIT_HASH_SHORT", String::from(env!("GIT_HASH_SHORT")));
-    map.insert("JOIN_LOG", env::var("JOIN_LOG")?);
     map.insert("BOT_PREFIX", String::from(prefix));
     map.insert("BOT_ID", id.to_string());
     data.insert::<ConfigCache>(Arc::new(RwLock::new(map)));
