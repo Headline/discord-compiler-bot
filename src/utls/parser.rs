@@ -45,17 +45,18 @@ pub async fn get_components(input: &str, author : &User, compilation_manager : O
         end_point = parse_stop;
     }
     if let Some(index) = input.find('`') {
+        if end_point == 0 {
+            end_point = index;
+        }
         // if the ` character is found before \n we should use the ` as our parse stop point
-        if index < end_point {
+        else if index < end_point {
             end_point = index;
         }
     } else {
         end_point = input.len();
     }
 
-
     let mut args: Vec<&str> = input[..end_point].split_whitespace().collect();
-
     // ditch command str (;compile, ;asm)
     args.remove(0);
 
