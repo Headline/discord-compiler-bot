@@ -75,7 +75,7 @@ pub async fn format(ctx: &Context, msg: &Message, mut args : Args) -> CommandRes
             }
             else {
                 if let Ok(var) = std::env::var("LINGUIST_ENABLE") {
-                    if var == "1" {
+                    if var.trim() == "1" {
                         lang_code = get_language_from(&msg.content).await?;
                         code = msg.content.clone();
                     }

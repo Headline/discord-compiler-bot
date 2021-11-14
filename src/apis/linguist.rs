@@ -3,6 +3,7 @@ use std::io::Write;
 use crate::utls::parser::shortname_to_qualified;
 use serde::*;
 use uuid::Uuid;
+use std::collections::HashMap;
 
 #[derive(Clone, Debug, Deserialize, Default)]
 struct LinguistOutput {
@@ -31,10 +32,11 @@ pub async fn get_language_from(content : &str) -> serenity::Result<String> {
         .spawn()?;
 
     let output = child.wait_with_output().await?;
-    let _ = std::fs::remove_file(dir)?;
+    let _ = std::fs::remove_file(&dir)?;
 
     let stdout = String::from(String::from_utf8_lossy(&output.stdout));
-    println!("Got stdout:\n======\n{}\n======\n", &stdout);
-    let linguist : LinguistOutput  = serde_json::from_str(&stdout)?;
-    Ok(String::from(shortname_to_qualified(&linguist.language.to_lowercase())))
+    let linguist : HashMap<String, LinguistOutput>  = serde_json::from_str(&stdout)?;
+    let name = String::from(dir.to_string_lossy());
+    let linguist_out = linguist.get(&name).unwrap();
+    Ok(String::from(shortname_to_qualified(&linguist_out.language.to_lowercase())))
 }
