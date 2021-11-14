@@ -67,7 +67,7 @@ pub async fn format(ctx: &Context, msg: &Message, mut args : Args) -> CommandRes
         else {
             if msgref.attachments.len() > 0 {
                 attachment_name = msgref.attachments[0].filename.clone();
-                let (program_code, _) = get_message_attachment(&msg.attachments).await?;
+                let (program_code, _) = get_message_attachment(&msgref.attachments).await?;
                 code = program_code;
             }
             else {
