@@ -96,7 +96,9 @@ impl CompilationManager {
             execute_parameters: Default::default(),
             filters
         };
-        let compiler = self.gbolt.resolve(&parse_result.target).unwrap();
+
+        let target = if parse_result.target == "haskell" { "ghc901" } else { &parse_result.target };
+        let compiler = self.gbolt.resolve(target).unwrap();
         let response = Godbolt::send_request(&compiler, &parse_result.code, options, USER_AGENT).await?;
         Ok((compiler.lang, response.to_embed(author, true)))
     }
@@ -126,7 +128,9 @@ impl CompilationManager {
             },
             filters
         };
-        let compiler = self.gbolt.resolve(&parse_result.target).unwrap();
+
+        let target = if parse_result.target == "haskell" { "ghc901" } else { &parse_result.target };
+        let compiler = self.gbolt.resolve(target).unwrap();
         let response = Godbolt::send_request(&compiler, &parse_result.code,  options, USER_AGENT).await?;
         Ok((compiler.lang, response))
     }

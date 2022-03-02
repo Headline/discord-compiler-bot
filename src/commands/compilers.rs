@@ -28,7 +28,8 @@ pub async fn compilers(ctx: &Context, msg: &Message, _args: Args) -> CommandResu
     // Get our list of compilers
     let mut langs: Vec<String> = Vec::new();
 
-    let language = shortname_to_qualified(&user_lang);
+    let lower_lang = user_lang.to_lowercase();
+    let language = shortname_to_qualified(&lower_lang);
     match compiler_manager.resolve_target(language) {
         RequestHandler::CompilerExplorer => {
             for cache_entry in &compiler_manager.gbolt.cache {
