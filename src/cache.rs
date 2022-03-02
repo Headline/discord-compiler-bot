@@ -100,9 +100,10 @@ pub async fn fill(
     info!("Compilation manager loaded");
 
     // DBL
-    let token = env::var("DBL_TOKEN")?;
-    let client = dbl::Client::new(token)?;
-    data.insert::<DblCache>(Arc::new(RwLock::new(client)));
+    if let Ok(token) = env::var("DBL_TOKEN") {
+        let client = dbl::Client::new(token)?;
+        data.insert::<DblCache>(Arc::new(RwLock::new(client)));
+    }
 
     // Stats tracking
     let stats = StatsManager::new();
