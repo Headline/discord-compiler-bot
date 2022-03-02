@@ -89,7 +89,7 @@ pub async fn handle_request(ctx : Context, mut content : String, author : User, 
             return Err(CommandError::from(format!("{}", e)));
         }
     };
-
+    
     // remove our loading emote
     if msg.delete_reaction_emoji(&ctx.http, reaction.emoji.clone()).await
         .is_err()

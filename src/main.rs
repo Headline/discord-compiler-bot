@@ -38,7 +38,10 @@ struct General;
 /** Spawn bot **/
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
-    dotenv::dotenv().ok();
+    if let Err(e) = dotenv::dotenv() {
+        error!("Unable to find .env configuration file: {}", e);
+    }
+
     pretty_env_logger::init();
 
     let token = env::var("BOT_TOKEN")?;
