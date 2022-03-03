@@ -55,10 +55,24 @@ impl TypeMapKey for ShardManagerCache {
     type Value = Arc<Mutex<ShardManager>>;
 }
 
+pub struct MessageCacheEntry {
+    pub our_msg : Message,
+    pub original_msg : Message
+}
+impl MessageCacheEntry {
+    pub fn new(our_msg : Message, original_msg : Message) -> Self {
+        MessageCacheEntry {
+            our_msg,
+            original_msg
+        }
+    }
+}
+
+
 /// Message  cache to interact with our own messages after they are dispatched
 pub struct MessageCache;
 impl TypeMapKey for MessageCache {
-    type Value = Arc<Mutex<LruCache<u64, Message>>>;
+    type Value = Arc<Mutex<LruCache<u64, MessageCacheEntry>>>;
 }
 
 pub async fn fill(

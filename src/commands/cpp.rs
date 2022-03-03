@@ -2,7 +2,7 @@ use serenity::framework::standard::{macros::command, Args, CommandResult, Comman
 use serenity::model::prelude::*;
 use serenity::prelude::*;
 
-use crate::cache::{MessageCache, CompilerCache, ConfigCache};
+use crate::cache::{MessageCache, CompilerCache, ConfigCache, MessageCacheEntry};
 use crate::utls::discordhelpers::embeds;
 use crate::utls::discordhelpers;
 use crate::cppeval::eval::CppEval;
@@ -26,7 +26,7 @@ pub async fn cpp(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
     // add delete cache
     let data_read = ctx.data.read().await;
     let mut delete_cache = data_read.get::<MessageCache>().unwrap().lock().await;
-    delete_cache.insert(msg.id.0, compilation_embed);
+    delete_cache.insert(msg.id.0, MessageCacheEntry::new(compilation_embed, msg.clone()));
 
     Ok(())
 }

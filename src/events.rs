@@ -60,21 +60,12 @@ impl ShardsReadyHandler for Handler {
 #[async_trait]
 impl EventHandler for Handler {
     async fn message_update(&self, ctx: Context, new_data: MessageUpdateEvent) {
-        let old_msg = {
-            let data = ctx.data.read().await;
-            let mut message_cache = data.get::<MessageCache>().unwrap().lock().await;
-            if let Some(msg) = message_cache.get_mut(&new_data.id.0) {
-                Some(msg.clone())
-            }
-            else {
-                None
-            }
-        };
-
-        if let Some(msg) = old_msg {
+        let data = ctx.data.read().await;
+        let mut message_cache = data.get::<MessageCache>().unwrap().lock().await;
+        if let Some(msg) = message_cache.get_mut(&new_data.id.0) {
             if let Some(new_msg) = new_data.content {
                 if let Some (author) = new_data.author {
-                    discordhelpers::handle_edit(&ctx, new_msg, author, msg).await;
+                    discordhelpers::handle_edit(&ctx, new_msg, author, msg.our_msg.clone(), msg.original_msg.clone()).await;
                 }
             }
         }
@@ -144,7 +135,7 @@ impl EventHandler for Handler {
         let data = ctx.data.read().await;
         let mut message_cache = data.get::<MessageCache>().unwrap().lock().await;
         if let Some(msg) = message_cache.get_mut(id.as_u64()) {
-            if msg.delete(ctx.http).await.is_err() {
+            if msg.our_msg.delete(ctx.http).await.is_err() {
                 // ignore for now
             }
             message_cache.remove(id.as_u64());
@@ -233,7 +224,7 @@ impl EventHandler for Handler {
                                     .await
                                 {
                                     let mut message_cache = data.get::<MessageCache>().unwrap().lock().await;
-                                    message_cache.insert(new_message.id.0, sent);
+                                    message_cache.insert(new_message.id.0, MessageCacheEntry::new(sent, new_message));
                                 }
                                 return;
                             }
@@ -336,7 +327,7 @@ pub async fn after(
             .await
         {
             let mut message_cache = data.get::<MessageCache>().unwrap().lock().await;
-            message_cache.insert(msg.id.0, sent);
+            message_cache.insert(msg.id.0, MessageCacheEntry::new(sent, msg.clone()));
         }
     }
 

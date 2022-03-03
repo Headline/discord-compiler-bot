@@ -3,7 +3,7 @@ use serenity::{
     framework::standard::{macros::command, Args, CommandError, CommandResult},
 };
 
-use crate::cache::{ConfigCache, MessageCache, CompilerCache};
+use crate::cache::{ConfigCache, MessageCache, CompilerCache, MessageCacheEntry};
 use crate::utls::constants::*;
 use crate::utls::{discordhelpers};
 use crate::utls::discordhelpers::embeds;
@@ -30,7 +30,7 @@ pub async fn asm(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
 
     let data_read = ctx.data.read().await;
     let mut message_cache = data_read.get::<MessageCache>().unwrap().lock().await;
-    message_cache.insert(msg.id.0, asm_embed.clone());
+    message_cache.insert(msg.id.0, MessageCacheEntry::new(asm_embed.clone(), msg.clone()));
     debug!("Command executed");
     Ok(())
 }
