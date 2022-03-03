@@ -1,6 +1,6 @@
 use serenity::framework::standard::{macros::command, Args, CommandResult};
 
-use crate::cache::{MessageCache};
+use crate::cache::{MessageCache, MessageCacheEntry};
 use crate::utls::{parser, discordhelpers};
 use crate::utls::constants::COLOR_OKAY;
 use crate::utls::discordhelpers::{embeds, is_success_embed};
@@ -37,7 +37,7 @@ pub async fn compile(ctx: &Context, msg: &Message, _args: Args) -> CommandResult
     discordhelpers::send_completion_react(ctx, &compilation_embed, compilation_successful).await?;
 
     let mut delete_cache = data_read.get::<MessageCache>().unwrap().lock().await;
-    delete_cache.insert(msg.id.0, compilation_embed);
+    delete_cache.insert(msg.id.0, MessageCacheEntry::new(compilation_embed, msg.clone()));
     debug!("Command executed");
     Ok(())
 }
