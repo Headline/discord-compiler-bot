@@ -15,6 +15,7 @@ use crate::utls::blocklist::Blocklist;
 
 use lru_cache::LruCache;
 use serenity::model::channel::Message;
+use crate::managers::command::CommandManager;
 use crate::managers::compilation::CompilationManager;
 
 /** Caching **/
@@ -75,6 +76,12 @@ impl TypeMapKey for MessageCache {
     type Value = Arc<Mutex<LruCache<u64, MessageCacheEntry>>>;
 }
 
+/// Holds the Command Manager which handles command registration logic
+pub struct CommandCache;
+impl TypeMapKey for CommandCache {
+    type Value = Arc<Mutex<CommandManager>>;
+}
+
 pub async fn fill(
     data: Arc<RwLock<TypeMap>>,
     prefix: &str,
@@ -129,6 +136,9 @@ pub async fn fill(
     // Blocklist
     let blocklist = Blocklist::new();
     data.insert::<BlocklistCache>(Arc::new(RwLock::new(blocklist)));
+
+    let commands = CommandManager::new();
+    data.insert::<CommandCache>(Arc::new(Mutex::new(commands)));
 
     Ok(())
 }

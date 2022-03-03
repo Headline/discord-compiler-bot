@@ -5,7 +5,7 @@ use serenity::{
     },
     model::{
         channel::Message,
-        guild::{Guild, GuildUnavailable},
+        guild::{Guild},
         id::{ChannelId, MessageId},
         gateway::Ready
     },
@@ -26,6 +26,7 @@ use serenity::model::channel::{ReactionType};
 use crate::utls::parser::{get_message_attachment, shortname_to_qualified};
 use crate::managers::compilation::RequestHandler;
 use serenity::collector::CollectReaction;
+use serenity::model::guild::GuildUnavailable;
 use crate::commands::compile::handle_request;
 use crate::utls::discordhelpers::embeds::embed_message;
 
@@ -262,6 +263,9 @@ impl EventHandler for Handler {
         if stats.shard_count() == total_shards_to_spawn {
             self.all_shards_ready(&ctx, & mut stats, &ready).await;
         }
+
+        let cmd_mgr = data.get::<CommandCache>().unwrap().lock().await;
+        cmd_mgr.register_commands(&ctx.http).await;
     }
 }
 

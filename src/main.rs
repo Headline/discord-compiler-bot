@@ -11,13 +11,12 @@ mod managers;
 mod tests;
 
 use serenity::{
-    client::bridge::gateway::GatewayIntents,
     framework::{standard::macros::group, StandardFramework},
     http::Http,
 };
 
 use std::{collections::HashSet, env, error::Error};
-
+use serenity::client::bridge::gateway::GatewayIntents;
 use crate::apis::dbl::BotsListApi;
 
 #[macro_use]
@@ -45,6 +44,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     pretty_env_logger::init();
 
     let token = env::var("BOT_TOKEN")?;
+    let application_id = env::var("APPLICATION_ID");
     let http = Http::new_with_token(&token);
     let (owners, bot_id) = match http.get_current_application_info().await {
         Ok(info) => {
@@ -87,11 +87,17 @@ async fn main() -> Result<(), Box<dyn Error>> {
         .bucket("nospam", |b| b.delay(3).time_span(10).limit(3))
         .await
         .on_dispatch_error(events::dispatch_error);
-    let mut client = serenity::Client::builder(token)
+
+    let mut cb = serenity::Client::builder(token)
         .framework(framework)
         .event_handler(events::Handler)
-        .intents(GatewayIntents::GUILDS | GatewayIntents::GUILD_MESSAGES | GatewayIntents::GUILD_MESSAGE_REACTIONS)
-        .await?;
+        .intents(GatewayIntents::GUILDS | GatewayIntents::GUILD_MESSAGES | GatewayIntents::GUILD_MESSAGE_REACTIONS);
+
+    if let Ok(app_id) = application_id {
+        cb = cb.application_id(app_id.parse::<u64>()?);
+    }
+
+    let mut client = cb.await?;
 
     cache::fill(client.data.clone(), &prefix, &bot_id, client.shard_manager.clone()).await?;
 

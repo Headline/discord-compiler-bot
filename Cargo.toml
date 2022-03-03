@@ -7,7 +7,7 @@ edition = "2018"
 build = "src/build.rs"
 
 [dependencies]
-tokio = { version = "1", features = ["full"] }
+tokio = { version = "1", features = ["full", "rt-multi-thread"] }
 reqwest = { version = "0.11" }
 dotenv = "0.15.0"
 regex = "1"
@@ -32,16 +32,16 @@ chrono = "0.4.19"
 
 
 [dependencies.serenity]
-version = "0.10"
 default-features = false
-features = ["collector", "gateway", "builder", "standard_framework", "http", "model", "client", "framework", "utils", "rustls_backend"]
+features = ["collector", "gateway", "builder", "standard_framework", "http", "model", "client", "framework", "utils", "rustls_backend", "unstable_discord_api"]
+version = "0.10.10"
 
 [dependencies.wandbox]
 version = "0.1"
 
 [dependencies.godbolt]
 git = "https://github.com/Headline/godbolt-rs"
-branch = "breaking-change"
+branch = "master"
 #path = '../godbolt-rs'
 
 [dependencies.serenity_utils]
