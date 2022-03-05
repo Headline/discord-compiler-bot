@@ -73,6 +73,10 @@ impl EventHandler for Handler {
     }
 
     async fn guild_create(&self, ctx: Context, guild: Guild) {
+        let data = ctx.data.read().await;
+        let cmd_mgr = data.get::<CommandCache>().unwrap().lock().await;
+        cmd_mgr.register_commands(&ctx, &guild).await;
+
         let now: DateTime<Utc> = Utc::now();
         if guild.joined_at + Duration::seconds(30) > now {
             let data = ctx.data.read().await;
@@ -245,7 +249,6 @@ impl EventHandler for Handler {
 
     async fn ready(&self, ctx: Context, ready: Ready) {
         info!("[Shard {}] Ready", ctx.shard_id);
-
         let data = ctx.data.read().await;
         let mut stats = data.get::<StatsManagerCache>().unwrap().lock().await;
 
@@ -263,9 +266,6 @@ impl EventHandler for Handler {
         if stats.shard_count() == total_shards_to_spawn {
             self.all_shards_ready(&ctx, & mut stats, &ready).await;
         }
-
-        let cmd_mgr = data.get::<CommandCache>().unwrap().lock().await;
-        cmd_mgr.register_commands(&ctx.http).await;
     }
 }
 
