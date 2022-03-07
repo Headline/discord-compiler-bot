@@ -98,9 +98,16 @@ impl CompilationManager {
         };
 
         let target = if parse_result.target == "haskell" { "ghc901" } else { &parse_result.target };
-        let compiler = self.gbolt.resolve(target).unwrap();
-        let response = Godbolt::send_request(&compiler, &parse_result.code, options, USER_AGENT).await?;
-        Ok((compiler.lang, response.to_embed(author, true)))
+        let resolution_result = self.gbolt.resolve(target);
+        return match resolution_result {
+            None => {
+                Err(CommandError::from(format!("Target '{}' either does not produce assembly or is not currently supported on godbolt.org", target)))
+            }
+            Some(compiler) => {
+                let response = Godbolt::send_request(&compiler, &parse_result.code, options, USER_AGENT).await?;
+                Ok((compiler.lang, response.to_embed(author, true)))
+            }
+        }
     }
 
     pub async fn compiler_explorer(&self, parse_result : &ParserResult) -> Result<(String, godbolt::GodboltResponse), GodboltError> {
