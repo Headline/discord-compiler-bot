@@ -41,7 +41,7 @@ version = "0.1"
 
 [dependencies.godbolt]
 git = "https://github.com/Headline/godbolt-rs"
-branch = "breaking-change"
+branch = "master"
 #path = '../godbolt-rs'
 
 [dependencies.serenity_utils]
