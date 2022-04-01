@@ -159,6 +159,9 @@ pub async fn asm(ctx: &Context, command: &ApplicationCommandInteraction) -> Comm
         // dispatch final response
         msg.unwrap().channel_id.send_message(&ctx.http, |new_msg| {
             new_msg
+                .allowed_mentions(|mentions| {
+                    mentions.replied_user(false)
+                })
                 .reference_message(msg.unwrap())
                 .set_embed(result)
         }).await?;
