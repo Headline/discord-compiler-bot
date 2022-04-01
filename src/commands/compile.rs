@@ -1,126 +1,164 @@
-use serenity::framework::standard::{macros::command, Args, CommandResult};
+use serenity::{
+    framework::standard::{CommandResult},
+    framework::standard::CommandError,
+    client::Context,
+    model::interactions::application_command::ApplicationCommandInteraction,
+    model::interactions::InteractionResponseType,
+    model::prelude::InteractionApplicationCommandCallbackDataFlags
+};
 
-use crate::cache::{MessageCache, MessageCacheEntry};
-use crate::utls::{parser, discordhelpers};
-use crate::utls::constants::COLOR_OKAY;
-use crate::utls::discordhelpers::{embeds, is_success_embed};
-
-use std::env;
+use std::time::Duration;
+use futures_util::StreamExt;
 use tokio::sync::RwLockReadGuard;
 
-use serenity::framework::standard::CommandError;
-use serenity::builder::{CreateEmbed};
-use serenity::client::Context;
-use serenity::model::channel::{Message, ReactionType};
-use serenity::model::user::User;
+use crate::{
+    managers::compilation::{CompilationManager},
+    cache::{CompilerCache, StatsManagerCache},
+    utls::discordhelpers::{interactions},
+    utls::{parser},
+    utls::constants::COLOR_OKAY,
+    utls::parser::{ParserResult}
+};
 
-use crate::cache::{ConfigCache, StatsManagerCache, CompilerCache};
-use crate::managers::compilation::CompilationManager;
+pub async fn compile(ctx: &Context, command : &ApplicationCommandInteraction) -> CommandResult {
+    let mut parse_result = ParserResult::default();
 
-#[command]
-#[bucket = "nospam"]
-pub async fn compile(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
-    let data_read = ctx.data.read().await;
+    let mut msg = None;
+    for (_, value) in &command.data.resolved.messages {
+        if !parser::find_code_block(& mut parse_result, &value.content) {
+            return Err(CommandError::from("Unable to find a codeblock to compile!"))
+        }
+        msg = Some(value);
+        break;
+    }
 
-    // Handle wandbox request logic
-    let embed = handle_request(ctx.clone(), msg.content.clone(), msg.author.clone(), msg).await?;
+    // We never got a target from the codeblock, let's have them manually select a language
+    let mut sent_interaction = false;
+    if parse_result.target.is_empty() {
+        let languages = CompilationManager::slash_cmd_langs();
+        command.create_interaction_response(&ctx.http, |response| {
+            interactions::create_language_interaction(response, &languages)
+        }).await?;
 
-    // Send our final embed
-    let mut message = embeds::embed_message(embed);
-    let compilation_embed = msg
-        .channel_id
-        .send_message(&ctx.http, |_| &mut message)
-        .await?;
+        let resp = command.get_interaction_response(&ctx.http).await?;
+        let selection = match resp.await_component_interaction(ctx)
+                                                            .timeout(Duration::from_secs(30)).await {
+            Some(s) => s,
+            None => {
+                return Err(CommandError::from("Request timed out"))
+            }
+        };
 
-    // Success/fail react
-    let compilation_successful = compilation_embed.embeds[0].colour.0 == COLOR_OKAY;
-    discordhelpers::send_completion_react(ctx, &compilation_embed, compilation_successful).await?;
+        sent_interaction = true;
+        parse_result.target = selection.data.values.get(0).unwrap().to_lowercase();
+    }
 
-    let mut delete_cache = data_read.get::<MessageCache>().unwrap().lock().await;
-    delete_cache.insert(msg.id.0, MessageCacheEntry::new(compilation_embed, msg.clone()));
-    debug!("Command executed");
+    // ensure our options list is less than discord's limit
+    let language = parse_result.target.clone();
+    let mut options = interactions::create_compiler_options(ctx, &language, false).await?;
+
+    if !sent_interaction {
+        command.create_interaction_response(&ctx.http, |response| {
+            response
+            .kind(InteractionResponseType::ChannelMessageWithSource)
+            .interaction_response_data(|data| {
+                let compile_components = interactions::create_compile_panel(options);
+
+                data
+                    .flags(InteractionApplicationCommandCallbackDataFlags::EPHEMERAL)
+                    .content("Select a compiler:")
+                    .set_components(compile_components)
+            })
+        }).await?;
+    }
+    else {
+        command.edit_original_interaction_response(&ctx.http, |response| {
+            response
+                .content("Select a compiler:")
+                .components(|c| {
+                    *c = interactions::create_compile_panel(options);
+                    c
+                })
+        }).await?;
+    }
+
+    let resp = command.get_interaction_response(&ctx.http).await?;
+    let mut cib = resp.await_component_interactions(&ctx.shard).timeout(Duration::from_secs(30)).await;
+
+    // collect compiler into var
+    parse_result.target = language.to_owned();
+
+    let mut last_interaction = None;
+    let mut more_options_response = None;
+    while let Some(interaction) = &cib.next().await {
+        last_interaction = Some(interaction.clone());
+        match interaction.data.custom_id.as_str() {
+            "compiler_select" => {
+                parse_result.target = interaction.data.values[0].clone();
+                interaction.defer(&ctx.http).await?;
+            }
+            "2" => {
+                more_options_response = interactions::create_more_options_panel(ctx, interaction.clone(), & mut parse_result).await?;
+                cib.stop();
+                break;
+            }
+            "1" => {
+                cib.stop();
+                break;
+            }
+            _ => {
+                unreachable!("Cannot get here..");
+            }
+        }
+    }
+
+    // exit, they let this expire
+    if last_interaction.is_none() && more_options_response.is_none() {
+        return Ok(())
+    }
+
+    command.edit_original_interaction_response(&ctx.http, |resp| {
+        interactions::create_think_interaction(resp)
+    }).await.unwrap();
+
+    let data = ctx.data.read().await;
+    let result = {
+        let compilation_manager= data.get::<CompilerCache>().unwrap();
+        let compilation_manager_lock : RwLockReadGuard<CompilationManager> = compilation_manager.read().await;
+        let compilation_res = compilation_manager_lock.compile(&parse_result, &command.user).await;
+        let result = match compilation_res {
+            Ok(r) => r,
+            Err(e) => {
+                return Err(CommandError::from(format!("{}", e)));
+            }
+        };
+        result
+    };
+
+    //statistics
+    {
+        let stats_manager = data.get::<StatsManagerCache>().unwrap().lock().await;
+        if stats_manager.should_track() {
+            stats_manager.compilation(&language, result.0["color"] == COLOR_OKAY).await;
+        }
+    }
+
+    command.edit_original_interaction_response(&ctx.http, |resp| {
+        interactions::edit_to_confirmation_interaction(&result, resp)
+    }).await.unwrap();
+
+    let int_resp = command.get_interaction_response(&ctx.http).await?;
+    if let Some(int) = int_resp.await_component_interaction(&ctx.shard).await {
+        int.create_interaction_response(&ctx.http, |resp| {
+            interactions::create_dismiss_response(resp)
+        }).await?;
+
+        // dispatch final response
+        msg.unwrap().channel_id.send_message(&ctx.http, |new_msg| {
+            new_msg
+                .reference_message(msg.unwrap())
+                .set_embed(result)
+        }).await?;
+    }
     Ok(())
-}
-
-pub async fn handle_request(ctx : Context, mut content : String, author : User, msg : &Message) -> Result<CreateEmbed, CommandError> {
-    let data_read = ctx.data.read().await;
-    let reaction = {
-        let botinfo_lock = data_read.get::<ConfigCache>().unwrap();
-        let botinfo = botinfo_lock.read().await;
-        if let Some(loading_id) = botinfo.get("LOADING_EMOJI_ID") {
-            let loading_name = botinfo.get("LOADING_EMOJI_NAME").expect("Unable to find loading emoji name").clone();
-            discordhelpers::build_reaction(loading_id.parse::<u64>()?, &loading_name)
-        }
-        else {
-            ReactionType::Unicode(String::from("⏳"))
-        }
-    };
-
-    // Try to load in an attachment
-    let (code, ext) = parser::get_message_attachment(&msg.attachments).await?;
-    if !code.is_empty() {
-        content.push_str(&format!("\n```{}\n{}\n```\n", ext, code));
-    }
-
-    // parse user input
-    let compilation_manager = data_read.get::<CompilerCache>().unwrap();
-    let parse_result = parser::get_components(&content, &author, Some(&compilation_manager), &msg.referenced_message).await?;
-
-    // send out loading emote
-    let reaction = match msg
-        .react(&ctx.http, reaction)
-        .await
-    {
-        Ok(r) => r,
-        Err(e) => {
-            return Err(CommandError::from(format!(" Unable to react to message, am I missing permissions to react or use external emoji?\n{}", e)));
-        }
-    };
-
-    // dispatch our req
-    let compilation_manager_lock : RwLockReadGuard<CompilationManager> = compilation_manager.read().await;
-    let awd = compilation_manager_lock.compile(&parse_result, &author).await;
-    let result = match awd {
-        Ok(r) => r,
-        Err(e) => {
-            // we failed, lets remove the loading react so it doesn't seem like we're still processing
-            msg.delete_reaction_emoji(&ctx.http, reaction.emoji.clone()).await?;
-
-            return Err(CommandError::from(format!("{}", e)));
-        }
-    };
-    
-    // remove our loading emote
-    if msg.delete_reaction_emoji(&ctx.http, reaction.emoji.clone()).await
-        .is_err()
-    {
-        return Err(CommandError::from(
-            "Unable to remove reactions!\nAm I missing permission to manage messages?",
-        ));
-    }
-
-    let stats = data_read.get::<StatsManagerCache>().unwrap().lock().await;
-    if stats.should_track() {
-        stats.compilation(&result.0, !is_success_embed(&result.1)).await;
-    }
-
-    let mut guild = String::from("<unknown>");
-    if let Some(g) = msg.guild_id {
-        guild = g.to_string()
-    }
-    if let Ok(log) = env::var("COMPILE_LOG") {
-        if let Ok(id) = log.parse::<u64>() {
-            let emb = embeds::build_complog_embed(
-                is_success_embed(&result.1),
-                &parse_result.code,
-                &parse_result.target,
-                &author.tag(),
-                author.id.0,
-                &guild,
-            );
-            discordhelpers::manual_dispatch(ctx.http.clone(), id, emb).await;
-        }
-    }
-
-    Ok(result.1)
 }

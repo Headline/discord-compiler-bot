@@ -63,11 +63,11 @@ pub struct LanguageRequest {
     fail: bool,
 }
 impl LanguageRequest {
-    pub fn new(language: &str, fail: bool) -> LanguageRequest {
+    pub fn new(language: &str, is_success: bool) -> LanguageRequest {
         LanguageRequest {
             key: String::from(""),
             language: String::from(language),
-            fail,
+            fail: is_success,
         }
     }
 }

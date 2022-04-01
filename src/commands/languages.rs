@@ -48,44 +48,6 @@ pub async fn languages(ctx: &Context, msg: &Message, _args: Args) -> CommandResu
     let mut items_vec : Vec<String> = items.into_iter().collect();
     items_vec.sort();
 
-    let options = discordhelpers::build_menu_controls();
-    let pages = discordhelpers::build_menu_items(
-        items_vec,
-        15,
-        "Supported Languages",
-        &avatar,
-        &msg.author.tag(),
-        "*\\* = supports assembly output*"
-    );
-    let menu = Menu::new(ctx, msg, &pages, options);
-    match menu.run().await {
-        Ok(m) => m,
-        Err(e) => {
-            if e.to_string() == "Unknown Message" {
-                match msg
-                    .react(
-                        &ctx.http,
-                        discordhelpers::build_reaction(success_id, &success_name),
-                    )
-                    .await
-                {
-                    Ok(r) => r,
-                    Err(_e) => {
-                        // No need to fail here - this case is handled above
-                        return Ok(());
-                    }
-                };
-
-                return Ok(());
-            }
-
-            return Err(CommandError::from(format!(
-                "Failed to build languages menu\n{}",
-                e
-            )));
-        }
-    };
-
     debug!("Command executed");
     Ok(())
 }

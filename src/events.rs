@@ -1,3 +1,4 @@
+use std::error::Error;
 use serenity::{
     async_trait,
     framework::standard:: {
@@ -19,16 +20,11 @@ use crate::utls::discordhelpers;
 use crate::managers::stats::StatsManager;
 use serenity::model::id::{GuildId};
 use serenity::model::event::{MessageUpdateEvent};
-use crate::utls::discordhelpers::embeds;
+use crate::utls::discordhelpers::{embeds, manual_dispatch};
 use tokio::sync::MutexGuard;
-use serenity::model::channel::{ReactionType};
 
-use crate::utls::parser::{get_message_attachment, shortname_to_qualified};
-use crate::managers::compilation::RequestHandler;
-use serenity::collector::CollectReaction;
 use serenity::model::guild::GuildUnavailable;
-use crate::commands::compile::handle_request;
-use crate::utls::discordhelpers::embeds::embed_message;
+use serenity::model::interactions::Interaction;
 
 pub struct Handler; // event handler for serenity
 
@@ -60,13 +56,19 @@ impl ShardsReadyHandler for Handler {
 
 #[async_trait]
 impl EventHandler for Handler {
-    async fn message_update(&self, ctx: Context, new_data: MessageUpdateEvent) {
-        let data = ctx.data.read().await;
-        let mut message_cache = data.get::<MessageCache>().unwrap().lock().await;
-        if let Some(msg) = message_cache.get_mut(&new_data.id.0) {
-            if let Some(new_msg) = new_data.content {
-                if let Some (author) = new_data.author {
-                    discordhelpers::handle_edit(&ctx, new_msg, author, msg.our_msg.clone(), msg.original_msg.clone()).await;
+    async fn interaction_create(&self, ctx: Context, interaction: Interaction) {
+        if let Interaction::ApplicationCommand(command) = interaction {
+            let data_read = ctx.data.read().await;
+            let commands = data_read.get::<CommandCache>().unwrap().read().await;
+            match commands.on_command(&ctx, &command).await {
+                Ok(t) => {}
+                Err(e) => {
+                    manual_dispatch(ctx.http.clone(), command.channel_id.0, embeds::build_fail_embed(&command.user, &e.to_string())).await;
+                   /* let _ = command.create_interaction_response(&ctx.http, |rsp| {
+                        rsp.interaction_response_data(|data| {
+                            data.set_embed(embeds::build_fail_embed(&command.user, &e.to_string()))
+                        })
+                    }).await;*/
                 }
             }
         }
@@ -74,9 +76,9 @@ impl EventHandler for Handler {
 
     async fn guild_create(&self, ctx: Context, guild: Guild) {
         let data = ctx.data.read().await;
-        let cmd_mgr = data.get::<CommandCache>().unwrap().lock().await;
+        let cmd_mgr = data.get::<CommandCache>().unwrap().read().await;
         cmd_mgr.register_commands(&ctx, &guild).await;
-
+        println!("Registerring commands...");
         let now: DateTime<Utc> = Utc::now();
         if guild.joined_at + Duration::seconds(30) > now {
             let data = ctx.data.read().await;

@@ -79,7 +79,7 @@ impl TypeMapKey for MessageCache {
 /// Holds the Command Manager which handles command registration logic
 pub struct CommandCache;
 impl TypeMapKey for CommandCache {
-    type Value = Arc<Mutex<CommandManager>>;
+    type Value = Arc<RwLock<CommandManager>>;
 }
 
 pub async fn fill(
@@ -138,7 +138,7 @@ pub async fn fill(
     data.insert::<BlocklistCache>(Arc::new(RwLock::new(blocklist)));
 
     let commands = CommandManager::new();
-    data.insert::<CommandCache>(Arc::new(Mutex::new(commands)));
+    data.insert::<CommandCache>(Arc::new(RwLock::new(commands)));
 
     Ok(())
 }

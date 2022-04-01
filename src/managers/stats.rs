@@ -34,8 +34,8 @@ impl StatsManager {
         !self.url.is_empty() && !self.pass.is_empty()
     }
 
-    pub async fn compilation(&self, language: &str, fail: bool) {
-        let mut cmd = LanguageRequest::new(language, fail);
+    pub async fn compilation(&self, language: &str, is_success: bool) {
+        let mut cmd = LanguageRequest::new(language, is_success);
         self.send_request::<LanguageRequest>(&mut cmd).await;
     }
 

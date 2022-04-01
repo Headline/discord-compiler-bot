@@ -56,15 +56,15 @@ impl CompilationManager {
         })
     }
 
-    pub async fn compile(&self, parser_result : &ParserResult, author : &User) -> Result<(String, CreateEmbed), CommandError> {
+    pub async fn compile(&self, parser_result : &ParserResult, author : &User) -> Result<CreateEmbed, CommandError> {
         return match self.resolve_target(&parser_result.target) {
             RequestHandler::CompilerExplorer => {
                 let result = self.compiler_explorer(parser_result).await?;
-                Ok((result.0, result.1.to_embed(author, false)))
+                Ok(result.to_embed(author, false))
             }
             RequestHandler::WandBox => {
                 let result = self.wandbox(&parser_result).await?;
-                Ok((result.0, result.1.to_embed(&author, false)))
+                Ok(result.to_embed(&author, parser_result))
             }
             RequestHandler::None => {
                 Err(CommandError::from(
@@ -74,7 +74,7 @@ impl CompilationManager {
         }
     }
 
-    pub async fn assembly(&self, parse_result : &ParserResult, author : &User) -> Result<(String, CreateEmbed), CommandError> {
+    pub async fn assembly(&self, parse_result : &ParserResult, author : &User) -> Result<CreateEmbed, CommandError> {
         let filters = CompilationFilters {
             binary: None,
             comment_only: Some(true),
@@ -100,10 +100,10 @@ impl CompilationManager {
         let target = if parse_result.target == "haskell" { "ghc901" } else { &parse_result.target };
         let compiler = self.gbolt.resolve(target).unwrap();
         let response = Godbolt::send_request(&compiler, &parse_result.code, options, USER_AGENT).await?;
-        Ok((compiler.lang, response.to_embed(author, true)))
+        Ok(response.to_embed(author, true))
     }
 
-    pub async fn compiler_explorer(&self, parse_result : &ParserResult) -> Result<(String, godbolt::GodboltResponse), GodboltError> {
+    pub async fn compiler_explorer(&self, parse_result : &ParserResult) -> Result<godbolt::GodboltResponse, GodboltError> {
         let filters = CompilationFilters {
             binary: None,
             comment_only: Some(true),
@@ -132,7 +132,7 @@ impl CompilationManager {
         let target = if parse_result.target == "haskell" { "ghc901" } else { &parse_result.target };
         let compiler = self.gbolt.resolve(target).unwrap();
         let response = Godbolt::send_request(&compiler, &parse_result.code,  options, USER_AGENT).await?;
-        Ok((compiler.lang, response))
+        Ok(response)
     }
 
     pub fn resolve_target(&self, target : &str) -> RequestHandler {
@@ -154,7 +154,7 @@ impl CompilationManager {
         }
     }
 
-    pub async fn wandbox(&self, parse_result : &ParserResult) -> Result<(String, wandbox::CompilationResult), WandboxError> {
+    pub async fn wandbox(&self, parse_result : &ParserResult) -> Result<wandbox::CompilationResult, WandboxError> {
         let mut builder = CompilationBuilder::new();
         builder.code(&parse_result.code);
         builder.target(&parse_result.target);
@@ -164,10 +164,13 @@ impl CompilationManager {
 
         builder.build(&self.wbox)?;
         let res = builder.dispatch().await?;
-        Ok((builder.lang, res))
+        Ok(res)
     }
 
-    pub fn slash_cmd_langs() -> [&str;11] {
+    pub fn slash_cmd_langs() -> [&'static str; 11] {
         ["Python", "C++", "Javascript", "C", "Java", "Bash", "Lua", "C#", "Rust", "Php", "Perl"]
+    }
+    pub fn slash_cmd_langs_asm() -> [&'static str; 7] {
+        ["C++", "C", "Haskell", "Java", "Python", "Rust", "Zig"]
     }
 }

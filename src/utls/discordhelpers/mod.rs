@@ -1,4 +1,5 @@
 pub mod embeds;
+pub mod interactions;
 
 use std::str;
 use std::sync::Arc;
@@ -72,29 +73,6 @@ pub fn build_menu_items(
     pages
 }
 
-pub fn build_menu_controls() -> MenuOptions {
-    let controls = vec![
-        Control::new(
-            ReactionType::from('◀'),
-            Arc::new(|m, r| Box::pin(prev_page(m, r))),
-        ),
-        Control::new(
-            ReactionType::from('🛑'),
-            Arc::new(|m, r| Box::pin(close_menu(m, r))),
-        ),
-        Control::new(
-            ReactionType::from('▶'),
-            Arc::new(|m, r| Box::pin(next_page(m, r))),
-        ),
-    ];
-
-    // Let's create options for the menu.
-    MenuOptions {
-        controls,
-        ..Default::default()
-    }
-}
-
 // Pandas#3**2 on serenity disc, tyty
 pub fn build_reaction(emoji_id: u64, emoji_name: &str) -> ReactionType {
     ReactionType::Custom {
@@ -102,70 +80,6 @@ pub fn build_reaction(emoji_id: u64, emoji_name: &str) -> ReactionType {
         id: EmojiId::from(emoji_id),
         name: Some(String::from(emoji_name)),
     }
-}
-
-pub async fn handle_edit(ctx : &Context, content : String, author : User, mut old : Message, original_message: Message) {
-    let prefix = {
-        let data = ctx.data.read().await;
-        let info = data.get::<ConfigCache>().unwrap().read().await;
-        info.get("BOT_PREFIX").unwrap().to_owned()
-    };
-
-    // try to clear reactions
-    let _ = old.delete_reactions(&ctx).await;
-
-    if content.starts_with(&format!("{}asm", prefix)) {
-        if let Err(e) = handle_edit_asm(&ctx, content, author.clone(), old.clone(), original_message.clone()).await {
-            let err = embeds::build_fail_embed(&author, &e.to_string());
-            embeds::edit_message_embed(&ctx, & mut old, err).await;
-        }
-    }
-    else if content.starts_with(&format!("{}compile", prefix)) {
-        if let Err(e) = handle_edit_compile(&ctx, content, author.clone(), old.clone(), original_message.clone()).await {
-            let err = embeds::build_fail_embed(&author, &e.to_string());
-            embeds::edit_message_embed(&ctx, & mut old, err).await;
-        }
-    }
-    else if content.starts_with(&format!("{}cpp", prefix)) {
-        if let Err(e) = handle_edit_cpp(&ctx, content, author.clone(), old.clone(), original_message.clone()).await {
-            let err = embeds::build_fail_embed(&author, &e.to_string());
-            embeds::edit_message_embed(&ctx, & mut old, err).await;
-        }
-    }
-    else {
-        let err = embeds::build_fail_embed(&author, "Invalid command for edit functionality!");
-        embeds::edit_message_embed(&ctx, & mut old, err).await;
-    }
-}
-
-pub async fn handle_edit_cpp(ctx : &Context, content : String, author : User, mut old : Message, original_msg: Message) -> CommandResult {
-    let embed = crate::commands::cpp::handle_request(ctx.clone(), content, author, &original_msg).await?;
-
-    let compilation_successful = embed.0.get("color").unwrap() == COLOR_OKAY;
-    discordhelpers::send_completion_react(ctx, &old, compilation_successful).await?;
-
-    embeds::edit_message_embed(&ctx, & mut old, embed).await;
-    Ok(())
-}
-
-pub async fn handle_edit_compile(ctx : &Context, content : String, author : User, mut old : Message, original_msg: Message) -> CommandResult {
-    let embed = crate::commands::compile::handle_request(ctx.clone(), content, author, &original_msg).await?;
-
-    let compilation_successful = embed.0.get("color").unwrap() == COLOR_OKAY;
-    discordhelpers::send_completion_react(ctx, &old, compilation_successful).await?;
-
-    embeds::edit_message_embed(&ctx, & mut old, embed).await;
-    Ok(())
-}
-
-pub async fn handle_edit_asm(ctx : &Context, content : String, author : User, mut old : Message, original_msg: Message) -> CommandResult {
-    let emb = crate::commands::asm::handle_request(ctx.clone(), content, author, &original_msg).await?;
-
-    let success = emb.0.get("color").unwrap() == COLOR_OKAY;
-    embeds::edit_message_embed(&ctx, & mut old, emb).await;
-
-    send_completion_react(ctx, &old, success).await?;
-    Ok(())
 }
 
 pub fn is_success_embed(embed : &CreateEmbed) -> bool {
