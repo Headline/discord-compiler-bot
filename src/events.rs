@@ -1,7 +1,6 @@
-use std::error::Error;
 use serenity::{
     async_trait,
-    framework::standard:: {
+    framework::standard::{
         macros::hook, CommandResult, DispatchError
     },
     model::{
@@ -11,20 +10,20 @@ use serenity::{
         gateway::Ready
     },
     prelude::*,
+    model::id::{GuildId},
+    model::guild::GuildUnavailable,
+    model::interactions::Interaction
 };
 
 use chrono::{DateTime, Duration, Utc};
 
-use crate::cache::*;
-use crate::utls::discordhelpers;
-use crate::managers::stats::StatsManager;
-use serenity::model::id::{GuildId};
-use serenity::model::event::{MessageUpdateEvent};
-use crate::utls::discordhelpers::{embeds, manual_dispatch};
+use crate::{
+    cache::*,
+    utls::discordhelpers,
+    managers::stats::StatsManager,
+    utls::discordhelpers::{embeds}
+};
 use tokio::sync::MutexGuard;
-
-use serenity::model::guild::GuildUnavailable;
-use serenity::model::interactions::Interaction;
 
 pub struct Handler; // event handler for serenity
 
@@ -59,7 +58,7 @@ impl EventHandler for Handler {
             let data_read = ctx.data.read().await;
             let commands = data_read.get::<CommandCache>().unwrap().read().await;
             match commands.on_command(&ctx, &command).await {
-                Ok(t) => {}
+                Ok(_) => {}
                 Err(e) => {
                     if let Err(e2) = command.edit_original_interaction_response(&ctx.http, |rsp| {
                         rsp.content("")

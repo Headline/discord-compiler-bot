@@ -1,22 +1,30 @@
-use std::collections::HashMap;
-use std::env;
-use std::sync::Arc;
-use std::error::Error;
+use std::{
+    collections::HashMap,
+    env,
+    sync::Arc,
+    error::Error
+};
 
-use tokio::sync::RwLock;
-use tokio::sync::Mutex;
+use tokio::{
+    sync::RwLock,
+    sync::Mutex
+};
 
-use serenity::prelude::{TypeMap, TypeMapKey};
-use serenity::model::id::UserId;
-use serenity::client::bridge::gateway::ShardManager;
+use serenity::{
+    prelude::{TypeMap, TypeMapKey},
+    model::id::UserId,
+    client::bridge::gateway::ShardManager,
+    model::channel::Message
+};
 
-use crate::managers::stats::StatsManager;
-use crate::utls::blocklist::Blocklist;
+use crate::{
+    managers::stats::StatsManager,
+    utls::blocklist::Blocklist,
+    managers::command::CommandManager,
+    managers::compilation::CompilationManager
+};
 
 use lru_cache::LruCache;
-use serenity::model::channel::Message;
-use crate::managers::command::CommandManager;
-use crate::managers::compilation::CompilationManager;
 
 /** Caching **/
 

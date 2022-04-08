@@ -1,111 +1,20 @@
 pub mod embeds;
 pub mod interactions;
 
-use std::str;
-use std::sync::Arc;
+use std::{
+    str,
+    sync::Arc
+};
 
 use serenity::{
-    builder::{CreateEmbed, CreateMessage},
+    builder::{CreateEmbed},
     http::Http,
     model::prelude::*,
 };
 
-use serenity_utils::menu::*;
-
 use crate::utls::constants::*;
-use crate::utls::{discordhelpers};
 use tokio::sync::{MutexGuard};
 use serenity::client::bridge::gateway::{ShardManager};
-use crate::cache::{ConfigCache};
-use serenity::client::Context;
-use serenity::framework::standard::CommandResult;
-
-pub fn build_menu_items(
-    items: Vec<String>,
-    items_per_page: usize,
-    title: &str,
-    avatar: &str,
-    author: &str,
-    desc: &str
-) -> Vec<CreateMessage<'static>> {
-    let mut pages: Vec<CreateMessage> = Vec::new();
-    let num_pages = items.len() / items_per_page;
-
-    let mut current_page = 0;
-    while current_page < num_pages + 1 {
-        let start = current_page * items_per_page;
-        let mut end = start + items_per_page;
-        if end > items.len() {
-            end = items.len();
-        }
-        let mut page = CreateMessage::default();
-        page.embed(|e| {
-            let mut description = format!("{}\n", desc);
-            for (i, item) in items[current_page * items_per_page..end].iter().enumerate() {
-                if i > items_per_page {
-                    break;
-                }
-                description.push_str(&format!(
-                    "**{}**) {}\n",
-                    current_page * items_per_page + i + 1,
-                    item
-                ))
-            }
-            e.color(COLOR_OKAY);
-            e.title(title);
-            e.description(description);
-            e.footer(|f| {
-                f.text(&format!(
-                    "Requested by {} | Page {}/{}",
-                    author,
-                    current_page + 1,
-                    num_pages + 1
-                ))
-            });
-            e.thumbnail(avatar);
-            e
-        });
-
-        pages.push(page);
-        current_page += 1;
-    }
-
-    pages
-}
-
-// Pandas#3**2 on serenity disc, tyty
-pub fn build_reaction(emoji_id: u64, emoji_name: &str) -> ReactionType {
-    ReactionType::Custom {
-        animated: false,
-        id: EmojiId::from(emoji_id),
-        name: Some(String::from(emoji_name)),
-    }
-}
-
-pub fn is_success_embed(embed : &CreateEmbed) -> bool {
-    embed.0.get("color").unwrap() == COLOR_OKAY
-}
-
-pub async fn send_completion_react(ctx: &Context, msg: &Message, success: bool) -> Result<Reaction, serenity::Error> {
-    let reaction;
-    if success {
-        {
-            let data = ctx.data.read().await;
-            let botinfo_lock = data.get::<ConfigCache>().unwrap();
-            let botinfo = botinfo_lock.read().await;
-            if let Some(success_id) = botinfo.get("SUCCESS_EMOJI_ID") {
-                let success_name = botinfo.get("SUCCESS_EMOJI_NAME").expect("Unable to find success emoji name").clone();
-                reaction = discordhelpers::build_reaction(success_id.parse::<u64>()?, &success_name);
-            }
-            else {
-                reaction = ReactionType::Unicode(String::from("✅"));
-            }
-        }
-    } else {
-        reaction = ReactionType::Unicode(String::from("❌"));
-    }
-    return msg.react(&ctx.http, reaction).await
-}
 
 // Certain compiler outputs use unicode control characters that
 // make the user experience look nice (colors, etc). This ruins

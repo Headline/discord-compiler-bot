@@ -1,17 +1,14 @@
-use std::env;
-
 use serenity::{
-    builder::CreateEmbed,
-    framework::standard::{macros::command, Args, CommandResult},
-    model::prelude::*,
-    prelude::*,
+    framework::standard::{CommandResult},
+    client::Context,
+    model::interactions::application_command::ApplicationCommandInteraction,
+    model::prelude::message_component::ButtonStyle
 };
-use serenity::model::interactions::application_command::ApplicationCommandInteraction;
-use serenity::model::prelude::message_component::ButtonStyle;
-use crate::cache::ConfigCache;
 
-use crate::utls::constants::*;
-use crate::utls::discordhelpers::embeds;
+use crate::{
+    cache::ConfigCache,
+    utls::constants::*
+};
 
 pub async fn help(ctx: &Context, msg: &ApplicationCommandInteraction) -> CommandResult {
     let data = ctx.data.read().await;

@@ -1,9 +1,13 @@
-use reqwest::header::{ACCEPT, USER_AGENT};
-use reqwest::Response;
+use reqwest::{
+    header::{ACCEPT, USER_AGENT},
+    Response
+};
 use serde::*;
-use serenity::async_trait;
+use serenity::{
+    async_trait,
+    model::id::GuildId
+};
 use std::sync::Arc;
-use serenity::model::id::GuildId;
 
 #[async_trait]
 pub trait Sendable: Serialize {

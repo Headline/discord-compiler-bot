@@ -1,17 +1,18 @@
-use serenity::framework::standard::{macros::command, Args, CommandResult, CommandError};
-use serenity::model::prelude::*;
-use serenity::prelude::*;
+use serenity::{
+    framework::standard::{CommandResult},
+    model::prelude::*,
+    prelude::*,
+    model::interactions::application_command::ApplicationCommandInteraction,
+    model::interactions::application_command::ApplicationCommandInteractionDataOptionValue
+};
 
-use crate::cache::{MessageCache, CompilerCache, ConfigCache, MessageCacheEntry};
-use crate::utls::discordhelpers::embeds;
-use crate::utls::discordhelpers;
-use crate::cppeval::eval::CppEval;
-use crate::utls::parser::ParserResult;
-use serenity::builder::CreateEmbed;
-use serenity::model::interactions::application_command::ApplicationCommandInteraction;
-use crate::utls::constants::{COLOR_OKAY, COLOR_WARN};
-use crate::utls::discordhelpers::embeds::ToEmbed;
-use serenity::model::interactions::application_command::ApplicationCommandInteractionDataOptionValue;
+use crate::{
+    cache::{CompilerCache},
+    cppeval::eval::CppEval,
+    utls::parser::ParserResult,
+    utls::constants::{COLOR_OKAY},
+    utls::discordhelpers::embeds::ToEmbed
+};
 
 pub async fn cpp(ctx: &Context, msg: &ApplicationCommandInteraction) -> CommandResult {
     if msg.data.options.is_empty() {

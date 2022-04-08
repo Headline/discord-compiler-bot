@@ -1,9 +1,11 @@
-use serenity::framework::standard::{macros::command, CommandResult};
-use serenity::model::prelude::*;
-use serenity::prelude::*;
+use serenity::{
+    framework::standard::{CommandResult},
+    model::prelude::*,
+    prelude::*,
+    model::interactions::application_command::ApplicationCommandInteraction
+};
 
 use std::time::Instant;
-use serenity::model::interactions::application_command::ApplicationCommandInteraction;
 
 pub async fn ping(ctx: &Context, msg: &ApplicationCommandInteraction) -> CommandResult {
 

@@ -1,9 +1,11 @@
-use std::error::Error;
-use std::future::Future;
-use std::sync::Arc;
-use std::time::Duration;
-use futures_util::future::select;
+use std::{
+    sync::Arc,
+    future::Future,
+    time::Duration
+};
+
 use futures_util::StreamExt;
+
 use serenity::{
     builder::{CreateComponents, CreateEmbed, CreateInteractionResponse, CreateSelectMenuOption},
     client::Context,
@@ -11,21 +13,21 @@ use serenity::{
     model::interactions::{InteractionApplicationCommandCallbackDataFlags, InteractionResponseType},
     model::interactions::message_component::{ActionRowComponent, ButtonStyle, InputTextStyle},
     model::prelude::message_component::MessageComponentInteraction,
-    model::prelude::modal::ModalSubmitInteraction
+    model::prelude::modal::ModalSubmitInteraction,
+    builder::EditInteractionResponse,
+    model::interactions::application_command::ApplicationCommandInteraction
 };
-use serenity::builder::EditInteractionResponse;
-use serenity::model::interactions::application_command::ApplicationCommandInteraction;
-use serenity::model::interactions::InteractionType;
 use crate::{
-    managers::compilation::{CompilationManager, RequestHandler},
+    utls::discordhelpers::embeds,
+    utls::constants::{C_ASM_COMPILERS, C_EXEC_COMPILERS, COLOR_OKAY, CPP_ASM_COMPILERS, CPP_EXEC_COMPILERS},
+    cache::StatsManagerCache,
+    managers::compilation::{RequestHandler},
     cache::CompilerCache,
     utls::constants::COLOR_WARN,
-    utls::parser::{ParserResult}
+    utls::parser::{ParserResult},
+    utls::discordhelpers::embeds::build_publish_embed,
+    utls::{discordhelpers, parser}
 };
-use crate::cache::StatsManagerCache;
-use crate::utls::constants::{C_ASM_COMPILERS, C_EXEC_COMPILERS, COLOR_OKAY, CPP_ASM_COMPILERS, CPP_EXEC_COMPILERS};
-use crate::utls::discordhelpers::embeds::build_publish_embed;
-use crate::utls::parser;
 
 pub fn create_compile_panel(compiler_options : Vec<CreateSelectMenuOption>) -> CreateComponents {
     let mut components = CreateComponents::default();
@@ -204,34 +206,6 @@ pub fn edit_to_confirmation_interaction<'a>(result: &CreateEmbed, resp: &'a mut 
         })
 }
 
-pub fn create_confirmation_interaction<'a>(result: & CreateEmbed, resp: &'a mut CreateInteractionResponse) -> &'a mut CreateInteractionResponse {
-    resp
-        .kind(InteractionResponseType::UpdateMessage)
-        .interaction_response_data(|data| {
-            data
-                .content("")
-                .embed(|emb| {
-                    emb
-                        .color(COLOR_WARN)
-                        .description("This result will not be visible to others until you click the publish button.\n\n \
-                    If you are unhappy with your results please start a new compilation request \
-                    and dismiss this message.")
-                })
-                .add_embed(result.clone())
-                .components(|components| {
-                    components.set_action_rows(Vec::new())
-                        .create_action_row(|row| {
-                            row.create_button(|btn| {
-                                btn
-                                    .custom_id("publish")
-                                    .label("Publish")
-                                    .style(ButtonStyle::Primary)
-                            })
-                        })
-                })
-        })
-}
-
 pub fn create_language_interaction<'a>(resp : &'a mut CreateInteractionResponse, languages : &[&str]) -> &'a mut CreateInteractionResponse {
     resp
         .kind(InteractionResponseType::ChannelMessageWithSource)
@@ -331,7 +305,7 @@ where
     }
 
     let language = parse_result.target.clone();
-    let mut options = create_compiler_options(ctx, &language, is_asm).await?;
+    let options = create_compiler_options(ctx, &language, is_asm).await?;
 
     if !sent_interaction {
         command.create_interaction_response(&ctx.http, |response| {
@@ -412,14 +386,26 @@ where
     }).await.unwrap();
 
     let data = ctx.data.read().await;
-    let mut result = get_result(parse_result).await?;
+    let result = get_result(parse_result.clone()).await?;
+    let is_success = result.0["color"] == COLOR_OKAY;
     //statistics
     {
         let stats_manager = data.get::<StatsManagerCache>().unwrap().lock().await;
         if !is_asm && stats_manager.should_track() {
-            stats_manager.compilation(&language, result.0["color"] == COLOR_OKAY).await;
+            stats_manager.compilation(&language, is_success).await;
         }
     }
+
+    let guild = if command.guild_id.is_some() {command.guild_id.unwrap().0.to_string()} else {"<<unknown>>".to_owned()};
+    let emb = embeds::build_complog_embed(
+        is_success,
+        &parse_result.code,
+        &parse_result.target,
+        &command.user.tag(),
+        command.user.id.0,
+        &guild,
+    );
+    discordhelpers::manual_dispatch(ctx.http.clone(), command.channel_id.0, emb).await;
 
     command.edit_original_interaction_response(&ctx.http, |resp| {
         edit_to_confirmation_interaction(&result, resp)

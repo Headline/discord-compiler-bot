@@ -1,12 +1,14 @@
-use serenity::framework::standard::{macros::command, Args, CommandResult};
-use serenity::model::prelude::*;
-use serenity::prelude::*;
+use serenity::{
+    framework::standard::{CommandResult},
+    model::prelude::*,
+    prelude::*,
+    model::interactions::application_command::ApplicationCommandInteraction
+};
 
-use std::env;
-use serenity::model::interactions::application_command::ApplicationCommandInteraction;
-use crate::cache::ConfigCache;
-
-use crate::utls::discordhelpers::embeds;
+use crate::{
+    cache::ConfigCache,
+    utls::discordhelpers::embeds
+};
 
 pub async fn invite(ctx: &Context, msg: &ApplicationCommandInteraction) -> CommandResult {
     let invite_link = {

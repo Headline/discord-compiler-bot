@@ -1,17 +1,16 @@
 use std::collections::HashMap;
-use serenity::builder::{CreateActionRow, CreateEmbed, CreateSelectMenu, CreateSelectMenuOption, CreateSelectMenuOptions};
-use serenity::client::Context;
-use serenity::framework::standard::CommandResult;
-use serenity::model::guild::Guild;
-use serenity::model::interactions::application_command::{ApplicationCommandInteraction, ApplicationCommandOptionType, ApplicationCommandType};
-use serenity::model::interactions::InteractionResponseType;
-use crate::cache::{CompilerCache};
-use crate::commands;
-use crate::managers::compilation::CompilationManager;
+use serenity::{
+    client::Context,
+    framework::standard::CommandResult,
+    model::guild::Guild,
+    model::interactions::application_command::{ApplicationCommandInteraction, ApplicationCommandOptionType, ApplicationCommandType}
+};
+use crate::{
+    cache::{CompilerCache},
+    commands
+};
 
-pub struct CommandManager {
-
-}
+pub struct CommandManager;
 
 impl CommandManager {
     pub fn new() -> Self {

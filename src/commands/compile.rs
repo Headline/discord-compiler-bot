@@ -3,21 +3,14 @@ use serenity::{
     framework::standard::CommandError,
     client::Context,
     model::interactions::application_command::ApplicationCommandInteraction,
-    model::interactions::InteractionResponseType,
-    model::prelude::InteractionApplicationCommandCallbackDataFlags
 };
 
-use std::time::Duration;
-use futures_util::StreamExt;
 use tokio::sync::RwLockReadGuard;
 
 use crate::{
     managers::compilation::{CompilationManager},
-    cache::{CompilerCache, StatsManagerCache},
+    cache::{CompilerCache},
     utls::discordhelpers::{interactions},
-    utls::{parser},
-    utls::constants::COLOR_OKAY,
-    utls::parser::{ParserResult}
 };
 
 pub async fn compile(ctx: &Context, command : &ApplicationCommandInteraction) -> CommandResult {

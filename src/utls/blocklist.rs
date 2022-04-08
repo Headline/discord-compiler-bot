@@ -26,12 +26,13 @@ impl Blocklist {
         self.list.contains(&snowflake.to_string())
     }
 
+    #[allow(dead_code)]
     pub fn block(&mut self, snowflake : u64) {
         let snowflake = snowflake.to_string();
         self.list.push(snowflake);
         self.write();
     }
-
+    #[allow(dead_code)]
     pub fn unblock(&mut self, snowflake : u64) {
         let snowflake = snowflake.to_string();
         self.list.retain(|x| *x != snowflake);

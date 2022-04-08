@@ -8,33 +8,33 @@ mod stats;
 mod utls;
 mod cppeval;
 mod managers;
-mod tests;
+
+use std::{collections::HashSet, env, error::Error};
 
 use serenity::{
     framework::{standard::macros::group, StandardFramework},
     http::Http,
+    client::bridge::gateway::GatewayIntents,
+    client::Context,
+    framework::standard::{Args, CommandResult},
+    model::channel::Message,
+    framework::standard::{macros::command},
+    model::interactions::message_component::ButtonStyle
 };
 
-use std::{collections::HashSet, env, error::Error};
-use serenity::client::bridge::gateway::GatewayIntents;
-use serenity::client::Context;
-use serenity::framework::standard::{Args, CommandResult};
-use serenity::model::channel::Message;
-use crate::apis::dbl::BotsListApi;
-use crate::utls::constants::COLOR_WARN;
+use crate::{
+    apis::dbl::BotsListApi,
+    utls::constants::COLOR_WARN,
+    cache::ConfigCache
+};
 
 #[macro_use]
 extern crate log;
 extern crate pretty_env_logger;
 
-/** Command Registration **/
-use serenity::framework::standard::{macros::command};
-use serenity::model::interactions::message_component::ButtonStyle;
-use crate::cache::ConfigCache;
-
 #[command]
 #[aliases("cpp", "asm", "help", "botinfo", "format", "invite", "ping")]
-pub async fn compile(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
+pub async fn compile(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
     let data = ctx.data.read().await;
     let botinfo = data.get::<ConfigCache>().unwrap().read().await;
     let github_link = botinfo.get("GITHUB_LINK").unwrap();

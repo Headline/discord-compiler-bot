@@ -1,18 +1,21 @@
-use serenity::framework::standard::{macros::command, Args, CommandResult, CommandError, Delimiter};
-use serenity::model::prelude::*;
-use serenity::prelude::*;
-use crate::cache::{CompilerCache};
-use crate::utls::parser::{ParserResult, get_message_attachment};
+use serenity::{
+    framework::standard::{CommandResult, CommandError},
+    model::prelude::*,
+    prelude::*,
+    builder::{CreateInteractionResponse, EditInteractionResponse},
+    model::interactions::application_command::ApplicationCommandInteraction,
+    model::interactions::message_component::ButtonStyle
+};
+use crate::{
+    cache::{CompilerCache},
+    utls::parser::{ParserResult},
+    utls::constants::COLOR_WARN,
+    utls::discordhelpers::interactions,
+    utls::parser
+};
 use godbolt::{Format, Godbolt};
-use std::io::Write;
 use std::time::Duration;
 use futures_util::StreamExt;
-use serenity::builder::{CreateInteractionResponse, EditInteractionResponse};
-use serenity::model::interactions::application_command::ApplicationCommandInteraction;
-use serenity::model::interactions::message_component::ButtonStyle;
-use crate::utls::constants::COLOR_WARN;
-use crate::utls::discordhelpers::interactions;
-use crate::utls::parser;
 
 pub async fn format(ctx: &Context, command: &ApplicationCommandInteraction) -> CommandResult {
     let mut msg = None;

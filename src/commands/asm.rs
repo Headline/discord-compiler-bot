@@ -1,28 +1,14 @@
-use std::time::Duration;
-use futures_util::StreamExt;
 use serenity::{
     client::Context,
-    framework::standard::{macros::command, Args, CommandError, CommandResult},
+    framework::standard::{CommandError, CommandResult},
+    model::interactions::application_command::ApplicationCommandInteraction
 };
 
-<<<<<<< HEAD
-use crate::cache::{ConfigCache, MessageCache, CompilerCache, MessageCacheEntry};
-=======
-use crate::cache::{ConfigCache, MessageCache, CompilerCache, StatsManagerCache};
->>>>>>> 6d3df4a (Begin Discord integrations API implementation)
-use crate::utls::constants::*;
-use crate::utls::{discordhelpers};
-use crate::utls::discordhelpers::{embeds, interactions};
-
-use serenity::builder::{CreateEmbed};
-use serenity::model::channel::Message;
-use serenity::model::interactions::application_command::ApplicationCommandInteraction;
-use serenity::model::interactions::{InteractionApplicationCommandCallbackDataFlags, InteractionResponseType};
-use serenity::model::user::User;
-use crate::managers::compilation::CompilationManager;
-
-use crate::utls::{parser};
-use crate::utls::parser::ParserResult;
+use crate::{
+    cache::{CompilerCache},
+    utls::discordhelpers::{interactions},
+    managers::compilation::CompilationManager
+};
 
 pub async fn asm(ctx: &Context, command: &ApplicationCommandInteraction) -> CommandResult {
     interactions::handle_asm_or_compile_request(ctx, command, &CompilationManager::slash_cmd_langs_asm(), true, |parse_result| async move {

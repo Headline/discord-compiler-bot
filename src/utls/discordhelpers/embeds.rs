@@ -2,16 +2,17 @@ use std::str;
 
 use serenity::{
     builder::{CreateEmbed, CreateMessage},
-    model::prelude::*,
-    client::Context
+    model::prelude::*
 };
 
 use wandbox::*;
 
-use crate::utls::constants::*;
-use crate::utls::{discordhelpers};
-use crate::utls::discordhelpers::conform_external_str;
-use crate::utls::parser::ParserResult;
+use crate::{
+    utls::constants::*,
+    utls::{discordhelpers},
+    utls::discordhelpers::conform_external_str,
+    utls::parser::ParserResult
+};
 
 pub trait ToEmbed<T> {
     fn to_embed(self, author : &User, any : T) -> CreateEmbed;
@@ -243,16 +244,6 @@ pub fn build_publish_embed() -> CreateEmbed {
     embed
 }
 
-pub async fn edit_message_embed(ctx : &Context, old : & mut Message, emb : CreateEmbed) {
-    let _ = old.edit(ctx, |m| {
-        m.embed(|e| {
-            e.0 = emb.0;
-            e
-        });
-        m
-    }).await;
-}
-
 #[allow(dead_code)]
 pub fn build_small_compilation_embed(author: &User, res: & mut CompilationResult) -> CreateEmbed {
     let mut embed = CreateEmbed::default();
@@ -352,7 +343,7 @@ pub fn build_complog_embed(
     guild: &str,
 ) -> CreateEmbed {
     let mut embed = CreateEmbed::default();
-    if success {
+    if !success {
         embed.color(COLOR_FAIL);
     } else {
         embed.color(COLOR_OKAY);
