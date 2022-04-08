@@ -103,11 +103,16 @@ pub async fn fill(
         }
     }
 
+    map.insert("INVITE_LINK", env::var("INVITE_LINK")?);
+    map.insert("DISCORDBOTS_LINK", env::var("DISCORDBOTS_LINK")?);
+    map.insert("GITHUB_LINK", env::var("GITHUB_LINK")?);
+    map.insert("STATS_LINK", env::var("STATS_LINK")?);
     map.insert("GIT_HASH_LONG", String::from(env!("GIT_HASH_LONG")));
     map.insert("GIT_HASH_SHORT", String::from(env!("GIT_HASH_SHORT")));
     map.insert("JOIN_LOG", env::var("JOIN_LOG")?);
     map.insert("BOT_PREFIX", String::from(prefix));
     map.insert("BOT_ID", id.to_string());
+
     data.insert::<ConfigCache>(Arc::new(RwLock::new(map)));
 
     // Shard manager for universal presence

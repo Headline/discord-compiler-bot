@@ -17,21 +17,73 @@ use serenity::{
 
 use std::{collections::HashSet, env, error::Error};
 use serenity::client::bridge::gateway::GatewayIntents;
+use serenity::client::Context;
+use serenity::framework::standard::{Args, CommandResult};
+use serenity::model::channel::Message;
 use crate::apis::dbl::BotsListApi;
+use crate::utls::constants::COLOR_WARN;
 
 #[macro_use]
 extern crate log;
 extern crate pretty_env_logger;
 
 /** Command Registration **/
-use crate::commands::{
-    asm::*, botinfo::*, compilers::*,
-    help::*, languages::*, ping::*, block::*, unblock::*,
-    invite::*, cpp::*, format::*, formats::*
-};
+use serenity::framework::standard::{macros::command};
+use serenity::model::interactions::message_component::ButtonStyle;
+use crate::cache::ConfigCache;
+
+#[command]
+#[aliases("cpp", "asm", "help", "botinfo", "format", "invite", "ping")]
+pub async fn compile(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
+    let data = ctx.data.read().await;
+    let botinfo = data.get::<ConfigCache>().unwrap().read().await;
+    let github_link = botinfo.get("GITHUB_LINK").unwrap();
+
+    msg.channel_id.send_message(&ctx.http, |new| {
+        new.reference_message(msg).embed(|emb| {
+            emb.color(COLOR_WARN)
+                .title("A message from the author")
+                .description("Hello,\n\
+                As you may already know, Discord is limiting the ability of large bots to view message content. \
+                This means that we will no longer be able to respond to requests as we used to, our entire command \
+                handling system has been rewritten, and we no longer operate using the prefix ';'. \
+                \n\n\
+                By August 31st, all requests must now either originate from slash commands (see /help) or through what's called \
+                \"Message Commands\". You should already be familiar with slash commands, but message commands \
+                can be accessed by right clicking a message and hovering over \"Apps\". This is where you will find \
+                our Compile, Format, and Assembly commands from now on. \
+                \n\n\
+                Since this format is new for all of us I'm asking our users to bear with us these coming weeks \
+                while we work out any new issues introduced. If you'd like to report an issue or suggestion you may do so \
+                by selecting one of the buttons below. \
+                \n\n\
+                Thank you for your patience while we migrate to this new system \
+                \n\
+                -Headline")
+        })
+        .allowed_mentions(|mnts| {
+            mnts.replied_user(false)
+        })
+            .components(|cmps| {
+                cmps.create_action_row(|row| {
+                    row.create_button(|btn| {
+                        btn.label("Support Server")
+                            .url("https://discord.com/invite/ExraTaJ")
+                            .style(ButtonStyle::Link)
+                    })
+                    .create_button(|btn| {
+                        btn.label("GitHub Page")
+                            .url(github_link)
+                            .style(ButtonStyle::Link)
+                    })
+                })
+            })
+    }).await?;
+    Ok(())
+}
 
 #[group]
-#[commands(botinfo, languages, compilers, ping, help, block, unblock, invite, cpp, formats, format)]
+#[commands(compile)]
 struct General;
 
 /** Spawn bot **/

@@ -3,15 +3,21 @@ use serenity::model::prelude::*;
 use serenity::prelude::*;
 
 use std::time::Instant;
+use serenity::model::interactions::application_command::ApplicationCommandInteraction;
 
-#[command]
-pub async fn ping(ctx: &Context, msg: &Message) -> CommandResult {
+pub async fn ping(ctx: &Context, msg: &ApplicationCommandInteraction) -> CommandResult {
 
     let old = Instant::now();
-    let mut m = msg.channel_id.say(&ctx.http, "🏓 Pong!\n...").await?;
+    msg.create_interaction_response(&ctx.http, |resp| {
+        resp.kind(InteractionResponseType::ChannelMessageWithSource)
+            .interaction_response_data(|data| {
+                data.content("🏓 Pong!\n...")
+            })
+    }).await?;
     let new = Instant::now();
 
-    m.edit(ctx, |m| m.content(format!("🏓 Pong!\n{} ms", (new - old).as_millis()))).await?;
-    debug!("Command executed");
+    msg.edit_original_interaction_response(&ctx.http, |resp| {
+        resp.content(format!("🏓 Pong!\n{} ms", (new - old).as_millis()))
+    }).await?;
     Ok(())
 }

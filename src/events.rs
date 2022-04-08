@@ -44,9 +44,7 @@ impl ShardsReadyHandler for Handler {
         let guild_count = stats.get_boot_vec_sum();
 
         // update stats
-        if stats.should_track() {
-            stats.post_servers(guild_count).await;
-        }
+        stats.post_servers(guild_count).await;
 
         discordhelpers::send_global_presence(&shard_manager, stats.server_count()).await;
 
@@ -63,12 +61,16 @@ impl EventHandler for Handler {
             match commands.on_command(&ctx, &command).await {
                 Ok(t) => {}
                 Err(e) => {
-                    manual_dispatch(ctx.http.clone(), command.channel_id.0, embeds::build_fail_embed(&command.user, &e.to_string())).await;
-                   /* let _ = command.create_interaction_response(&ctx.http, |rsp| {
-                        rsp.interaction_response_data(|data| {
-                            data.set_embed(embeds::build_fail_embed(&command.user, &e.to_string()))
-                        })
-                    }).await;*/
+                    if let Err(e2) = command.edit_original_interaction_response(&ctx.http, |rsp| {
+                        rsp.content("")
+                            .set_embeds(Vec::new())
+                            .components(|cmps| {
+                                cmps.set_action_rows(Vec::new())
+                            })
+                            .set_embed(embeds::build_fail_embed(&command.user, &e.to_string()))
+                    }).await {
+                        warn!("Error displaying command error {}: {}", e, e2);
+                    }
                 }
             }
         }
@@ -78,7 +80,7 @@ impl EventHandler for Handler {
         let data = ctx.data.read().await;
         let cmd_mgr = data.get::<CommandCache>().unwrap().read().await;
         cmd_mgr.register_commands(&ctx, &guild).await;
-        println!("Registerring commands...");
+        println!("Registering commands...");
         let now: DateTime<Utc> = Utc::now();
         if guild.joined_at + Duration::seconds(30) > now {
             let data = ctx.data.read().await;

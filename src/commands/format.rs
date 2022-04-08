@@ -3,125 +3,199 @@ use serenity::model::prelude::*;
 use serenity::prelude::*;
 use crate::cache::{CompilerCache};
 use crate::utls::parser::{ParserResult, get_message_attachment};
-use godbolt::Godbolt;
+use godbolt::{Format, Godbolt};
 use std::io::Write;
+use std::time::Duration;
+use futures_util::StreamExt;
+use serenity::builder::{CreateInteractionResponse, EditInteractionResponse};
+use serenity::model::interactions::application_command::ApplicationCommandInteraction;
+use serenity::model::interactions::message_component::ButtonStyle;
+use crate::utls::constants::COLOR_WARN;
+use crate::utls::discordhelpers::interactions;
+use crate::utls::parser;
 
-#[command]
-pub async fn format(ctx: &Context, msg: &Message, mut args : Args) -> CommandResult {
-    let mut fmt = String::from("clangformat");
-    let mut style = String::from("webkit");
-    if !args.is_empty() {
-        // do not include ``` codeblocks into arg parsing.. lets just substr and replace args
-        let idx = msg.content.find("`");
-        if let Some(idx) = idx {
-            let substr : String = msg.content.chars().take(idx).collect();
-            args = Args::new(&substr, &[Delimiter::Single(' ')]);
-            args.advance();
+pub async fn format(ctx: &Context, command: &ApplicationCommandInteraction) -> CommandResult {
+    let mut msg = None;
+    let mut parse_result = ParserResult::default();
+
+    for (_, value) in &command.data.resolved.messages {
+        if !parser::find_code_block(& mut parse_result, &value.content) {
+            return Err(CommandError::from("Unable to find a codeblock to format!"))
         }
-
-        // kind of odd - but since we replaced args we try again...
-        if !args.is_empty() {
-            fmt = args.single::<String>()?.trim().to_owned();
-
-            style = String::from("");
-            if !args.is_empty() {
-                style = args.single::<String>()?.trim().to_owned();
-            }
-        }
+        msg = Some(value);
+        break;
     }
 
     let data = ctx.data.read().await;
     let comp_mgr = data.get::<CompilerCache>().unwrap().read().await;
     let gbolt = &comp_mgr.gbolt;
 
-    // validate user input
-    for format in &gbolt.formats {
-        if format.format_type.to_ascii_lowercase().contains(&fmt.to_ascii_lowercase()) {
-            // fmt is now valid - lets ensure case correctness
-            fmt = format.format_type.clone();
+    command.create_interaction_response(&ctx.http, |response| {
+        create_formats_interaction(response, &gbolt.formats)
+    }).await?;
 
-            // if fmt has no styles - lets just empty the style string
-            if format.styles.is_empty() {
-                style = String::default();
+    // Handle response from select menu / button interactions
+    let resp = command.get_interaction_response(&ctx.http).await?;
+    let mut cib = resp.await_component_interactions(&ctx.shard).timeout(Duration::from_secs(30)).await;
+    let mut formatter = String::from("clangformat");
+    let mut selected = false;
+    while let Some(interaction) = &cib.next().await {
+        match interaction.data.custom_id.as_str() {
+            "formatter" => {
+                formatter = interaction.data.values[0].clone();
+                interaction.defer(&ctx.http).await?;
             }
-            else { // fmt does have styles - validate result if possible
-                for fmtstyle in &format.styles {
-                    if fmtstyle.to_ascii_lowercase().contains(&style) {
-                        style = fmtstyle.to_string();
-                    }
-                }
+            "select" => {
+                interaction.defer(&ctx.http).await?;
+                selected = true;
+                cib.stop();
+                break;
+            }
+            _ => {
+                unreachable!("Cannot get here..");
             }
         }
     }
 
-    let mut lang_code = String::new();
-    let mut attachment_name = String::new();
-    let code;
-
-    if let Some(msgref) = &msg.referenced_message {
-        let mut result = ParserResult::default();
-        if crate::utls::parser::find_code_block(& mut result, &msgref.content) {
-            lang_code = result.target.clone();
-            code = result.code
-        }
-        else {
-            if msgref.attachments.len() > 0 {
-                attachment_name = msgref.attachments[0].filename.clone();
-                let (program_code, _) = get_message_attachment(&msgref.attachments).await?;
-                code = program_code;
-            }
-            else {
-                return Err(CommandError::from("Referenced message has no code or attachment"));
-            }
-        }
+    // interaction expired...
+    if !selected {
+        return Ok(())
     }
-    else {
-        if !msg.attachments.is_empty() {
-            attachment_name = msg.attachments[0].filename.clone();
-            let (program_code, _) = get_message_attachment(&msg.attachments).await?;
-            code = program_code;
-        } else {
-            let mut result = ParserResult::default();
-            if crate::utls::parser::find_code_block(& mut result, &msg.content) {
-                lang_code = result.target.clone();
-                code = result.code
+
+    let styles = &gbolt.formats.iter().find(|p| p.format_type == formatter).unwrap().styles;
+    command.edit_original_interaction_response(&ctx.http, |resp| {
+        create_styles_interaction(resp, styles)
+    }).await?;
+
+    let resp = command.get_interaction_response(&ctx.http).await?;
+    cib = resp.await_component_interactions(&ctx.shard).timeout(Duration::from_secs(30)).await;
+
+    selected = false;
+    let mut style = String::from("WebKit");
+    while let Some(interaction) = &cib.next().await {
+        match interaction.data.custom_id.as_str() {
+            "style" => {
+                style = interaction.data.values[0].clone();
+                interaction.defer(&ctx.http).await?;
             }
-            else {
-                return Err(CommandError::from("Unable to find code to format!\n\nPlease reply to a message when executing this command or supply the code yourself in a code block or message attachment."));
+            "select" => {
+                selected = true;
+                cib.stop();
+                break;
+            }
+            _ => {
+                unreachable!("Cannot get here..");
             }
         }
     }
 
+    // they let this expire
+    if !selected {
+        return Ok(())
+    }
 
-    let answer;
-    {
-        let result = Godbolt::format_code(&fmt, &style, &code, false, 4).await;
-        match result {
-            Ok(res) => {
-                if res.exit != 0 {
-                    return Err(CommandError::from("Formatter returned a non-zero exit code"));
-                } else {
-                    answer = res.answer;
-                }
-            }
-            Err(err) => {
-                return Err(CommandError::from(format!("An error occurred while formatting code: `{}`", err)));
-            }
+    command.edit_original_interaction_response(&ctx.http, |resp| {
+        interactions::create_think_interaction(resp)
+    }).await.unwrap();
+
+    let result = match Godbolt::format_code(&formatter, &style, &parse_result.code, true, 4).await {
+        Ok(r) => r,
+        Err(e) => {
+            return Err(CommandError::from(format!("{}", e)))
         }
-    }
+    };
 
-    if !attachment_name.is_empty() {
-        let _ = std::fs::create_dir("temp");
-        let path = format!("temp/{}", attachment_name);
-        let mut file = std::fs::File::create(&path)?;
-        let _ = file.write_all(answer.as_bytes());
-        let _ = file.flush();
 
-        msg.channel_id.send_message(&ctx.http, |msg| msg.add_file(path.as_str()).content("Powered by godbolt.org")).await?;
-        let _ = std::fs::remove_file(&path);
-    }
-    else {
-        msg.reply(&ctx.http, format!("\n```{}\n{}```\n*Powered by godbolt.org*", lang_code, answer)).await?;
-    }
+    command.edit_original_interaction_response(&ctx.http, |resp| {
+        resp
+            .set_embeds(Vec::new())
+            .embed(|emb| {
+                emb.color(COLOR_WARN)
+                    .description("Interaction completed, you may safely dismiss this message.")
+            })
+            .components(|components| {
+                components.set_action_rows(Vec::new())
+            })
+    }).await.unwrap();
+
+    // dispatch final response
+    msg.unwrap().channel_id.send_message(&ctx.http, |new_msg| {
+        new_msg
+            .allowed_mentions(|mentions| {
+                mentions.replied_user(false)
+            })
+            .reference_message(msg.unwrap())
+            .content(format!("```{}\n{}\n```Requested by: {}", if parse_result.target.is_empty() {""} else {&parse_result.target}, result.answer, command.user.tag()))
+    }).await?;
+
     Ok(())
+}
+
+fn create_styles_interaction<'a>(response: &'a mut EditInteractionResponse, styles: &Vec<String>) -> &'a mut EditInteractionResponse {
+    response
+        .content("Select a style:")
+        .components(|cmps| {
+            cmps.create_action_row(|row| {
+                row.create_select_menu(|menu| {
+                    menu.custom_id("style")
+                        .options(|opts| {
+                            for style in styles {
+                                opts.create_option(|opt| {
+                                    opt.label(style)
+                                        .value(style);
+                                    if style == "WebKit" {
+                                        opt.default_selection(true);
+                                    }
+                                    opt
+                                });
+                            }
+                            opts
+                        })
+                })
+            })
+                .create_action_row(|row| {
+                    row.create_button(|btn| {
+                        btn.custom_id("select")
+                            .label("Select")
+                            .style(ButtonStyle::Primary)
+                    })
+                })
+        })
+}
+
+fn create_formats_interaction<'a>(response: &'a mut CreateInteractionResponse, formats: &Vec<Format>) -> &'a mut CreateInteractionResponse {
+    response
+        .kind(InteractionResponseType::ChannelMessageWithSource)
+        .interaction_response_data(|data| {
+            data.content("Select a formatter to use:")
+            .flags(InteractionApplicationCommandCallbackDataFlags::EPHEMERAL)
+            .components(|cmps| {
+                cmps.create_action_row(|row| {
+                    row.create_select_menu(|menu| {
+                        menu.custom_id("formatter")
+                            .options(|opts| {
+                            for format in formats {
+                                opts.create_option(|opt| {
+                                    opt.label(&format.name)
+                                        .value(&format.format_type)
+                                        .description(&format.exe);
+                                    if format.format_type == "clangformat" {
+                                        opt.default_selection(true);
+                                    }
+                                    opt
+                                });
+                            }
+                            opts
+                        })
+                    })
+                })
+                .create_action_row(|row| {
+                    row.create_button(|btn| {
+                        btn.custom_id("select")
+                            .label("Select")
+                            .style(ButtonStyle::Primary)
+                    })
+                })
+            })
+    })
 }

@@ -1,4 +1,9 @@
+use std::error::Error;
+use std::future::Future;
 use std::sync::Arc;
+use std::time::Duration;
+use futures_util::future::select;
+use futures_util::StreamExt;
 use serenity::{
     builder::{CreateComponents, CreateEmbed, CreateInteractionResponse, CreateSelectMenuOption},
     client::Context,
@@ -9,14 +14,18 @@ use serenity::{
     model::prelude::modal::ModalSubmitInteraction
 };
 use serenity::builder::EditInteractionResponse;
+use serenity::model::interactions::application_command::ApplicationCommandInteraction;
+use serenity::model::interactions::InteractionType;
 use crate::{
     managers::compilation::{CompilationManager, RequestHandler},
     cache::CompilerCache,
     utls::constants::COLOR_WARN,
     utls::parser::{ParserResult}
 };
-use crate::utls::constants::{C_ASM_COMPILERS, C_EXEC_COMPILERS, CPP_ASM_COMPILERS, CPP_EXEC_COMPILERS};
+use crate::cache::StatsManagerCache;
+use crate::utls::constants::{C_ASM_COMPILERS, C_EXEC_COMPILERS, COLOR_OKAY, CPP_ASM_COMPILERS, CPP_EXEC_COMPILERS};
 use crate::utls::discordhelpers::embeds::build_publish_embed;
+use crate::utls::parser;
 
 pub fn create_compile_panel(compiler_options : Vec<CreateSelectMenuOption>) -> CreateComponents {
     let mut components = CreateComponents::default();
@@ -80,8 +89,11 @@ pub async fn create_more_options_panel(ctx: &Context, interaction : Arc<MessageC
             })
     }).await.unwrap();
 
+    println!("awaiting response...");
     let msg = interaction.get_interaction_response(&ctx.http).await?;
+    println!("response got...");
     if let Some(resp) = msg.await_modal_interaction(&ctx.shard).await {
+        println!("response: {:?}", resp.kind);
         if let ActionRowComponent::InputText(input) = &resp.data.components[0].components[0] {
             parse_result.options = input.value.clone().split(" ").map(|p| p.to_owned()).collect();
         }
@@ -273,4 +285,161 @@ pub(crate) fn create_think_interaction(resp: &mut EditInteractionResponse) -> &m
             emb.color(COLOR_WARN)
                 .description("Processing request...")
         })
+}
+
+pub(crate) async fn handle_asm_or_compile_request<F, Fut>(ctx: &Context, command: &ApplicationCommandInteraction, languages: &[&str], is_asm: bool, get_result: F) -> Result<(), CommandError>
+where
+    F: FnOnce(ParserResult) -> Fut,
+    Fut: Future<Output = Result<CreateEmbed, CommandError>>,
+{
+    let mut parse_result = ParserResult::default();
+
+    let mut msg = None;
+    for (_, value) in &command.data.resolved.messages {
+        if !parser::find_code_block(& mut parse_result, &value.content) {
+            command.create_interaction_response(&ctx.http, |resp| {
+                resp.kind(InteractionResponseType::DeferredChannelMessageWithSource)
+                    .interaction_response_data(|data| {
+                        data.flags(InteractionApplicationCommandCallbackDataFlags::EPHEMERAL)
+                    })
+            }).await?;
+            return Err(CommandError::from("Unable to find a codeblock to compile!"))
+        }
+        msg = Some(value);
+        break;
+    }
+
+    // We never got a target from the codeblock, let's have them manually select a language
+    let mut sent_interaction = false;
+    if parse_result.target.is_empty() {
+        command.create_interaction_response(&ctx.http, |response| {
+            create_language_interaction(response, &languages)
+        }).await?;
+
+        let resp = command.get_interaction_response(&ctx.http).await?;
+        let selection = match resp.await_component_interaction(ctx)
+            .timeout(Duration::from_secs(30)).await {
+            Some(s) => s,
+            None => {
+                return Ok(())
+            }
+        };
+
+        sent_interaction = true;
+        parse_result.target = selection.data.values.get(0).unwrap().to_lowercase();
+        selection.defer(&ctx.http).await?;
+    }
+
+    let language = parse_result.target.clone();
+    let mut options = create_compiler_options(ctx, &language, is_asm).await?;
+
+    if !sent_interaction {
+        command.create_interaction_response(&ctx.http, |response| {
+            response
+                .kind(InteractionResponseType::ChannelMessageWithSource)
+                .interaction_response_data(|data| {
+                    let compile_components = create_compile_panel(options);
+
+                    data
+                        .flags(InteractionApplicationCommandCallbackDataFlags::EPHEMERAL)
+                        .content("Select a compiler:")
+                        .set_components(compile_components)
+                })
+        }).await?;
+    }
+    else {
+        command.edit_original_interaction_response(&ctx.http, |response| {
+            response
+                .content("Select a compiler:")
+                .components(|c| {
+                    *c = create_compile_panel(options);
+                    c
+                })
+        }).await?;
+    }
+
+    let resp = command.get_interaction_response(&ctx.http).await?;
+    let mut cib = resp.await_component_interactions(&ctx.shard).timeout(Duration::from_secs(30)).await;
+
+    // collect compiler into var
+    parse_result.target = language.to_owned();
+
+    let mut last_interaction = None;
+    let mut more_options_response = None;
+    while let Some(interaction) = &cib.next().await {
+        last_interaction = Some(interaction.clone());
+        match interaction.data.custom_id.as_str() {
+            "compiler_select" => {
+                parse_result.target = interaction.data.values[0].clone();
+                interaction.defer(&ctx.http).await?;
+            }
+            "2" => {
+                command.edit_original_interaction_response(&ctx.http, |resp| {
+                    resp.components(|cmps| {
+                        cmps.set_action_rows(Vec::new())
+                    })
+                        .set_embeds(Vec::new())
+                        .embed(|emb| {
+                            emb.color(COLOR_WARN)
+                                .description("Awaiting completion of modal interaction, \
+                                if you have cancelled the menu you may safely dismiss the message")
+                        })
+                }).await?;
+
+                more_options_response = create_more_options_panel(ctx, interaction.clone(), & mut parse_result).await?;
+                if more_options_response.is_some() {
+                    cib.stop();
+                    break;
+                }
+            }
+            "1" => {
+                cib.stop();
+                break;
+            }
+            _ => {
+                unreachable!("Cannot get here..");
+            }
+        }
+    }
+
+    // exit, they let this expire
+    if last_interaction.is_none() && more_options_response.is_none() {
+        return Ok(())
+    }
+
+    command.edit_original_interaction_response(&ctx.http, |resp| {
+        create_think_interaction(resp)
+    }).await.unwrap();
+
+    let data = ctx.data.read().await;
+    let mut result = get_result(parse_result).await?;
+    //statistics
+    {
+        let stats_manager = data.get::<StatsManagerCache>().unwrap().lock().await;
+        if !is_asm && stats_manager.should_track() {
+            stats_manager.compilation(&language, result.0["color"] == COLOR_OKAY).await;
+        }
+    }
+
+    command.edit_original_interaction_response(&ctx.http, |resp| {
+        edit_to_confirmation_interaction(&result, resp)
+    }).await.unwrap();
+
+    let int_resp = command.get_interaction_response(&ctx.http).await?;
+    if let Some(int) = int_resp.await_component_interaction(&ctx.shard).await {
+        int.create_interaction_response(&ctx.http, |resp| {
+            create_dismiss_response(resp)
+        }).await?;
+
+        // dispatch final response
+        msg.unwrap().channel_id.send_message(&ctx.http, |new_msg| {
+            new_msg
+                .allowed_mentions(|mentions| {
+                    mentions.replied_user(false)
+                })
+                .reference_message(msg.unwrap())
+                .set_embed(result)
+        }).await?;
+    }
+    Ok(())
 }
