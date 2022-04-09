@@ -24,7 +24,7 @@ pub async fn help(ctx: &Context, msg: &ApplicationCommandInteraction) -> Command
                 emb.color(COLOR_OKAY)
                     .description("Hello! I can compile code for you. To compile code, \
                     first post a code block containing code, right click the message, \
-                    and select the Compile option!")
+                    go to the Apps dropdown, and select the Compile option!")
                     .thumbnail(ICON_HELP)
                 })
 
