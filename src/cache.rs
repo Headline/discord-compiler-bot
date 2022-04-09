@@ -15,6 +15,7 @@ use crate::utls::blocklist::Blocklist;
 
 use lru_cache::LruCache;
 use serenity::model::channel::Message;
+use crate::managers::command::CommandManager;
 use crate::managers::compilation::CompilationManager;
 
 /** Caching **/
@@ -75,6 +76,12 @@ impl TypeMapKey for MessageCache {
     type Value = Arc<Mutex<LruCache<u64, MessageCacheEntry>>>;
 }
 
+/// Holds the Command Manager which handles command registration logic
+pub struct CommandCache;
+impl TypeMapKey for CommandCache {
+    type Value = Arc<RwLock<CommandManager>>;
+}
+
 pub async fn fill(
     data: Arc<RwLock<TypeMap>>,
     prefix: &str,
@@ -98,7 +105,14 @@ pub async fn fill(
 
     map.insert("GIT_HASH_LONG", String::from(env!("GIT_HASH_LONG")));
     map.insert("GIT_HASH_SHORT", String::from(env!("GIT_HASH_SHORT")));
-    map.insert("JOIN_LOG", env::var("JOIN_LOG")?);
+
+    if let Ok(jlog) = env::var("JOIN_LOG") {
+        map.insert("JOIN_LOG", jlog);
+    }
+    if let Ok(clog) = env::var("COMPILE_LOG") {
+        map.insert("COMPILE_LOG", clog);
+    }
+
     map.insert("BOT_PREFIX", String::from(prefix));
     map.insert("BOT_ID", id.to_string());
     data.insert::<ConfigCache>(Arc::new(RwLock::new(map)));
@@ -129,6 +143,9 @@ pub async fn fill(
     // Blocklist
     let blocklist = Blocklist::new();
     data.insert::<BlocklistCache>(Arc::new(RwLock::new(blocklist)));
+
+    let commands = CommandManager::new();
+    data.insert::<CommandCache>(Arc::new(RwLock::new(commands)));
 
     Ok(())
 }

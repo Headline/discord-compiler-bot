@@ -1,21 +1,21 @@
 pub mod embeds;
+pub mod interactions;
+pub mod menu;
 
 use std::str;
 use std::sync::Arc;
 
 use serenity::{
-    builder::{CreateEmbed, CreateMessage},
+    builder::{CreateEmbed},
     http::Http,
     model::prelude::*,
 };
 
-use serenity_utils::menu::*;
-
 use crate::utls::constants::*;
-use crate::utls::{discordhelpers};
-use tokio::sync::{MutexGuard};
-use serenity::client::bridge::gateway::{ShardManager};
-use crate::cache::{ConfigCache};
+use crate::utls::discordhelpers;
+use tokio::sync::MutexGuard;
+use serenity::client::bridge::gateway::ShardManager;
+use crate::cache::ConfigCache;
 use serenity::client::Context;
 use serenity::framework::standard::CommandResult;
 
@@ -26,8 +26,8 @@ pub fn build_menu_items(
     avatar: &str,
     author: &str,
     desc: &str
-) -> Vec<CreateMessage<'static>> {
-    let mut pages: Vec<CreateMessage> = Vec::new();
+) -> Vec<CreateEmbed> {
+    let mut pages = Vec::new();
     let num_pages = items.len() / items_per_page;
 
     let mut current_page = 0;
@@ -37,62 +37,36 @@ pub fn build_menu_items(
         if end > items.len() {
             end = items.len();
         }
-        let mut page = CreateMessage::default();
-        page.embed(|e| {
-            let mut description = format!("{}\n", desc);
-            for (i, item) in items[current_page * items_per_page..end].iter().enumerate() {
-                if i > items_per_page {
-                    break;
-                }
-                description.push_str(&format!(
-                    "**{}**) {}\n",
-                    current_page * items_per_page + i + 1,
-                    item
-                ))
+        let mut emb = CreateEmbed::default();
+        let mut description = format!("{}\n", desc);
+        for (i, item) in items[current_page * items_per_page..end].iter().enumerate() {
+            if i > items_per_page {
+                break;
             }
-            e.color(COLOR_OKAY);
-            e.title(title);
-            e.description(description);
-            e.footer(|f| {
-                f.text(&format!(
-                    "Requested by {} | Page {}/{}",
-                    author,
-                    current_page + 1,
-                    num_pages + 1
-                ))
-            });
-            e.thumbnail(avatar);
-            e
+            description.push_str(&format!(
+                "**{}**) {}\n",
+                current_page * items_per_page + i + 1,
+                item
+            ))
+        }
+        emb.color(COLOR_OKAY);
+        emb.title(title);
+        emb.description(description);
+        emb.footer(|f| {
+            f.text(&format!(
+                "Requested by {} | Page {}/{}",
+                author,
+                current_page + 1,
+                num_pages + 1
+            ))
         });
+        emb.thumbnail(avatar);
 
-        pages.push(page);
+        pages.push(emb);
         current_page += 1;
     }
 
     pages
-}
-
-pub fn build_menu_controls() -> MenuOptions {
-    let controls = vec![
-        Control::new(
-            ReactionType::from('◀'),
-            Arc::new(|m, r| Box::pin(prev_page(m, r))),
-        ),
-        Control::new(
-            ReactionType::from('🛑'),
-            Arc::new(|m, r| Box::pin(close_menu(m, r))),
-        ),
-        Control::new(
-            ReactionType::from('▶'),
-            Arc::new(|m, r| Box::pin(next_page(m, r))),
-        ),
-    ];
-
-    // Let's create options for the menu.
-    MenuOptions {
-        controls,
-        ..Default::default()
-    }
 }
 
 // Pandas#3**2 on serenity disc, tyty

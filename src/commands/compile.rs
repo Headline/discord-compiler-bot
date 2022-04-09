@@ -5,7 +5,6 @@ use crate::utls::{parser, discordhelpers};
 use crate::utls::constants::COLOR_OKAY;
 use crate::utls::discordhelpers::{embeds, is_success_embed};
 
-use std::env;
 use tokio::sync::RwLockReadGuard;
 
 use serenity::framework::standard::CommandError;
@@ -99,23 +98,26 @@ pub async fn handle_request(ctx : Context, mut content : String, author : User, 
         ));
     }
 
+    let is_success = is_success_embed(&result.1);
     let stats = data_read.get::<StatsManagerCache>().unwrap().lock().await;
     if stats.should_track() {
-        stats.compilation(&result.0, !is_success_embed(&result.1)).await;
+        stats.compilation(&result.0, !is_success).await;
     }
 
-    let mut guild = String::from("<unknown>");
-    if let Some(g) = msg.guild_id {
-        guild = g.to_string()
-    }
-    if let Ok(log) = env::var("COMPILE_LOG") {
+    let data = ctx.data.read().await;
+    let config = data.get::<ConfigCache>().unwrap();
+    let config_lock = config.read().await;
+    let comp_log_id = config_lock.get("COMPILE_LOG");
+
+    if let Some(log) = comp_log_id {
         if let Ok(id) = log.parse::<u64>() {
+            let guild = if msg.guild_id.is_some() {msg.guild_id.unwrap().0.to_string()} else {"<<unknown>>".to_owned()};
             let emb = embeds::build_complog_embed(
-                is_success_embed(&result.1),
+                is_success,
                 &parse_result.code,
                 &parse_result.target,
-                &author.tag(),
-                author.id.0,
+                &msg.author.tag(),
+                msg.author.id.0,
                 &guild,
             );
             discordhelpers::manual_dispatch(ctx.http.clone(), id, emb).await;
