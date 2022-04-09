@@ -26,9 +26,10 @@ use serenity::model::channel::{ReactionType};
 use crate::utls::parser::{get_message_attachment, shortname_to_qualified};
 use crate::managers::compilation::RequestHandler;
 use serenity::collector::CollectReaction;
-use serenity::model::interactions::Interaction;
+use serenity::model::interactions::{Interaction, InteractionResponseType};
 use crate::commands::compile::handle_request;
 use crate::utls::discordhelpers::embeds::embed_message;
+use crate::utls::discordhelpers::interactions::send_error_msg;
 
 pub struct Handler; // event handler for serenity
 
@@ -275,15 +276,13 @@ impl EventHandler for Handler {
             match commands.on_command(&ctx, &command).await {
                 Ok(_) => {}
                 Err(e) => {
-                    if let Err(e2) = command.edit_original_interaction_response(&ctx.http, |rsp| {
-                        rsp.content("")
-                            .set_embeds(Vec::new())
-                            .components(|cmps| {
-                                cmps.set_action_rows(Vec::new())
-                            })
-                            .set_embed(embeds::build_fail_embed(&command.user, &e.to_string()))
-                    }).await {
-                        warn!("Error displaying command error {}: {}", e, e2);
+                    // in order to respond to messages with errors, we'll first try to
+                    // send an edit, and if that fails we'll pivot to create a new interaction
+                    // response
+                    let fail_embed = embeds::build_fail_embed(&command.user, &e.to_string());
+                    if let Err(_) = send_error_msg(&ctx, &command, false, fail_embed.clone()).await {
+                        warn!("Sending new integration for error: {}", e);
+                        let _ = send_error_msg(&ctx, &command, true, fail_embed.clone()).await;
                     }
                 }
             }
