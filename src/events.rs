@@ -50,10 +50,7 @@ impl ShardsReadyHandler for Handler {
         let shard_manager = data.get::<ShardManagerCache>().unwrap().lock().await;
         let guild_count = stats.get_boot_vec_sum();
 
-        // update stats
-        if stats.should_track() {
-            stats.post_servers(guild_count).await;
-        }
+        stats.post_servers(guild_count).await;
 
         discordhelpers::send_global_presence(&shard_manager, stats.server_count()).await;
 
@@ -84,9 +81,7 @@ impl EventHandler for Handler {
 
             // publish/queue new server to stats
             let mut stats = data.get::<StatsManagerCache>().unwrap().lock().await;
-            if stats.should_track() {
-                stats.new_server().await;
-            }
+            stats.new_server().await;
 
             // ensure we're actually loaded in before we start posting our server counts
             if stats.server_count() > 0
@@ -138,9 +133,7 @@ impl EventHandler for Handler {
 
         // publish/queue new server to stats
         let mut stats = data.get::<StatsManagerCache>().unwrap().lock().await;
-        if stats.should_track() {
-            stats.leave_server().await;
-        }
+        stats.leave_server().await;
 
         // ensure we're actually loaded in before we start posting our server counts
         if stats.server_count() > 0
