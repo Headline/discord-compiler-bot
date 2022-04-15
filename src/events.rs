@@ -1,35 +1,37 @@
 use serenity::{
+    framework::standard::DispatchError,
+    framework::standard::CommandResult,
+    framework::standard::macros::hook,
     async_trait,
-    framework::standard:: {
-        macros::hook, CommandResult, DispatchError
-    },
-    model::{
-        channel::Message,
-        guild::{Guild, GuildUnavailable},
-        id::{ChannelId, MessageId},
-        gateway::Ready
-    },
+    model::channel::Message,
+    model::guild::Guild,
+    model::guild::GuildUnavailable,
+    model::id::ChannelId,
+    model::id::MessageId,
+    model::gateway::Ready,
     prelude::*,
+    model::id::{GuildId},
+    model::event::{MessageUpdateEvent},
+    model::channel::{ReactionType},
+    collector::CollectReaction,
+    model::interactions::{Interaction}
 };
+
+use tokio::sync::MutexGuard;
 
 use chrono::{DateTime, Duration, Utc};
 
-use crate::cache::*;
-use crate::utls::discordhelpers;
-use crate::managers::stats::StatsManager;
-use serenity::model::id::{GuildId};
-use serenity::model::event::{MessageUpdateEvent};
-use crate::utls::discordhelpers::embeds;
-use tokio::sync::MutexGuard;
-use serenity::model::channel::{ReactionType};
-
-use crate::utls::parser::{get_message_attachment, shortname_to_qualified};
-use crate::managers::compilation::RequestHandler;
-use serenity::collector::CollectReaction;
-use serenity::model::interactions::{Interaction, InteractionResponseType};
-use crate::commands::compile::handle_request;
-use crate::utls::discordhelpers::embeds::embed_message;
-use crate::utls::discordhelpers::interactions::send_error_msg;
+use crate::{
+    utls::discordhelpers::embeds,
+    cache::*,
+    utls::discordhelpers,
+    managers::stats::StatsManager,
+    managers::compilation::RequestHandler,
+    commands::compile::handle_request,
+    utls::discordhelpers::embeds::embed_message,
+    utls::discordhelpers::interactions::send_error_msg,
+    utls::parser::{get_message_attachment, shortname_to_qualified}
+};
 
 pub struct Handler; // event handler for serenity
 
