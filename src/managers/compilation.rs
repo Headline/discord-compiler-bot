@@ -173,4 +173,11 @@ impl CompilationManager {
         let res = builder.dispatch().await?;
         Ok((builder.lang, res))
     }
+
+    pub fn slash_cmd_langs() -> [&'static str; 11] {
+        ["Python", "C++", "Javascript", "C", "Java", "Bash", "Lua", "C#", "Rust", "Php", "Perl"]
+    }
+    pub fn slash_cmd_langs_asm() -> [&'static str; 7] {
+        ["C++", "C", "Haskell", "Java", "Python", "Rust", "Zig"]
+    }
 }

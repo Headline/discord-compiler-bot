@@ -1,33 +1,37 @@
 use serenity::{
+    framework::standard::DispatchError,
+    framework::standard::CommandResult,
+    framework::standard::macros::hook,
     async_trait,
-    framework::standard:: {
-        macros::hook, CommandResult, DispatchError
-    },
-    model::{
-        channel::Message,
-        guild::{Guild, GuildUnavailable},
-        id::{ChannelId, MessageId},
-        gateway::Ready
-    },
+    model::channel::Message,
+    model::guild::Guild,
+    model::guild::GuildUnavailable,
+    model::id::ChannelId,
+    model::id::MessageId,
+    model::gateway::Ready,
     prelude::*,
+    model::id::{GuildId},
+    model::event::{MessageUpdateEvent},
+    model::channel::{ReactionType},
+    collector::CollectReaction,
+    model::interactions::{Interaction}
 };
+
+use tokio::sync::MutexGuard;
 
 use chrono::{DateTime, Duration, Utc};
 
-use crate::cache::*;
-use crate::utls::discordhelpers;
-use crate::managers::stats::StatsManager;
-use serenity::model::id::{GuildId};
-use serenity::model::event::{MessageUpdateEvent};
-use crate::utls::discordhelpers::embeds;
-use tokio::sync::MutexGuard;
-use serenity::model::channel::{ReactionType};
-
-use crate::utls::parser::{get_message_attachment, shortname_to_qualified};
-use crate::managers::compilation::RequestHandler;
-use serenity::collector::CollectReaction;
-use crate::commands::compile::handle_request;
-use crate::utls::discordhelpers::embeds::embed_message;
+use crate::{
+    utls::discordhelpers::embeds,
+    cache::*,
+    utls::discordhelpers,
+    managers::stats::StatsManager,
+    managers::compilation::RequestHandler,
+    commands::compile::handle_request,
+    utls::discordhelpers::embeds::embed_message,
+    utls::discordhelpers::interactions::send_error_msg,
+    utls::parser::{get_message_attachment, shortname_to_qualified}
+};
 
 pub struct Handler; // event handler for serenity
 
@@ -59,23 +63,11 @@ impl ShardsReadyHandler for Handler {
 
 #[async_trait]
 impl EventHandler for Handler {
-    async fn message_update(&self, ctx: Context, new_data: MessageUpdateEvent) {
-        let data = ctx.data.read().await;
-        let mut message_cache = data.get::<MessageCache>().unwrap().lock().await;
-        if let Some(msg) = message_cache.get_mut(&new_data.id.0) {
-            if let Some(new_msg) = new_data.content {
-                if let Some (author) = new_data.author {
-                    discordhelpers::handle_edit(&ctx, new_msg, author, msg.our_msg.clone(), msg.original_msg.clone()).await;
-                }
-            }
-        }
-    }
-
     async fn guild_create(&self, ctx: Context, guild: Guild) {
+        let data = ctx.data.read().await;
+
         let now: DateTime<Utc> = Utc::now();
         if guild.joined_at + Duration::seconds(30) > now {
-            let data = ctx.data.read().await;
-
             // post new server to join log
             let id;
             {
@@ -128,17 +120,6 @@ impl EventHandler for Handler {
                     }
                 }
             }
-        }
-    }
-
-    async fn message_delete(&self, ctx: Context, _channel_id: ChannelId, id: MessageId, _guild_id: Option<GuildId>) {
-        let data = ctx.data.read().await;
-        let mut message_cache = data.get::<MessageCache>().unwrap().lock().await;
-        if let Some(msg) = message_cache.get_mut(id.as_u64()) {
-            if msg.our_msg.delete(ctx.http).await.is_err() {
-                // ignore for now
-            }
-            message_cache.remove(id.as_u64());
         }
     }
 
@@ -242,11 +223,37 @@ impl EventHandler for Handler {
         }
     }
 
+    async fn message_delete(&self, ctx: Context, _channel_id: ChannelId, id: MessageId, _guild_id: Option<GuildId>) {
+        let data = ctx.data.read().await;
+        let mut message_cache = data.get::<MessageCache>().unwrap().lock().await;
+        if let Some(msg) = message_cache.get_mut(id.as_u64()) {
+            if msg.our_msg.delete(ctx.http).await.is_err() {
+                // ignore for now
+            }
+            message_cache.remove(id.as_u64());
+        }
+    }
+
+    async fn message_update(&self, ctx: Context, new_data: MessageUpdateEvent) {
+        let data = ctx.data.read().await;
+        let mut message_cache = data.get::<MessageCache>().unwrap().lock().await;
+        if let Some(msg) = message_cache.get_mut(&new_data.id.0) {
+            if let Some(new_msg) = new_data.content {
+                if let Some (author) = new_data.author {
+                    discordhelpers::handle_edit(&ctx, new_msg, author, msg.our_msg.clone(), msg.original_msg.clone()).await;
+                }
+            }
+        }
+    }
+
     async fn ready(&self, ctx: Context, ready: Ready) {
         info!("[Shard {}] Ready", ctx.shard_id);
 
         let data = ctx.data.read().await;
         let mut stats = data.get::<StatsManagerCache>().unwrap().lock().await;
+        let cmd_mgr = data.get::<CommandCache>().unwrap().read().await;
+        cmd_mgr.register_commands(&ctx).await;
+        info!("Registering commands for shard {}", ctx.shard_id);
 
         // occasionally we can have a ready event fire well after execution
         // this check prevents us from double calling all_shards_ready
@@ -261,6 +268,26 @@ impl EventHandler for Handler {
 
         if stats.shard_count() == total_shards_to_spawn {
             self.all_shards_ready(&ctx, & mut stats, &ready).await;
+        }
+    }
+
+    async fn interaction_create(&self, ctx: Context, interaction: Interaction) {
+        if let Interaction::ApplicationCommand(command) = interaction {
+            let data_read = ctx.data.read().await;
+            let commands = data_read.get::<CommandCache>().unwrap().read().await;
+            match commands.on_command(&ctx, &command).await {
+                Ok(_) => {}
+                Err(e) => {
+                    // in order to respond to messages with errors, we'll first try to
+                    // send an edit, and if that fails we'll pivot to create a new interaction
+                    // response
+                    let fail_embed = embeds::build_fail_embed(&command.user, &e.to_string());
+                    if let Err(_) = send_error_msg(&ctx, &command, false, fail_embed.clone()).await {
+                        warn!("Sending new integration for error: {}", e);
+                        let _ = send_error_msg(&ctx, &command, true, fail_embed.clone()).await;
+                    }
+                }
+            }
         }
     }
 }

@@ -9,6 +9,7 @@ mod utls;
 mod cppeval;
 mod managers;
 mod tests;
+mod slashcmds;
 
 use serenity::{
     client::bridge::gateway::GatewayIntents,
@@ -79,6 +80,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     );
 
     let prefix = env::var("BOT_PREFIX")?;
+    let app_id = env::var("APPLICATION_ID")?;
     let framework = StandardFramework::new()
         .configure(|c| c.owners(owners).prefix(&prefix))
         .before(events::before)
@@ -91,6 +93,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
         .framework(framework)
         .event_handler(events::Handler)
         .intents(GatewayIntents::GUILDS | GatewayIntents::GUILD_MESSAGES | GatewayIntents::GUILD_MESSAGE_REACTIONS)
+        .application_id(app_id.parse::<u64>().unwrap())
         .await?;
 
     cache::fill(client.data.clone(), &prefix, &bot_id, client.shard_manager.clone()).await?;

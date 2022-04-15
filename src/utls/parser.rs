@@ -25,7 +25,7 @@ pub fn shortname_to_qualified(language : &str) -> &str {
     }
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone)]
 pub struct ParserResult {
     pub url: String,
     pub stdin: String,
