@@ -22,7 +22,7 @@ pub async fn format(ctx: &Context, command: &ApplicationCommandInteraction) -> C
     let mut parse_result = ParserResult::default();
 
     for (_, value) in &command.data.resolved.messages {
-        if !parser::find_code_block(& mut parse_result, &value.content) {
+        if !parser::find_code_block(& mut parse_result, &value.content, &command.user).await? {
             return Err(CommandError::from("Unable to find a codeblock to format!"))
         }
         msg = Some(value);
