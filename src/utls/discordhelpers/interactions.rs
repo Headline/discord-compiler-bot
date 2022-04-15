@@ -272,7 +272,7 @@ where
 
     let mut msg = None;
     for (_, value) in &command.data.resolved.messages {
-        if !parser::find_code_block(& mut parse_result, &value.content) {
+        if !parser::find_code_block(& mut parse_result, &value.content, &command.user).await? {
             command.create_interaction_response(&ctx.http, |resp| {
                 resp.kind(InteractionResponseType::DeferredChannelMessageWithSource)
                     .interaction_response_data(|data| {

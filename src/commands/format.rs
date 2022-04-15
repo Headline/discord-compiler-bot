@@ -60,7 +60,7 @@ pub async fn format(ctx: &Context, msg: &Message, mut args : Args) -> CommandRes
 
     if let Some(msgref) = &msg.referenced_message {
         let mut result = ParserResult::default();
-        if crate::utls::parser::find_code_block(& mut result, &msgref.content) {
+        if crate::utls::parser::find_code_block(& mut result, &msgref.content, &msg.author).await? {
             lang_code = result.target.clone();
             code = result.code
         }
@@ -82,7 +82,7 @@ pub async fn format(ctx: &Context, msg: &Message, mut args : Args) -> CommandRes
             code = program_code;
         } else {
             let mut result = ParserResult::default();
-            if crate::utls::parser::find_code_block(& mut result, &msg.content) {
+            if crate::utls::parser::find_code_block(& mut result, &msg.content, &msg.author).await? {
                 lang_code = result.target.clone();
                 code = result.code
             }

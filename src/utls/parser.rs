@@ -8,6 +8,7 @@ use tokio::sync::RwLock;
 use std::sync::Arc;
 use crate::managers::compilation::{CompilationManager, RequestHandler};
 use std::path::Path;
+use regex::Regex;
 
 
 // Allows us to convert some common aliases to other programming languages
@@ -135,7 +136,7 @@ pub async fn get_components(input: &str, author : &User, compilation_manager : O
         let code = get_url_code(&result.url, author).await?;
         result.code = code;
     }
-    else if find_code_block(&mut result, input) {
+    else if find_code_block(&mut result, input, author).await? {
         // If we find a code block from our executor's message, and it's also a reply
         // let's assume we found the stdin and what they're quoting is the code.
         // Anything else probably doesn't make sense.
@@ -150,7 +151,7 @@ pub async fn get_components(input: &str, author : &User, compilation_manager : O
                 }
                 result.code = attachment.0;
             }
-            else if !find_code_block(&mut result, &replied_msg.content) {
+            else if !find_code_block(&mut result, &replied_msg.content, author).await? {
                 return Err(CommandError::from(
                     "Cannot find code to compile assuming your code block is the program's stdin.",
                 ))
@@ -169,7 +170,7 @@ pub async fn get_components(input: &str, author : &User, compilation_manager : O
                 result.code = attachment.0;
             }
             // no reply in the attachment, lets check for a code-block..
-            else if !find_code_block(&mut result, &replied_msg.content) {
+            else if !find_code_block(&mut result, &replied_msg.content, author).await? {
                 return Err(CommandError::from(
                     "You must attach a code-block containing code to your message or quote a message that has one.",
                 ))
@@ -224,7 +225,7 @@ async fn get_url_code(url : &str, author : &User) -> Result<String, CommandError
     };
 }
 
-pub fn find_code_block(result: &mut ParserResult, haystack: &str) -> bool {
+pub async fn find_code_block(result: &mut ParserResult, haystack: &str, author : &User) -> Result<bool, CommandError> {
     let re = regex::Regex::new(r"```(?:(?P<language>[^\s`]*)\r?\n)?(?P<code>[\s\S]*?)```").unwrap();
     let matches = re.captures_iter(haystack);
 
@@ -249,7 +250,21 @@ pub fn find_code_block(result: &mut ParserResult, haystack: &str) -> bool {
             code_index = 0;
         }
         _ => {
-            return false
+            return Ok(false)
+        }
+    }
+
+    let code_copy = result.code.clone();
+    let include_regex = Regex::new("\"[^\"]+\"|(?P<statement>#include\\s<(?P<url>.+?)>)").unwrap();
+    let matches = include_regex.captures_iter(&code_copy).enumerate();
+    for (_, cap) in matches {
+        if let Some(statement) = cap.name("statement"){
+            let include_stmt = statement.as_str();
+            let url = cap.name("url").unwrap().as_str();
+            if let Ok(code) = get_url_code(url, &author).await {
+                println!("Replacing {} with {}", include_stmt, &code);
+                result.code = result.code.replace(include_stmt, &code);
+            }
         }
     }
 
@@ -260,7 +275,7 @@ pub fn find_code_block(result: &mut ParserResult, haystack: &str) -> bool {
         }
     }
 
-    true
+    Ok(true)
 }
 
 pub async fn get_message_attachment(attachments : & Vec<Attachment>) -> Result<(String, String), CommandError> {
