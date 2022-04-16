@@ -1,14 +1,18 @@
-use serenity::framework::standard::{macros::command, Args, CommandResult, CommandError};
-use serenity::model::prelude::*;
-use serenity::prelude::*;
+use serenity::{
+    framework::standard::{macros::command, Args, CommandResult, CommandError},
+    model::prelude::*,
+    prelude::*,
+    builder::CreateEmbed
+};
 
-use crate::cache::{MessageCache, CompilerCache, ConfigCache, MessageCacheEntry};
-use crate::utls::discordhelpers::embeds;
-use crate::utls::discordhelpers;
-use crate::cppeval::eval::CppEval;
-use crate::utls::parser::ParserResult;
-use serenity::builder::CreateEmbed;
-use crate::utls::discordhelpers::embeds::ToEmbed;
+use crate::{
+    utls::discordhelpers::embeds,
+    cache::{MessageCache, CompilerCache, ConfigCache, MessageCacheEntry},
+    utls::discordhelpers,
+    cppeval::eval::CppEval,
+    utls::parser::ParserResult,
+    utls::discordhelpers::embeds::ToEmbed
+};
 
 #[command]
 #[aliases("c++")]
@@ -31,60 +35,38 @@ pub async fn cpp(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
     Ok(())
 }
 
-pub async fn handle_request(ctx : Context, content : String, author : User, msg : &Message) -> Result<CreateEmbed, CommandError> {
-    let loading_id;
-    let loading_name;
-    {
+pub async fn handle_request(ctx : Context, content : String, author : User, msg : &Message) -> std::result::Result<CreateEmbed, CommandError> {
+    let loading_reaction = {
         let data_read = ctx.data.read().await;
-        let botinfo_lock = data_read
-            .get::<ConfigCache>()
-            .expect("Expected ConfigCache in global cache")
-            .clone();
+        let botinfo_lock = data_read.get::<ConfigCache>().unwrap();
         let botinfo = botinfo_lock.read().await;
-        loading_id = botinfo
-            .get("LOADING_EMOJI_ID")
-            .unwrap()
-            .clone()
-            .parse::<u64>()
-            .unwrap();
-        loading_name = botinfo.get("LOADING_EMOJI_NAME").unwrap().clone();
-    }
+        if let Some(loading_id) = botinfo.get("LOADING_EMOJI_ID") {
+            let loading_name = botinfo.get("LOADING_EMOJI_NAME").expect("Unable to find loading emoji name").clone();
+            discordhelpers::build_reaction(loading_id.parse::<u64>()?, &loading_name)
+        }
+        else {
+            ReactionType::Unicode(String::from("⏳"))
+        }
+    };
 
     let start = content.find(' ');
     if start.is_none() {
-        return Err(CommandError::from(
-            "Invalid usage. View `;help cpp`",
-        ));
+        return Err(CommandError::from("Invalid usage. View `;help cpp`"))
     }
 
     let mut eval = CppEval::new(content.split_at(start.unwrap()).1);
-    let out = eval.evaluate();
-
-    if let Err(e) = out {
-        return Err(CommandError::from(
-            format!("{}", e),
-        ));
-    }
+    let out = eval.evaluate()?;
 
     // send out loading emote
-    let reaction = match msg
-        .react(
-            &ctx.http,
-            discordhelpers::build_reaction(loading_id, &loading_name),
-        )
-        .await
-    {
-        Ok(r) => r,
-        Err(e) => {
-            return Err(CommandError::from(format!(" Unable to react to message, am I missing permissions to react or use external emoji?\n{}", e)));
-        }
-    };
+    if let Err(_) = msg.react(&ctx.http, loading_reaction.clone()).await {
+        return Err(CommandError::from("Unable to react to message, am I missing permissions to react or use external emoji?\n{}"))
+    }
 
     let fake_parse = ParserResult {
         url: "".to_string(),
         stdin: "".to_string(),
         target: "g101".to_string(),
-        code: out.unwrap(),
+        code: out,
         options: vec![String::from("-O2"), String::from("-std=gnu++2a")],
         args: vec![]
     };
@@ -95,25 +77,14 @@ pub async fn handle_request(ctx : Context, content : String, author : User, msg 
         Ok(r) => r,
         Err(e) => {
             // we failed, lets remove the loading react so it doesn't seem like we're still processing
-            msg.delete_reaction_emoji(&ctx.http, reaction.emoji.clone())
-                .await?;
+            discordhelpers::delete_bot_reacts(&ctx, msg, loading_reaction.clone()).await?;
 
-            return Err(CommandError::from(format!("{}", e)));
+            return Err(CommandError::from(format!("{}", e)))
         }
     };
 
     // remove our loading emote
-    match msg
-        .delete_reaction_emoji(&ctx.http, reaction.emoji.clone())
-        .await
-    {
-        Ok(()) => (),
-        Err(_e) => {
-            return Err(CommandError::from(
-                "Unable to remove reactions!\nAm I missing permission to manage messages?",
-            ));
-        }
-    }
+    discordhelpers::delete_bot_reacts(&ctx, msg, loading_reaction).await?;
 
     return Ok(result.1.to_embed(&author, false));
 }

@@ -218,3 +218,16 @@ pub async fn send_global_presence(shard_manager : &MutexGuard<'_, ShardManager>,
         v.runner_tx.set_presence(Some(Activity::playing(&presence_str)), OnlineStatus::Online);
     }
 }
+
+pub async fn delete_bot_reacts(ctx : &Context, msg : &Message, react : ReactionType) -> CommandResult {
+    let bot_id = {
+        let data_read = ctx.data.read().await;
+        let botinfo_lock = data_read.get::<ConfigCache>().unwrap();
+        let botinfo = botinfo_lock.read().await;
+        let id = botinfo.get("BOT_ID").unwrap();
+        UserId::from(id.parse::<u64>().unwrap())
+    };
+
+    msg.channel_id.delete_reaction(&ctx.http, msg.id, Some(bot_id), react).await?;
+    Ok(())
+}

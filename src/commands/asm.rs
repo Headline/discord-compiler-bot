@@ -9,7 +9,7 @@ use crate::utls::{discordhelpers};
 use crate::utls::discordhelpers::embeds;
 
 use serenity::builder::{CreateEmbed};
-use serenity::model::channel::Message;
+use serenity::model::channel::{Message, ReactionType};
 use serenity::model::user::User;
 
 use crate::utls::{parser};
@@ -37,19 +37,17 @@ pub async fn asm(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
 
 pub async fn handle_request(ctx : Context, mut content : String, author : User, msg : &Message) -> Result<CreateEmbed, CommandError> {
     let data_read = ctx.data.read().await;
-    let loading_id;
-    let loading_name;
-    {
+    let loading_reaction = {
         let botinfo_lock = data_read.get::<ConfigCache>().unwrap();
         let botinfo = botinfo_lock.read().await;
-        loading_id = botinfo
-            .get("LOADING_EMOJI_ID")
-            .unwrap()
-            .clone()
-            .parse::<u64>()
-            .unwrap();
-        loading_name = botinfo.get("LOADING_EMOJI_NAME").unwrap().clone();
-    }
+        if let Some(loading_id) = botinfo.get("LOADING_EMOJI_ID") {
+            let loading_name = botinfo.get("LOADING_EMOJI_NAME").expect("Unable to find loading emoji name").clone();
+            discordhelpers::build_reaction(loading_id.parse::<u64>()?, &loading_name)
+        }
+        else {
+            ReactionType::Unicode(String::from("⏳"))
+        }
+    };
 
     // Try to load in an attachment
     let (code, ext) = parser::get_message_attachment(&msg.attachments).await?;
@@ -67,26 +65,15 @@ pub async fn handle_request(ctx : Context, mut content : String, author : User, 
     };
 
     // send out loading emote
-    let reaction = match msg
-        .react(
-            &ctx.http,
-            discordhelpers::build_reaction(loading_id, &loading_name),
-        )
-        .await
-    {
-        Ok(r) => r,
-        Err(e) => {
-            return Err(CommandError::from(format!(" Unable to react to message, am I missing permissions to react or use external emoji?\n{}", e)));
-        }
-    };
+    if let Err(_) = msg.react(&ctx.http, loading_reaction.clone()).await {
+        return Err(CommandError::from("Unable to react to message, am I missing permissions to react or use external emoji?\n{}"))
+    }
 
     let comp_mngr_lock = comp_mngr.read().await;
     let response = match comp_mngr_lock.assembly(&result, &author).await {
         Ok(resp) => resp,
         Err(e) => {
-            // we failed, lets remove the loading react before leaving so it doesn't seem like we're still processing
-            msg.delete_reaction_emoji(&ctx.http, reaction.emoji.clone())
-                .await?;
+            discordhelpers::delete_bot_reacts(&ctx, msg, loading_reaction).await?;
             return Err(CommandError::from(format!(
                 "Godbolt request failed!\n\n{}",
                 e
@@ -95,17 +82,7 @@ pub async fn handle_request(ctx : Context, mut content : String, author : User, 
     };
 
     // remove our loading emote
-    match msg
-        .delete_reaction_emoji(&ctx.http, reaction.emoji.clone())
-        .await
-    {
-        Ok(()) => (),
-        Err(_e) => {
-            return Err(CommandError::from(
-                "Unable to remove reactions!\nAm I missing permission to manage messages?",
-            ));
-        }
-    }
+    discordhelpers::delete_bot_reacts(&ctx, msg, loading_reaction).await?;
 
     Ok(response.1)
 }
