@@ -45,7 +45,8 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     pretty_env_logger::init();
 
-    let token = env::var("BOT_TOKEN")?;
+    let token = env::var("BOT_TOKEN")
+        .expect("Expected bot token in .env file");
     let http = Http::new_with_token(&token);
     let (owners, bot_id) = match http.get_current_application_info().await {
         Ok(info) => {
@@ -64,8 +65,10 @@ async fn main() -> Result<(), Box<dyn Error>> {
         Err(why) => {
             warn!("Could not access application info: {:?}", why);
             warn!("Trying environment variable for bot id...");
-            let id = env::var("BOT_ID").expect("Unable to find BOT_ID environment variable");
-            let bot_id = id.parse::<u64>().expect("Invalid bot id");
+            let id = env::var("BOT_ID")
+                .expect("Unable to find BOT_ID environment variable");
+            let bot_id = id.parse::<u64>()
+                .expect("Invalid bot id");
             (HashSet::new(), serenity::model::id::UserId(bot_id))
         },
     };
@@ -79,8 +82,10 @@ async fn main() -> Result<(), Box<dyn Error>> {
             .join(", ")
     );
 
-    let prefix = env::var("BOT_PREFIX")?;
-    let app_id = env::var("APPLICATION_ID")?;
+    let prefix = env::var("BOT_PREFIX")
+        .expect("Expected bot prefix in .env file");
+    let app_id = env::var("APPLICATION_ID")
+        .expect("Expected application id in .env file");
     let framework = StandardFramework::new()
         .configure(|c| c.owners(owners).prefix(&prefix))
         .before(events::before)
