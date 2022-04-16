@@ -242,26 +242,32 @@ impl EventHandler for Handler {
     async fn ready(&self, ctx: Context, ready: Ready) {
         info!("[Shard {}] Ready", ctx.shard_id);
 
-        let data = ctx.data.read().await;
-        let mut stats = data.get::<StatsManagerCache>().unwrap().lock().await;
-        let cmd_mgr = data.get::<CommandCache>().unwrap().read().await;
-        cmd_mgr.register_commands(&ctx).await;
-        info!("Registering commands for shard {}", ctx.shard_id);
+        {
+            let data = ctx.data.read().await;
+            let mut stats = data.get::<StatsManagerCache>().unwrap().lock().await;
+            // occasionally we can have a ready event fire well after execution
+            // this check prevents us from double calling all_shards_ready
+            let total_shards_to_spawn = ready.shard.unwrap()[1];
+            if stats.shard_count() + 1 > total_shards_to_spawn {
+                info!("Skipping duplicate ready event...");
+                return;
+            }
 
-        // occasionally we can have a ready event fire well after execution
-        // this check prevents us from double calling all_shards_ready
-        let total_shards_to_spawn = ready.shard.unwrap()[1];
-        if stats.shard_count()+1 > total_shards_to_spawn {
-            info!("Skipping duplicate ready event...");
-            return;
+            let guild_count = ready.guilds.len() as u64;
+            stats.add_shard(guild_count);
+
+            if stats.shard_count() == total_shards_to_spawn {
+                self.all_shards_ready(&ctx, &mut stats, &ready).await;
+            }
         }
 
-        let guild_count = ready.guilds.len() as u64;
-        stats.add_shard(guild_count);
-
-        if stats.shard_count() == total_shards_to_spawn {
-            self.all_shards_ready(&ctx, & mut stats, &ready).await;
-        }
+        tokio::task::spawn(async move {
+            let ctx = ctx.clone();
+            let data = ctx.data.read().await;
+            let cmd_mgr = data.get::<CommandCache>().unwrap().read().await;
+            cmd_mgr.register_commands(&ctx).await;
+            info!("[Shard {}] Registered commands", ctx.shard_id);
+        });
     }
 
     async fn interaction_create(&self, ctx: Context, interaction: Interaction) {
