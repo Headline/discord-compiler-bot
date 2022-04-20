@@ -91,7 +91,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let framework = StandardFramework::new()
         .before(events::before)
         .after(events::after)
-        .configure(|c| c.owners(owners))
+        .configure(|c| c.owners(owners).prefix(&prefix))
         .group(&GENERAL_GROUP)
         .bucket("nospam", |b| b.delay(3).time_span(10).limit(3))
         .await
@@ -100,7 +100,8 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let intents = GatewayIntents::GUILDS
         | GatewayIntents::MESSAGE_CONTENT
         | GatewayIntents::GUILD_INTEGRATIONS
-        | GatewayIntents::GUILD_MESSAGE_REACTIONS;
+        | GatewayIntents::GUILD_MESSAGE_REACTIONS
+        | GatewayIntents::GUILD_MESSAGES;
     let mut client = serenity::Client::builder(token,intents)
         .framework(framework)
         .event_handler(events::Handler)
