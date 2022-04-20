@@ -1,7 +1,7 @@
 [package]
 name = "discord-compiler-bot"
 description = "Discord bot to compile your spaghetti code."
-version = "3.3.2"
+version = "3.3.3"
 authors = ["Michael Flaherty (Headline#9999)"]
 edition = "2018"
 build = "src/build.rs"
@@ -32,9 +32,8 @@ chrono = "0.4.19"
 
 
 [dependencies.serenity]
-version = "0.10"
-rev = "9624af0def9cd191a51750232edce23970486a0e"
-git = "https://github.com/serenity-rs/serenity"
+version = "0.11"
+#git = "https://github.com/serenity-rs/serenity"
 #branch = "current"
 default-features = false
 features = ["collector", "gateway", "builder", "standard_framework", "http", "model", "client", "framework", "utils", "rustls_backend", "unstable_discord_api"]

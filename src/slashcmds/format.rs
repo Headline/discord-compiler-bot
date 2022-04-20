@@ -39,10 +39,11 @@ pub async fn format(ctx: &Context, command: &ApplicationCommandInteraction) -> C
 
     // Handle response from select menu / button interactions
     let resp = command.get_interaction_response(&ctx.http).await?;
-    let mut cib = resp.await_component_interactions(&ctx.shard).timeout(Duration::from_secs(30)).await;
+    let mut cib = resp.await_component_interactions(&ctx.shard).timeout(Duration::from_secs(30));
+    let mut cic = cib.build();
     let mut formatter = String::from("clangformat");
     let mut selected = false;
-    while let Some(interaction) = &cib.next().await {
+    while let Some(interaction) = &cic.next().await {
         match interaction.data.custom_id.as_str() {
             "formatter" => {
                 formatter = interaction.data.values[0].clone();
@@ -51,7 +52,7 @@ pub async fn format(ctx: &Context, command: &ApplicationCommandInteraction) -> C
             "select" => {
                 interaction.defer(&ctx.http).await?;
                 selected = true;
-                cib.stop();
+                cic.stop();
                 break;
             }
             _ => {
@@ -71,11 +72,11 @@ pub async fn format(ctx: &Context, command: &ApplicationCommandInteraction) -> C
     }).await?;
 
     let resp = command.get_interaction_response(&ctx.http).await?;
-    cib = resp.await_component_interactions(&ctx.shard).timeout(Duration::from_secs(30)).await;
-
+    cib = resp.await_component_interactions(&ctx.shard).timeout(Duration::from_secs(30));
+    cic = cib.build();
     selected = false;
     let mut style = String::from("WebKit");
-    while let Some(interaction) = &cib.next().await {
+    while let Some(interaction) = &cic.next().await {
         match interaction.data.custom_id.as_str() {
             "style" => {
                 style = interaction.data.values[0].clone();
@@ -83,7 +84,7 @@ pub async fn format(ctx: &Context, command: &ApplicationCommandInteraction) -> C
             }
             "select" => {
                 selected = true;
-                cib.stop();
+                cic.stop();
                 break;
             }
             _ => {
@@ -166,7 +167,7 @@ fn create_styles_interaction<'a>(response: &'a mut EditInteractionResponse, styl
         })
 }
 
-fn create_formats_interaction<'a>(response: &'a mut CreateInteractionResponse, formats: &Vec<Format>) -> &'a mut CreateInteractionResponse {
+fn create_formats_interaction<'this,'a>(response: &'this mut CreateInteractionResponse<'a>, formats: &Vec<Format>) -> &'this mut CreateInteractionResponse<'a> {
     response
         .kind(InteractionResponseType::ChannelMessageWithSource)
         .interaction_response_data(|data| {

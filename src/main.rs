@@ -12,12 +12,13 @@ mod tests;
 mod slashcmds;
 
 use serenity::{
-    client::bridge::gateway::GatewayIntents,
     framework::{standard::macros::group, StandardFramework},
-    http::Http,
 };
 
-use std::{collections::HashSet, env, error::Error};
+use std::{env, error::Error};
+use std::collections::HashSet;
+use serenity::http::Http;
+use serenity::prelude::GatewayIntents;
 
 use crate::apis::dbl::BotsListApi;
 
@@ -47,7 +48,8 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     let token = env::var("BOT_TOKEN")
         .expect("Expected bot token in .env file");
-    let http = Http::new_with_token(&token);
+
+    let http = Http::new(&token);
     let (owners, bot_id) = match http.get_current_application_info().await {
         Ok(info) => {
             let mut owners = HashSet::new();
@@ -69,7 +71,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
                 .expect("Unable to find BOT_ID environment variable");
             let bot_id = id.parse::<u64>()
                 .expect("Invalid bot id");
-            (HashSet::new(), serenity::model::id::UserId(bot_id))
+            (HashSet::new(), serenity::model::id::ApplicationId(bot_id))
         },
     };
 
@@ -87,21 +89,26 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let app_id = env::var("APPLICATION_ID")
         .expect("Expected application id in .env file");
     let framework = StandardFramework::new()
-        .configure(|c| c.owners(owners).prefix(&prefix))
         .before(events::before)
         .after(events::after)
+        .configure(|c| c.owners(owners).prefix(&prefix))
         .group(&GENERAL_GROUP)
         .bucket("nospam", |b| b.delay(3).time_span(10).limit(3))
         .await
         .on_dispatch_error(events::dispatch_error);
-    let mut client = serenity::Client::builder(token)
+
+    let intents = GatewayIntents::GUILDS
+        | GatewayIntents::MESSAGE_CONTENT
+        | GatewayIntents::GUILD_INTEGRATIONS
+        | GatewayIntents::GUILD_MESSAGE_REACTIONS
+        | GatewayIntents::GUILD_MESSAGES;
+    let mut client = serenity::Client::builder(token,intents)
         .framework(framework)
         .event_handler(events::Handler)
-        .intents(GatewayIntents::GUILDS | GatewayIntents::GUILD_MESSAGES | GatewayIntents::GUILD_MESSAGE_REACTIONS)
         .application_id(app_id.parse::<u64>().unwrap())
         .await?;
 
-    cache::fill(client.data.clone(), &prefix, &bot_id, client.shard_manager.clone()).await?;
+    cache::fill(client.data.clone(), &prefix, bot_id.0, client.shard_manager.clone()).await?;
 
     let dbl = BotsListApi::new();
     if dbl.should_spawn() {

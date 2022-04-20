@@ -7,7 +7,6 @@ use tokio::sync::RwLock;
 use tokio::sync::Mutex;
 
 use serenity::prelude::{TypeMap, TypeMapKey};
-use serenity::model::id::UserId;
 use serenity::client::bridge::gateway::ShardManager;
 
 use crate::managers::stats::StatsManager;
@@ -85,7 +84,7 @@ impl TypeMapKey for CommandCache {
 pub async fn fill(
     data: Arc<RwLock<TypeMap>>,
     prefix: &str,
-    id: &UserId,
+    id: u64,
     shard_manager: Arc<tokio::sync::Mutex<ShardManager>>
 ) -> Result<(), Box<dyn Error>> {
     let mut data = data.write().await;

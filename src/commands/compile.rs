@@ -32,7 +32,7 @@ pub async fn compile(ctx: &Context, msg: &Message, _args: Args) -> CommandResult
         .await?;
 
     // Success/fail react
-    let compilation_successful = compilation_embed.embeds[0].colour.0 == COLOR_OKAY;
+    let compilation_successful = compilation_embed.embeds[0].colour.unwrap().0 == COLOR_OKAY;
     discordhelpers::send_completion_react(ctx, &compilation_embed, compilation_successful).await?;
 
     let mut delete_cache = data_read.get::<MessageCache>().unwrap().lock().await;

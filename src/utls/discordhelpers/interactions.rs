@@ -208,7 +208,7 @@ pub fn edit_to_confirmation_interaction<'a>(result: &CreateEmbed, resp: &'a mut 
         })
 }
 
-pub fn create_language_interaction<'a>(resp : &'a mut CreateInteractionResponse, languages : &[&str]) -> &'a mut CreateInteractionResponse {
+pub fn create_language_interaction<'this, 'a>(resp : &'this mut CreateInteractionResponse<'a>, languages : & [&str]) -> &'this  mut CreateInteractionResponse<'a> {
     resp
         .kind(InteractionResponseType::ChannelMessageWithSource)
         .interaction_response_data(|data| {
@@ -235,7 +235,7 @@ pub fn create_language_interaction<'a>(resp : &'a mut CreateInteractionResponse,
         })
 }
 
-pub fn create_dismiss_response(resp: &mut CreateInteractionResponse) -> &mut CreateInteractionResponse {
+pub fn create_dismiss_response<'this, 'a>(resp: &'this mut CreateInteractionResponse<'a>) -> &'this mut CreateInteractionResponse<'a> {
     resp
         .kind(InteractionResponseType::UpdateMessage)
         .interaction_response_data(|data| {
@@ -335,14 +335,15 @@ where
     }
 
     let resp = command.get_interaction_response(&ctx.http).await?;
-    let mut cib = resp.await_component_interactions(&ctx.shard).timeout(Duration::from_secs(30)).await;
+    let cib = resp.await_component_interactions(&ctx.shard).timeout(Duration::from_secs(30));
+    let mut cic = cib.build();
 
     // collect compiler into var
     parse_result.target = language.to_owned();
 
     let mut last_interaction = None;
     let mut more_options_response = None;
-    while let Some(interaction) = &cib.next().await {
+    while let Some(interaction) = &cic.next().await {
         last_interaction = Some(interaction.clone());
         match interaction.data.custom_id.as_str() {
             "compiler_select" => {
@@ -364,12 +365,12 @@ where
 
                 more_options_response = create_more_options_panel(ctx, interaction.clone(), & mut parse_result).await?;
                 if more_options_response.is_some() {
-                    cib.stop();
+                    cic.stop();
                     break;
                 }
             }
             "1" => {
-                cib.stop();
+                cic.stop();
                 break;
             }
             _ => {
