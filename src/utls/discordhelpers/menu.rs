@@ -31,8 +31,10 @@ impl Menu {
                 .set_components(self.components.clone())
         }).await?;
 
-        let mut cib = m.await_component_interactions(&self.ctx.shard).timeout(Duration::from_secs(60)).await;
-        while let Some(int) = cib.next().await {
+        let cib = m.await_component_interactions(&self.ctx.shard)
+            .timeout(Duration::from_secs(60));
+        let mut cic = cib.build();
+        while let Some(int) = cic.next().await {
             match int.data.custom_id.as_str() {
                 "left" => {
                     if self.page > 0 {

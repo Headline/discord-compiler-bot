@@ -32,9 +32,9 @@ chrono = "0.4.19"
 
 
 [dependencies.serenity]
-#version = "0.10"
-git = "https://github.com/serenity-rs/serenity"
-branch = "current"
+version = "0.11"
+#git = "https://github.com/serenity-rs/serenity"
+#branch = "current"
 default-features = false
 features = ["collector", "gateway", "builder", "standard_framework", "http", "model", "client", "framework", "utils", "rustls_backend", "unstable_discord_api"]
 

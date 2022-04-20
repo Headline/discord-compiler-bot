@@ -25,7 +25,7 @@ pub async fn asm(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
         .await?;
 
     // Success/fail react
-    let compilation_successful = asm_embed.embeds[0].colour.0 == COLOR_OKAY;
+    let compilation_successful = asm_embed.embeds[0].colour.unwrap().0 == COLOR_OKAY;
     discordhelpers::send_completion_react(ctx, &asm_embed, compilation_successful).await?;
 
     let data_read = ctx.data.read().await;

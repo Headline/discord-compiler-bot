@@ -155,7 +155,7 @@ pub async fn send_completion_react(ctx: &Context, msg: &Message, success: bool) 
             let botinfo = botinfo_lock.read().await;
             if let Some(success_id) = botinfo.get("SUCCESS_EMOJI_ID") {
                 let success_name = botinfo.get("SUCCESS_EMOJI_NAME").expect("Unable to find success emoji name").clone();
-                reaction = discordhelpers::build_reaction(success_id.parse::<u64>()?, &success_name);
+                reaction = discordhelpers::build_reaction(success_id.parse::<u64>().unwrap(), &success_name);
             }
             else {
                 reaction = ReactionType::Unicode(String::from("✅"));

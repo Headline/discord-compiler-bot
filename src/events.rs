@@ -5,7 +5,6 @@ use serenity::{
     async_trait,
     model::channel::Message,
     model::guild::Guild,
-    model::guild::GuildUnavailable,
     model::id::ChannelId,
     model::id::MessageId,
     model::gateway::Ready,
@@ -16,10 +15,11 @@ use serenity::{
     collector::CollectReaction,
     model::interactions::{Interaction}
 };
+use serenity::model::prelude::UnavailableGuild;
 
 use tokio::sync::MutexGuard;
 
-use chrono::{DateTime, Duration, Utc};
+use chrono::{DateTime, Utc};
 
 use crate::{
     utls::discordhelpers::embeds,
@@ -64,7 +64,7 @@ impl EventHandler for Handler {
         let data = ctx.data.read().await;
 
         let now: DateTime<Utc> = Utc::now();
-        if guild.joined_at + Duration::seconds(30) > now {
+        if guild.joined_at.unix_timestamp() + 30 > now.timestamp() {
             // post new server to join log
             let id;
             {
@@ -107,27 +107,19 @@ impl EventHandler for Handler {
                 let mut message = embeds::embed_message(embeds::build_welcome_embed());
                 let _ = system_channel.send_message(&ctx.http, |_| &mut message).await;
             }
-            else {
-                for (_, channel) in guild.channels {
-                    if channel.name.contains("general") {
-                        let mut message = embeds::embed_message(embeds::build_welcome_embed());
-                        let _ = channel.send_message(&ctx.http, |_| &mut message).await;
-                    }
-                }
-            }
         }
     }
 
-    async fn guild_delete(&self, ctx: Context, incomplete: GuildUnavailable) {
+    async fn guild_delete(&self, ctx: Context, incomplete: UnavailableGuild) {
         let data = ctx.data.read().await;
 
         // post new server to join log
         let info = data.get::<ConfigCache>().unwrap().read().await;
-        let id = info.get("BOT_ID").unwrap().parse::<u64>().unwrap();
+        let id = info.get("BOT_ID").unwrap().parse::<u64>().unwrap(); // used later
         if let Some(log) = info.get("JOIN_LOG") {
-            if let Ok(id) = log.parse::<u64>() {
+            if let Ok(join_id) = log.parse::<u64>() {
                 let emb = embeds::build_leave_embed(&incomplete.id);
-                discordhelpers::manual_dispatch(ctx.http.clone(), id, emb).await;
+                discordhelpers::manual_dispatch(ctx.http.clone(), join_id, emb).await;
             }
         }
 
@@ -366,7 +358,7 @@ pub async fn after(
 }
 
 #[hook]
-pub async fn dispatch_error(ctx: &Context, msg: &Message, error: DispatchError) {
+pub async fn dispatch_error(ctx: &Context, msg: &Message, error: DispatchError, _: &str) {
     if let DispatchError::Ratelimited(_) = error {
         let emb =
             embeds::build_fail_embed(&msg.author, "You are sending requests too fast!");
