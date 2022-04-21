@@ -41,7 +41,7 @@ pub async fn get_components(input: &str, author : &User, compilation_manager : O
     let mut result = ParserResult::default();
 
     // Find the index for where we should stop parsing user input
-    let mut end_point: usize = 0;
+    let mut end_point: usize = input.len();
     if let Some(parse_stop) = input.find("\n") {
         end_point = parse_stop;
     }
@@ -53,10 +53,7 @@ pub async fn get_components(input: &str, author : &User, compilation_manager : O
         else if index < end_point {
             end_point = index;
         }
-    } else {
-        end_point = input.len();
     }
-
     let mut args: Vec<&str> = input[..end_point].split_whitespace().collect();
     // ditch command str (;compile, ;asm)
     args.remove(0);

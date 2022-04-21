@@ -79,6 +79,29 @@ async fn standard_parse_url() {
 }
 
 #[tokio::test]
+async fn standard_parse_url_args() {
+    let dummy_user = User::default();
+    let input = indoc::indoc!(
+        ";compile c++ < https://pastebin.com/raw/ERqDRZva\ntest1 test2"
+    );
+
+    let reply = None;
+    let result = get_components(input, &dummy_user, None, &reply).await;
+    if let Err(_) = &result {
+        assert!(false, "Parser failed.");
+    }
+
+    let parser_result = result.unwrap();
+    println!("{:?}", &parser_result);
+    assert_eq!(parser_result.target, "c++");
+    assert_eq!(parser_result.args, ["test1", "test2"]);
+    assert_eq!(parser_result.options.len(), 0);
+    assert_eq!(parser_result.stdin, "");
+    assert_eq!(parser_result.url, "https://pastebin.com/raw/ERqDRZva");
+    assert_eq!(parser_result.code, "int main() {}");
+}
+
+#[tokio::test]
 async fn standard_parse_stdin() {
     let dummy_user = User::default();
     let input = indoc::indoc!(
