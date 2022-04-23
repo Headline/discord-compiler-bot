@@ -2,7 +2,7 @@
 A Discord bot which can compile code, display the output of the compiler, and run the program. This bot is great for prototyping ideas, or testing concepts on-the-fly with very little effort. It supports almost every programing language you could name (c++, c, java, python, ruby, javascript, go, php, lua, & more!). 
 
 ## 🔗 Links
- - **[Invitation Link](https://discordapp.com/oauth2/authorize?client_id=504095380166803466&scope=bot&permissions=388160)**
+ - **[Invitation Link](https://discord.com/oauth2/authorize?client_id=504095380166803466&permissions=379968&scope=applications.commands%20bot)**
  
  - **[Support Discord](https://discord.gg/ExraTaJ)**
  
