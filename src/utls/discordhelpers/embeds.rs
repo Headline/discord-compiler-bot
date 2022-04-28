@@ -145,13 +145,13 @@ impl ToEmbed<bool> for godbolt::GodboltResponse {
             let stderr = errs.trim();
             let mut output = false;
             if !stdout.is_empty() {
-                let str = discordhelpers::conform_external_str(stdout,  MAX_ERROR_LEN);
+                let str = discordhelpers::conform_external_str(stdout,  MAX_OUTPUT_LEN);
                 embed.field("Program Output", format!("```\n{}\n```", str), false);
                 output = true;
             }
             if !stderr.is_empty() {
                 output = true;
-                let str = discordhelpers::conform_external_str(stderr, MAX_OUTPUT_LEN);
+                let str = discordhelpers::conform_external_str(stderr, MAX_ERROR_LEN);
                 embed.field("Compiler Output", format!("```\n{}\n```", str), false);
             }
 
