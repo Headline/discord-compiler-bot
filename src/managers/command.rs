@@ -8,12 +8,14 @@ use serenity::model::interactions::application_command::ApplicationCommand;
 use crate::{cache::{CompilerCache}, slashcmds};
 use crate::cache::StatsManagerCache;
 
-pub struct CommandManager;
+pub struct CommandManager {
+    commands_registered : bool
+}
 
 impl CommandManager {
     pub fn new() -> Self {
         CommandManager {
-
+            commands_registered: false
         }
     }
 
@@ -57,7 +59,12 @@ impl CommandManager {
         }
     }
 
-    pub async fn register_commands(&self, ctx: &Context) {
+    pub async fn register_commands(&mut self, ctx: &Context) {
+        if self.commands_registered {
+            return
+        }
+        self.commands_registered = true;
+
         let data_read = ctx.data.read().await;
         let compiler_cache = data_read.get::<CompilerCache>().unwrap();
         let compiler_manager = compiler_cache.read().await;
@@ -101,5 +108,6 @@ impl CommandManager {
         }).await {
             error!("Unable to create application commands: {}", err);
         }
+        info!("Registered application commands");
     }
 }
