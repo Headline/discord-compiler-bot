@@ -253,13 +253,9 @@ impl EventHandler for Handler {
             }
         }
 
-        tokio::task::spawn(async move {
-            let ctx = ctx.clone();
-            let data = ctx.data.read().await;
-            let cmd_mgr = data.get::<CommandCache>().unwrap().read().await;
-            cmd_mgr.register_commands(&ctx).await;
-            info!("[Shard {}] Registered commands", ctx.shard_id);
-        });
+        let data = ctx.data.read().await;
+        let mut cmd_mgr = data.get::<CommandCache>().unwrap().write().await;
+        cmd_mgr.register_commands(&ctx).await;
     }
 
     async fn interaction_create(&self, ctx: Context, interaction: Interaction) {
