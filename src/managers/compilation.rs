@@ -6,6 +6,7 @@ use serenity::builder::CreateEmbed;
 
 use wandbox::{Wandbox, CompilationBuilder, WandboxError};
 use godbolt::{Godbolt, GodboltError, CompilationFilters, RequestOptions, CompilerOptions};
+use crate::boilerplate::generator::{boilerplate_factory};
 
 use crate::utls::parser::ParserResult;
 use crate::utls::discordhelpers::embeds::ToEmbed;
@@ -138,7 +139,16 @@ impl CompilationManager {
 
         let target = if parse_result.target == "haskell" { "ghc901" } else { &parse_result.target };
         let compiler = self.gbolt.resolve(target).unwrap();
-        let response = Godbolt::send_request(&compiler, &parse_result.code,  options, USER_AGENT).await?;
+
+        // replace boilerplate code if needed
+        let mut code = parse_result.code.clone();
+        {
+            let generator = boilerplate_factory(&compiler.lang, &code);
+            if generator.needs_boilerplate() {
+                code = generator.generate();
+            }
+        }
+        let response = Godbolt::send_request(&compiler, &code,  options, USER_AGENT).await?;
         Ok((compiler.lang, response))
     }
 
@@ -162,8 +172,33 @@ impl CompilationManager {
     }
 
     pub async fn wandbox(&self, parse_result : &ParserResult) -> Result<(String, wandbox::CompilationResult), WandboxError> {
+        let lang = {
+            let mut found = String::default();
+            for lang in self.wbox.get_languages() {
+                if parse_result.target == lang.name {
+                    found = parse_result.target.clone();
+                }
+                for compiler in lang.compilers {
+                    if compiler.name == parse_result.target {
+                        found = lang.name.clone();
+                    }
+                }
+            }
+            if found.is_empty() {
+                warn!("Invalid target leaked checks and was caught before boilerplate creation")
+            }
+            found
+        };
+        let mut code = parse_result.code.clone();
+        {
+            let generator = boilerplate_factory(&lang, &code);
+            if generator.needs_boilerplate() {
+                code = generator.generate();
+            }
+        }
+
         let mut builder = CompilationBuilder::new();
-        builder.code(&parse_result.code);
+        builder.code(&code);
         builder.target(&parse_result.target);
         builder.stdin(&parse_result.stdin);
         builder.save(false);
