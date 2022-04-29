@@ -147,9 +147,6 @@ impl CompilationManager {
             if generator.needs_boilerplate() {
                 code = generator.generate();
             }
-            else {
-                warn!("Does not need boilerplate for language: {}", &compiler.lang);
-            }
         }
         let response = Godbolt::send_request(&compiler, &code,  options, USER_AGENT).await?;
         Ok((compiler.lang, response))
