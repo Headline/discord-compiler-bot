@@ -1,4 +1,5 @@
 use crate::boilerplate::cpp::CppGenerator;
+use crate::boilerplate::csharp::CSharpGenerator;
 use crate::boilerplate::java::JavaGenerator;
 
 pub trait BoilerPlateGenerator {
@@ -51,8 +52,12 @@ pub fn boilerplate_factory(language : &str, code : &str)
         "java" => {
             BoilerPlate::new(Box::new(JavaGenerator::new(code)))
         }
-        unknown => {
-            warn!("Unknown boilerplate for: {}", unknown);
+        "c#" => {
+            BoilerPlate::new(Box::new(CSharpGenerator::new(code)))
+        }
+        // since all compilations go through this path, we have a Null generator whose
+        // needs_boilerplate() always returns false.
+        _ => {
             BoilerPlate::new(Box::new(Null::new(code)))
         }
     }
