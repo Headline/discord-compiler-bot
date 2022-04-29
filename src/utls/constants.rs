@@ -13,7 +13,7 @@ pub const ICON_INVITE: &str = "https://i.imgur.com/CZFt69d.png";
 //pub const COMPILER_EXPLORER_ICON: &str = "https://i.imgur.com/GIgATFr.png";
 pub const COMPILER_ICON: &str = "http://i.michaelwflaherty.com/u/XedLoQWCVc.png";
 pub const MAX_OUTPUT_LEN: usize = 250;
-pub const MAX_ERROR_LEN: usize = 956;
+pub const MAX_ERROR_LEN: usize = 997;
 pub const USER_AGENT : &str = const_format::formatcp!("discord-compiler-bot/{}", env!("CARGO_PKG_VERSION"));
 pub const URL_ALLOW_LIST : [&str; 4] = ["pastebin.com", "gist.githubusercontent.com", "hastebin.com", "raw.githubusercontent.com"];
 

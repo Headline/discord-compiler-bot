@@ -10,6 +10,7 @@ mod cppeval;
 mod managers;
 mod tests;
 mod slashcmds;
+mod boilerplate;
 
 use serenity::{
     framework::{standard::macros::group, StandardFramework},
