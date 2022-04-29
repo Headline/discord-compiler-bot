@@ -45,7 +45,7 @@ impl BoilerPlateGenerator for Null {
 pub fn boilerplate_factory(language : &str, code : &str)
     -> BoilerPlate<dyn BoilerPlateGenerator> {
     return match language {
-        "c++" => {
+        "c++" | "c" => {
             BoilerPlate::new(Box::new(CppGenerator::new(code)))
         }
         "java" => {
