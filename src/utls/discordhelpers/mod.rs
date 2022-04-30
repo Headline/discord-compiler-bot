@@ -215,9 +215,7 @@ pub async fn send_global_presence(shard_manager : &MutexGuard<'_, ShardManager>,
             sum.to_string()
         }
         else {
-            human_format::Formatter::new()
-                .with_decimals(1)
-                .format(sum as f64)
+            format!("{:.1}k", sum/1000)
         }
     };
     // update shard guild count & presence

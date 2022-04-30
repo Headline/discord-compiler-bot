@@ -26,7 +26,6 @@ use crate::apis::dbl::BotsListApi;
 #[macro_use]
 extern crate log;
 extern crate pretty_env_logger;
-extern crate human_format;
 
 /** Command Registration **/
 use crate::commands::{
