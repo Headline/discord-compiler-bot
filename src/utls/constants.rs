@@ -1,4 +1,5 @@
-
+use lazy_static::lazy_static;
+use regex::Regex;
 
 //pub const COLOR_OKAY : i32 = 0x046604;
 pub const COLOR_OKAY: u32 = 0x5dbcd2;
@@ -17,7 +18,12 @@ pub const MAX_ERROR_LEN: usize = 997;
 pub const USER_AGENT : &str = const_format::formatcp!("discord-compiler-bot/{}", env!("CARGO_PKG_VERSION"));
 pub const URL_ALLOW_LIST : [&str; 4] = ["pastebin.com", "gist.githubusercontent.com", "hastebin.com", "raw.githubusercontent.com"];
 
-
+// Boilerplate Regexes
+lazy_static! {
+    pub static ref JAVA_MAIN_REGEX: Regex = Regex::new("\"[^\"]+\"|(?P<main>public[\\s]+?static[\\s]+?void[\\s]+?main[\\s]*?\\()").unwrap();
+    pub static ref C_LIKE_MAIN_REGEX: Regex = Regex::new("\"[^\"]+\"|(?P<main>main[\\s]*?\\()").unwrap();
+    pub static ref CSHARP_MAIN_REGEX: Regex = Regex::new("\"[^\"]+\"|(?P<main>static[\\s]+?void[\\s]+?Main[\\s]*?\\()").unwrap();
+}
 /*
     Discord limits the size of the amount of compilers we can display to users, for some languages
     we'll just grab the first 25 from our API, for C & C++ we will create a curated list manually.

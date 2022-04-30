@@ -1,5 +1,5 @@
-use regex::Regex;
 use crate::boilerplate::generator::BoilerPlateGenerator;
+use crate::utls::constants::C_LIKE_MAIN_REGEX;
 
 pub struct CppGenerator {
     input : String
@@ -41,8 +41,7 @@ impl BoilerPlateGenerator for CppGenerator {
     }
 
     fn needs_boilerplate(&self) -> bool {
-        let cpp_main_regex: Regex = Regex::new("\"[^\"]+\"|(?P<main>main[\\s]*?\\()").unwrap();
-        for m in cpp_main_regex.captures_iter(&self.input) {
+        for m in C_LIKE_MAIN_REGEX.captures_iter(&self.input) {
             if let Some(_) = m.name("main") {
                 return false;
             }
