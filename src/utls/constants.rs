@@ -23,6 +23,7 @@ lazy_static! {
     pub static ref C_LIKE_MAIN_REGEX: Regex = Regex::new("\"[^\"]+\"|(?P<main>main[\\s]*?\\()").unwrap();
     pub static ref CSHARP_MAIN_REGEX: Regex = Regex::new("\"[^\"]+\"|(?P<main>static[\\s]+?void[\\s]+?Main[\\s]*?\\()").unwrap();
 }
+
 /*
     Discord limits the size of the amount of compilers we can display to users, for some languages
     we'll just grab the first 25 from our API, for C & C++ we will create a curated list manually.
