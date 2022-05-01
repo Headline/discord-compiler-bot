@@ -45,3 +45,12 @@ async fn standard_doesnt_need_boilerplate4() {
     }\n");
     assert!(!gen.needs_boilerplate());
 }
+
+#[tokio::test]
+async fn standard_doesnt_need_boilerplate5() {
+    let gen = JavaGenerator::new("class Test {\n\
+    public static final void main                               (String[] args) {\n\
+    }\n\
+    }\n");
+    assert!(!gen.needs_boilerplate());
+}

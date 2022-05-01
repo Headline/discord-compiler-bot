@@ -20,7 +20,7 @@ pub const URL_ALLOW_LIST : [&str; 4] = ["pastebin.com", "gist.githubusercontent.
 
 // Boilerplate Regexes
 lazy_static! {
-    pub static ref JAVA_MAIN_REGEX: Regex = Regex::new("\"[^\"]+\"|(?P<main>public[\\s]+?static[\\s]+?void[\\s]+?main[\\s]*?\\()").unwrap();
+    pub static ref JAVA_MAIN_REGEX: Regex = Regex::new("\"[^\"]+\"|(?P<main>void[\\s]+?main[\\s]*?\\()").unwrap();
     pub static ref C_LIKE_MAIN_REGEX: Regex = Regex::new("\"[^\"]+\"|(?P<main>main[\\s]*?\\()").unwrap();
     pub static ref CSHARP_MAIN_REGEX: Regex = Regex::new("\"[^\"]+\"|(?P<main>static[\\s]+?void[\\s]+?Main[\\s]*?\\()").unwrap();
 }
