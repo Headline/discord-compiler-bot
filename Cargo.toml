@@ -6,6 +6,9 @@ authors = ["Michael Flaherty (Headline#9999)"]
 edition = "2018"
 build = "src/build.rs"
 
+[dev-dependencies]
+rusty-hook = "0.11.2"
+
 [dependencies]
 tokio = { version = "1", features = ["full"] }
 reqwest = { version = "0.11" }
