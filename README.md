@@ -9,7 +9,7 @@ A Discord bot which can compile code, display the output of the compiler, and ru
  - **[Donation Link](https://donatebot.io/checkout/505721414662225921) ❤️**
 
 ## 👩‍🏫 Usage
-For a tutorial about how to use this bot, feel free to view our [wiki](https://github.com/Headline/discord-compiler/wiki/Introduction)!
+For a tutorial about how to use this bot, feel free to view our [wiki](https://github.com/Headline/discord-compiler-bot/wiki/1.-Getting-Started)!
 
 ## 🔰 Hosting it yourself?
 There's only two steps required to get this bot up-and-running. Our release builds only support 64-bit, if you'd like to run this on a different architecture you will have to compile the project yourself, this is also true if you wish to host this bot on MacOS.
