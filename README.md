@@ -18,7 +18,7 @@ There's only two steps required to get this bot up-and-running. Our release buil
 3) Start the bot
 
 ## ⚖️ License
-This project's license is the GNU GPLv3 general purpose license.
+This project's license is the GNU GPLv3 general purpose license. Review it [here](https://github.com/Headline/discord-compiler-bot/blob/master/LICENSE).
 
 ## 🖼️ Icons
 Icons made by [Freepik](https://www.flaticon.com/authors/freepik) and [pixelmeetup](https://www.flaticon.com/authors/pixelmeetup) from [www.flaticon.com](https://www.flaticon.com/)
