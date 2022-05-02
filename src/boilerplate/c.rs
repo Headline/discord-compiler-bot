@@ -1,11 +1,11 @@
 use crate::boilerplate::generator::BoilerPlateGenerator;
-use crate::utls::constants::CSHARP_MAIN_REGEX;
+use crate::utls::constants::C_LIKE_MAIN_REGEX;
 
-pub struct CSharpGenerator {
+pub struct CGenerator {
     input : String
 }
 
-impl BoilerPlateGenerator for CSharpGenerator {
+impl BoilerPlateGenerator for CGenerator {
     fn new(input: &str) -> Self {
         let mut formated = input.to_string();
         formated = formated.replace(";", ";\n"); // separate lines by ;
@@ -25,20 +25,22 @@ impl BoilerPlateGenerator for CSharpGenerator {
             if trimmed.starts_with("using") {
                 header.push_str(&format!("{}\n", trimmed));
             }
+            else if trimmed.starts_with("#i") {
+                header.push_str(&format!("{}\n", trimmed));
+            }
             else {
                 main_body.push_str(&format!("{}\n", trimmed))
             }
         }
 
-        // if they included nothing, we can just manually include System since they probably want it
-        if header.is_empty() {
-            header.push_str("using System;");
+        if main_body.contains("printf") && header.contains("stdio.h") {
+            header.push_str("include <stdio.h>")
         }
-        format!("{}\nnamespace Main{{\nclass Program {{\n static void Main(string[] args) {{\n{}}}}}}}", header, main_body)
+        format!("{}\nint main(void) {{\n{}return 0;\n}}", header, main_body)
     }
 
     fn needs_boilerplate(&self) -> bool {
-        for m in CSHARP_MAIN_REGEX.captures_iter(&self.input) {
+        for m in C_LIKE_MAIN_REGEX.captures_iter(&self.input) {
             if let Some(_) = m.name("main") {
                 return false;
             }
