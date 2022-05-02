@@ -53,9 +53,24 @@ pub async fn help(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
 
             "cpp" | "c++" => {
                 emb.title("c++/cpp command");
-                emb.field("Example 1", format!("{}cpp {{ int a = 4; if (a > 3) {{ cout << \"true\"; }} }}", prefix), false);
-                emb.field("Example 2", format!("{}cpp << (4*12) << \"Hello world!\"", prefix), false);
-                emb.field("Example 3", format!("{}cpp << f(2); int f(int a) {{ return a*12; }}", prefix), false);
+                emb.field(
+                    "Example 1",
+                    format!(
+                        "{}cpp {{ int a = 4; if (a > 3) {{ cout << \"true\"; }} }}",
+                        prefix
+                    ),
+                    false,
+                );
+                emb.field(
+                    "Example 2",
+                    format!("{}cpp << (4*12) << \"Hello world!\"", prefix),
+                    false,
+                );
+                emb.field(
+                    "Example 3",
+                    format!("{}cpp << f(2); int f(int a) {{ return a*12; }}", prefix),
+                    false,
+                );
                 emb.field("Example 4", format!("{}cpp int main() {{ cout << \"Main\"; f(); }} void f() {{ cout << \"f()\"; }}", prefix), false);
                 emb.field("Example 5", format!("*You may also use in-line code blocks if discord makes you escape some chars*\n{}cpp `<< (4*12) << \"\\\"Hello world!\\\"\"`", prefix), false);
                 "Allows you to quickly compile and execute c++ snippets using geordi-like syntax.\nSee section 2.1 of http://eel.is/geordi/#syntax"

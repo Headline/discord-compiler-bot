@@ -1,14 +1,14 @@
+use crate::cache::{CompilerCache, ConfigCache};
+use serenity::builder::CreateEmbed;
 use serenity::framework::standard::{macros::command, Args, CommandResult};
 use serenity::model::prelude::*;
 use serenity::prelude::*;
-use crate::cache::{ConfigCache, CompilerCache};
-use serenity::builder::CreateEmbed;
 
-use crate::utls::constants::{ICON_HELP, COLOR_OKAY};
+use crate::utls::constants::{COLOR_OKAY, ICON_HELP};
 use crate::utls::discordhelpers::embeds;
 
 #[command]
-pub async fn formats(ctx: &Context, msg: &Message, _args : Args) -> CommandResult {
+pub async fn formats(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
     let data = ctx.data.read().await;
     let prefix = {
         let botinfo_lock = data

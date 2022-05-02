@@ -1,48 +1,48 @@
-use serenity::{
-    framework::standard::DispatchError,
-    framework::standard::CommandResult,
-    framework::standard::macros::hook,
-    async_trait,
-    model::channel::Message,
-    model::guild::Guild,
-    model::id::ChannelId,
-    model::id::MessageId,
-    model::gateway::Ready,
-    prelude::*,
-    model::id::{GuildId},
-    model::event::{MessageUpdateEvent},
-    model::channel::{ReactionType},
-    collector::CollectReaction,
-    model::interactions::{Interaction}
-};
 use serenity::model::prelude::UnavailableGuild;
+use serenity::{
+    async_trait, collector::CollectReaction, framework::standard::macros::hook,
+    framework::standard::CommandResult, framework::standard::DispatchError,
+    model::channel::Message, model::channel::ReactionType, model::event::MessageUpdateEvent,
+    model::gateway::Ready, model::guild::Guild, model::id::ChannelId, model::id::GuildId,
+    model::id::MessageId, model::interactions::Interaction, prelude::*,
+};
 
 use tokio::sync::MutexGuard;
 
 use chrono::{DateTime, Utc};
 
 use crate::{
-    utls::discordhelpers::embeds,
     cache::*,
-    utls::discordhelpers,
-    managers::stats::StatsManager,
-    managers::compilation::RequestHandler,
     commands::compile::handle_request,
+    managers::compilation::RequestHandler,
+    managers::stats::StatsManager,
+    utls::discordhelpers,
+    utls::discordhelpers::embeds,
     utls::discordhelpers::embeds::embed_message,
     utls::discordhelpers::interactions::send_error_msg,
-    utls::parser::{get_message_attachment, shortname_to_qualified}
+    utls::parser::{get_message_attachment, shortname_to_qualified},
 };
 
 pub struct Handler; // event handler for serenity
 
 #[async_trait]
 trait ShardsReadyHandler {
-    async fn all_shards_ready(&self, ctx: &Context, stats: & mut MutexGuard<'_, StatsManager>, ready : &Ready);
+    async fn all_shards_ready(
+        &self,
+        ctx: &Context,
+        stats: &mut MutexGuard<'_, StatsManager>,
+        ready: &Ready,
+    );
 }
 
 #[async_trait]
 impl ShardsReadyHandler for Handler {
-    async fn all_shards_ready(&self, ctx: &Context, stats: & mut MutexGuard<'_, StatsManager>, ready : &Ready) {
+    async fn all_shards_ready(
+        &self,
+        ctx: &Context,
+        stats: &mut MutexGuard<'_, StatsManager>,
+        ready: &Ready,
+    ) {
         let data = ctx.data.read().await;
         let mut info = data.get::<ConfigCache>().unwrap().write().await;
         info.insert("BOT_AVATAR", ready.user.avatar_url().unwrap());
@@ -84,11 +84,10 @@ impl EventHandler for Handler {
             stats.new_server().await;
 
             // ensure we're actually loaded in before we start posting our server counts
-            if stats.server_count() > 0
-            {
+            if stats.server_count() > 0 {
                 let new_stats = dbl::types::ShardStats::Cumulative {
                     server_count: stats.server_count(),
-                    shard_count: Some(stats.shard_count())
+                    shard_count: Some(stats.shard_count()),
                 };
 
                 let dbl = data.get::<DblCache>().unwrap().read().await;
@@ -105,7 +104,9 @@ impl EventHandler for Handler {
 
             if let Some(system_channel) = guild.system_channel_id {
                 let mut message = embeds::embed_message(embeds::build_welcome_embed());
-                let _ = system_channel.send_message(&ctx.http, |_| &mut message).await;
+                let _ = system_channel
+                    .send_message(&ctx.http, |_| &mut message)
+                    .await;
             }
         }
     }
@@ -128,11 +129,10 @@ impl EventHandler for Handler {
         stats.leave_server().await;
 
         // ensure we're actually loaded in before we start posting our server counts
-        if stats.server_count() > 0
-        {
+        if stats.server_count() > 0 {
             let new_stats = dbl::types::ShardStats::Cumulative {
                 server_count: stats.server_count(),
-                shard_count: Some(stats.shard_count())
+                shard_count: Some(stats.shard_count()),
             };
 
             let dbl = data.get::<DblCache>().unwrap().read().await;
@@ -157,58 +157,84 @@ impl EventHandler for Handler {
                     cm.resolve_target(shortname_to_qualified(&language))
                 };
 
-                if !matches!(target,  RequestHandler::None) {
+                if !matches!(target, RequestHandler::None) {
                     let reaction = {
                         let botinfo = data.get::<ConfigCache>().unwrap().read().await;
                         if let Some(id) = botinfo.get("LOGO_EMOJI_ID") {
-                            let name = botinfo.get("LOGO_EMOJI_NAME").expect("Unable to find loading emoji name").clone();
+                            let name = botinfo
+                                .get("LOGO_EMOJI_NAME")
+                                .expect("Unable to find loading emoji name")
+                                .clone();
                             discordhelpers::build_reaction(id.parse::<u64>().unwrap(), &name)
-                        }
-                        else {
+                        } else {
                             ReactionType::Unicode(String::from("💻"))
                         }
                     };
 
-                    if let Err(_) = new_message.react(&ctx.http, reaction.clone()).await {
+                    if new_message
+                        .react(&ctx.http, reaction.clone())
+                        .await
+                        .is_err()
+                    {
                         return;
                     }
 
                     let collector = CollectReaction::new(ctx.clone())
                         .message_id(new_message.id)
                         .timeout(core::time::Duration::new(30, 0))
-                        .filter(move |r| r.emoji.eq(&reaction)).await;
+                        .filter(move |r| r.emoji.eq(&reaction))
+                        .await;
                     let _ = new_message.delete_reactions(&ctx.http).await;
-                    if let Some(_) = collector {
-                        let emb = match handle_request(ctx.clone(), format!(";compile\n```{}\n{}\n```", language, code), new_message.author.clone(), &new_message).await {
+                    if collector.is_some() {
+                        let emb = match handle_request(
+                            ctx.clone(),
+                            format!(";compile\n```{}\n{}\n```", language, code),
+                            new_message.author.clone(),
+                            &new_message,
+                        )
+                        .await
+                        {
                             Ok(emb) => emb,
                             Err(e) => {
-                                let emb = embeds::build_fail_embed(&new_message.author, &format!("{}", e));
+                                let emb = embeds::build_fail_embed(
+                                    &new_message.author,
+                                    &format!("{}", e),
+                                );
                                 let mut emb_msg = embeds::embed_message(emb);
                                 if let Ok(sent) = new_message
                                     .channel_id
                                     .send_message(&ctx.http, |_| &mut emb_msg)
                                     .await
                                 {
-                                    let mut message_cache = data.get::<MessageCache>().unwrap().lock().await;
-                                    message_cache.insert(new_message.id.0, MessageCacheEntry::new(sent, new_message));
+                                    let mut message_cache =
+                                        data.get::<MessageCache>().unwrap().lock().await;
+                                    message_cache.insert(
+                                        new_message.id.0,
+                                        MessageCacheEntry::new(sent, new_message),
+                                    );
                                 }
                                 return;
                             }
                         };
                         let mut emb_msg = embed_message(emb);
                         emb_msg.reference_message(&new_message);
-                        let _= new_message
+                        let _ = new_message
                             .channel_id
                             .send_message(&ctx.http, |_| &mut emb_msg)
                             .await;
-
                     }
                 }
             }
         }
     }
 
-    async fn message_delete(&self, ctx: Context, _channel_id: ChannelId, id: MessageId, _guild_id: Option<GuildId>) {
+    async fn message_delete(
+        &self,
+        ctx: Context,
+        _channel_id: ChannelId,
+        id: MessageId,
+        _guild_id: Option<GuildId>,
+    ) {
         let data = ctx.data.read().await;
         let mut message_cache = data.get::<MessageCache>().unwrap().lock().await;
         if let Some(msg) = message_cache.get_mut(id.as_u64()) {
@@ -224,8 +250,15 @@ impl EventHandler for Handler {
         let mut message_cache = data.get::<MessageCache>().unwrap().lock().await;
         if let Some(msg) = message_cache.get_mut(&new_data.id.0) {
             if let Some(new_msg) = new_data.content {
-                if let Some (author) = new_data.author {
-                    discordhelpers::handle_edit(&ctx, new_msg, author, msg.our_msg.clone(), msg.original_msg.clone()).await;
+                if let Some(author) = new_data.author {
+                    discordhelpers::handle_edit(
+                        &ctx,
+                        new_msg,
+                        author,
+                        msg.our_msg.clone(),
+                        msg.original_msg.clone(),
+                    )
+                    .await;
                 }
             }
         }
@@ -269,7 +302,10 @@ impl EventHandler for Handler {
                     // send an edit, and if that fails we'll pivot to create a new interaction
                     // response
                     let fail_embed = embeds::build_fail_embed(&command.user, &e.to_string());
-                    if let Err(_) = send_error_msg(&ctx, &command, false, fail_embed.clone()).await {
+                    if send_error_msg(&ctx, &command, false, fail_embed.clone())
+                        .await
+                        .is_err()
+                    {
                         warn!("Sending new integration for error: {}", e);
                         let _ = send_error_msg(&ctx, &command, true, fail_embed.clone()).await;
                     }
@@ -280,7 +316,7 @@ impl EventHandler for Handler {
 }
 
 #[hook]
-pub async fn before(ctx: &Context, msg : &Message, _: &str) -> bool {
+pub async fn before(ctx: &Context, msg: &Message, _: &str) -> bool {
     let data = ctx.data.read().await;
     {
         let stats = data.get::<StatsManagerCache>().unwrap().lock().await;
@@ -302,17 +338,23 @@ pub async fn before(ctx: &Context, msg : &Message, _: &str) -> bool {
         let guild_blocklisted = blocklist.contains(guild_id);
 
         if author_blocklisted || guild_blocklisted {
-            let emb = embeds::build_fail_embed(&msg.author,
-       "This server or your user is blocked from executing commands.
+            let emb = embeds::build_fail_embed(
+                &msg.author,
+                "This server or your user is blocked from executing commands.
             This may have happened due to abuse, spam, or other reasons.
-            If you feel that this has been done in error, request an unban in the support server.");
+            If you feel that this has been done in error, request an unban in the support server.",
+            );
 
             let mut emb_msg = embeds::embed_message(emb);
-            if msg.channel_id.send_message(&ctx.http, |_| &mut emb_msg).await.is_ok() {
+            if msg
+                .channel_id
+                .send_message(&ctx.http, |_| &mut emb_msg)
+                .await
+                .is_ok()
+            {
                 if author_blocklisted {
                     warn!("Blocked user {} [{}]", msg.author.tag(), msg.author.id.0);
-                }
-                else {
+                } else {
                     warn!("Blocked guild {}", guild_id);
                 }
             }
@@ -345,7 +387,6 @@ pub async fn after(
         }
     }
 
-
     // push command executed to api
     let stats = data.get::<StatsManagerCache>().unwrap().lock().await;
     if stats.should_track() {
@@ -356,8 +397,7 @@ pub async fn after(
 #[hook]
 pub async fn dispatch_error(ctx: &Context, msg: &Message, error: DispatchError, _: &str) {
     if let DispatchError::Ratelimited(_) = error {
-        let emb =
-            embeds::build_fail_embed(&msg.author, "You are sending requests too fast!");
+        let emb = embeds::build_fail_embed(&msg.author, "You are sending requests too fast!");
         let mut emb_msg = embeds::embed_message(emb);
         if msg
             .channel_id

@@ -56,8 +56,10 @@ pub async fn botinfo(ctx: &Context, msg: &Message, _args: Args) -> CommandResult
                 e.thumbnail(avatar);
                 e.color(COLOR_OKAY);
 
-                let str = format!("Built from commit [{}]({}{}{})",
-                                  hash_short, github, "/commit/", hash_long);
+                let str = format!(
+                    "Built from commit [{}]({}{}{})",
+                    hash_short, github, "/commit/", hash_long
+                );
 
                 e.fields(vec![
                     ("Language", "Rust 2018", false),

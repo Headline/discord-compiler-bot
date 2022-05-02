@@ -1,18 +1,17 @@
 use crate::utls::constants::URL_ALLOW_LIST;
 
-use serenity::model::user::User;
-use serenity::model::channel::{Message, Attachment};
 use serenity::framework::standard::CommandError;
+use serenity::model::channel::{Attachment, Message};
+use serenity::model::user::User;
 
-use tokio::sync::RwLock;
-use std::sync::Arc;
 use crate::managers::compilation::{CompilationManager, RequestHandler};
-use std::path::Path;
 use regex::Regex;
-
+use std::path::Path;
+use std::sync::Arc;
+use tokio::sync::RwLock;
 
 // Allows us to convert some common aliases to other programming languages
-pub fn shortname_to_qualified(language : &str) -> &str {
+pub fn shortname_to_qualified(language: &str) -> &str {
     match language {
         // Replace cpp with c++ since we removed the c pre-processor
         // support for wandbox. This is okay for godbolt requests, too.
@@ -22,7 +21,7 @@ pub fn shortname_to_qualified(language : &str) -> &str {
         "csharp" => "c#",
         "cs" => "c#",
         "py" => "python",
-        _ => language
+        _ => language,
     }
 }
 
@@ -37,20 +36,22 @@ pub struct ParserResult {
 }
 
 #[allow(clippy::while_let_on_iterator)]
-pub async fn get_components(input: &str, author : &User, compilation_manager : Option<&Arc<RwLock<CompilationManager>>>, reply : &Option<Box<Message>>) -> Result<ParserResult, CommandError> {
+pub async fn get_components(
+    input: &str,
+    author: &User,
+    compilation_manager: Option<&Arc<RwLock<CompilationManager>>>,
+    reply: &Option<Box<Message>>,
+) -> Result<ParserResult, CommandError> {
     let mut result = ParserResult::default();
 
     // Find the index for where we should stop parsing user input
     let mut end_point: usize = input.len();
-    if let Some(parse_stop) = input.find("\n") {
+    if let Some(parse_stop) = input.find('\n') {
         end_point = parse_stop;
     }
     if let Some(index) = input.find('`') {
-        if end_point == 0 {
-            end_point = index;
-        }
         // if the ` character is found before \n we should use the ` as our parse stop point
-        else if index < end_point {
+        if end_point == 0 || index < end_point {
             end_point = index;
         }
     }
@@ -65,13 +66,13 @@ pub async fn get_components(input: &str, author : &User, compilation_manager : O
         if let Some(param) = args.get(0) {
             let lower_param = param.trim().to_lowercase();
             let language = shortname_to_qualified(&lower_param);
-            if !matches!(lang_lookup.resolve_target( language), RequestHandler::None) {
+            if !matches!(lang_lookup.resolve_target(language), RequestHandler::None) {
                 args.remove(0);
                 result.target = language.to_owned();
             }
         }
-    }
-    else { // no compilation manager, just assume target is supplied
+    } else {
+        // no compilation manager, just assume target is supplied
         if let Some(param) = args.get(0) {
             let lower_param = param.trim().to_lowercase();
             let language = shortname_to_qualified(&lower_param);
@@ -83,7 +84,7 @@ pub async fn get_components(input: &str, author : &User, compilation_manager : O
     // looping every argument
     let mut iter = args.iter();
     while let Some(c) = iter.next() {
-        if c.contains("\n") || c.contains("`") {
+        if c.contains('\n') || c.contains('`') {
             break;
         }
 
@@ -115,25 +116,21 @@ pub async fn get_components(input: &str, author : &User, compilation_manager : O
     }
 
     let cmdline_args;
-    if let Some(codeblock_start) = input.find("`") {
+    if let Some(codeblock_start) = input.find('`') {
         if end_point < codeblock_start {
             cmdline_args = String::from(input[end_point..codeblock_start].trim());
-        }
-        else {
+        } else {
             cmdline_args = String::default();
         }
-    }
-    else {
+    } else {
         cmdline_args = String::from(input[end_point..].trim());
     }
     result.args = shell_words::split(&cmdline_args)?;
 
-
     if !result.url.is_empty() {
         let code = get_url_code(&result.url, author).await?;
         result.code = code;
-    }
-    else if find_code_block(&mut result, input, author).await? {
+    } else if find_code_block(&mut result, input, author).await? {
         // If we find a code block from our executor's message, and it's also a reply
         // let's assume we found the stdin and what they're replying to is the code.
         // Anything else probably doesn't make sense.
@@ -147,8 +144,7 @@ pub async fn get_components(input: &str, author : &User, compilation_manager : O
                 result.stdin = result.code;
                 result.code = String::default();
                 result.code = attachment.0;
-            }
-            else  {
+            } else {
                 let mut fake_result = ParserResult::default();
                 if find_code_block(&mut fake_result, &replied_msg.content, author).await? {
                     // we found a code block - lets assume the reply's codeblock is our actual code
@@ -157,8 +153,7 @@ pub async fn get_components(input: &str, author : &User, compilation_manager : O
                 }
             }
         }
-    }
-    else {
+    } else {
         // Unable to parse a code block from our executor's message, lets see if we have a
         // reply to grab some code from.
         if let Some(replied_msg) = reply {
@@ -173,41 +168,44 @@ pub async fn get_components(input: &str, author : &User, compilation_manager : O
             else if !find_code_block(&mut result, &replied_msg.content, author).await? {
                 return Err(CommandError::from(
                     "You must attach a code-block containing code to your message or reply to a message that has one.",
-                ))
+                ));
             }
-        }
-        else { // We were really given nothing, lets fail now.
+        } else {
+            // We were really given nothing, lets fail now.
             return Err(CommandError::from(
                 "You must attach a code-block containing code to your message or quote a message that has one.",
-            ))
+            ));
         }
     }
 
     if result.target.is_empty() {
-        return Err(CommandError::from("You must provide a valid language or compiler!\n\n;compile c++ \n\\`\\`\\`\nint main() {}\n\\`\\`\\`"))
+        return Err(CommandError::from("You must provide a valid language or compiler!\n\n;compile c++ \n\\`\\`\\`\nint main() {}\n\\`\\`\\`"));
     }
 
     //println!("Parse object: {:?}", result);
     Ok(result)
 }
 
-async fn get_url_code(url : &str, author : &User) -> Result<String, CommandError> {
+async fn get_url_code(url: &str, author: &User) -> Result<String, CommandError> {
     let url = match reqwest::Url::parse(url) {
-        Err(e) => {
-            return Err(CommandError::from(format!("Error parsing url: {}", e)))
-        },
-        Ok(url) => url
+        Err(e) => return Err(CommandError::from(format!("Error parsing url: {}", e))),
+        Ok(url) => url,
     };
 
     let host = url.host();
     if host.is_none() {
-        return Err(CommandError::from("Unable to find host"))
+        return Err(CommandError::from("Unable to find host"));
     }
 
     let host_str = host.unwrap().to_string();
     if !URL_ALLOW_LIST.contains(&host_str.as_str()) {
-        warn!("Blocked URL request to: {} by {} [{}]", host_str, author.id.0, author.tag());
-        return Err(CommandError::from("Unknown paste service. Please use pastebin.com, hastebin.com, or GitHub gists.\n\nAlso please be sure to use a 'raw text' link"))
+        warn!(
+            "Blocked URL request to: {} by {} [{}]",
+            host_str,
+            author.id.0,
+            author.tag()
+        );
+        return Err(CommandError::from("Unknown paste service. Please use pastebin.com, hastebin.com, or GitHub gists.\n\nAlso please be sure to use a 'raw text' link"));
     }
 
     let response = match reqwest::get(url).await {
@@ -225,7 +223,11 @@ async fn get_url_code(url : &str, author : &User) -> Result<String, CommandError
     };
 }
 
-pub async fn find_code_block(result: &mut ParserResult, haystack: &str, author : &User) -> Result<bool, CommandError> {
+pub async fn find_code_block(
+    result: &mut ParserResult,
+    haystack: &str,
+    author: &User,
+) -> Result<bool, CommandError> {
     let re = regex::Regex::new(r"```(?:(?P<language>[^\s`]*)\r?\n)?(?P<code>[\s\S]*?)```").unwrap();
     let matches = re.captures_iter(haystack);
 
@@ -249,19 +251,17 @@ pub async fn find_code_block(result: &mut ParserResult, haystack: &str, author :
 
             code_index = 0;
         }
-        _ => {
-            return Ok(false)
-        }
+        _ => return Ok(false),
     }
 
     let code_copy = result.code.clone();
     let include_regex = Regex::new("\"[^\"]+\"|(?P<statement>#include\\s<(?P<url>.+?)>)").unwrap();
     let matches = include_regex.captures_iter(&code_copy).enumerate();
     for (_, cap) in matches {
-        if let Some(statement) = cap.name("statement"){
+        if let Some(statement) = cap.name("statement") {
             let include_stmt = statement.as_str();
             let url = cap.name("url").unwrap().as_str();
-            if let Ok(code) = get_url_code(url, &author).await {
+            if let Ok(code) = get_url_code(url, author).await {
                 println!("Replacing {} with {}", include_stmt, &code);
                 result.code = result.code.replace(include_stmt, &code);
             }
@@ -278,15 +278,21 @@ pub async fn find_code_block(result: &mut ParserResult, haystack: &str, author :
     Ok(true)
 }
 
-pub async fn get_message_attachment(attachments : & Vec<Attachment>) -> Result<(String, String), CommandError> {
+pub async fn get_message_attachment(
+    attachments: &[Attachment],
+) -> Result<(String, String), CommandError> {
     if !attachments.is_empty() {
         let attachment = attachments.get(0);
         if attachment.is_none() {
             return Ok((String::new(), String::new()));
         }
         let attached = attachment.unwrap();
-        if attached.size > 512 * 1024  { // 512 KiB seems enough
-            return Err(CommandError::from(format!("Uploaded file too large: `{} MiB`", attached.size)));
+        if attached.size > 512 * 1024 {
+            // 512 KiB seems enough
+            return Err(CommandError::from(format!(
+                "Uploaded file too large: `{} MiB`",
+                attached.size
+            )));
         }
         return match reqwest::get(&attached.url).await {
             Ok(r) => {
@@ -304,15 +310,17 @@ pub async fn get_message_attachment(attachments : & Vec<Attachment>) -> Result<(
                         }
                         Ok((str, extension))
                     }
-                    Err(e) => {
-                        Err(CommandError::from(format!("UTF8 Error occured while parsing file: {}", e)))
-                    }
+                    Err(e) => Err(CommandError::from(format!(
+                        "UTF8 Error occured while parsing file: {}",
+                        e
+                    ))),
                 }
             }
-            Err(e) => {
-                Err(CommandError::from(format!("Failure when downloading attachment: {}", e)))
-            }
-        }
+            Err(e) => Err(CommandError::from(format!(
+                "Failure when downloading attachment: {}",
+                e
+            ))),
+        };
     }
-    Ok((String::new(),String::new()))
+    Ok((String::new(), String::new()))
 }

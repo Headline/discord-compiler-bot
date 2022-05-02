@@ -1,4 +1,4 @@
-use serenity::framework::standard::{macros::command, Args, CommandResult, CommandError};
+use serenity::framework::standard::{macros::command, Args, CommandError, CommandResult};
 use serenity::model::prelude::*;
 use serenity::prelude::*;
 
@@ -18,6 +18,8 @@ pub async fn unblock(ctx: &Context, msg: &Message, args: Args) -> CommandResult 
 
     blocklist.unblock(arg);
 
-    msg.channel_id.say(&ctx.http, format!("Unblocked snowflake `{}`", &arg)).await?;
+    msg.channel_id
+        .say(&ctx.http, format!("Unblocked snowflake `{}`", &arg))
+        .await?;
     Ok(())
 }

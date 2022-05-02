@@ -2,11 +2,11 @@ use serenity::framework::standard::{macros::command, Args, CommandError, Command
 use serenity::model::prelude::*;
 use serenity::prelude::*;
 
-use crate::cache::{ConfigCache, CompilerCache};
-use crate::utls::discordhelpers;
-use crate::utls::parser::shortname_to_qualified;
+use crate::cache::{CompilerCache, ConfigCache};
 use crate::managers::compilation::RequestHandler;
+use crate::utls::discordhelpers;
 use crate::utls::discordhelpers::menu::Menu;
+use crate::utls::parser::shortname_to_qualified;
 
 #[command]
 pub async fn compilers(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
@@ -40,26 +40,30 @@ pub async fn compilers(ctx: &Context, msg: &Message, _args: Args) -> CommandResu
             }
         }
         RequestHandler::WandBox => {
-            match compiler_manager.wbox.get_compilers(&shortname_to_qualified(&language)) {
-                Some(s) =>  {
+            match compiler_manager
+                .wbox
+                .get_compilers(shortname_to_qualified(language))
+            {
+                Some(s) => {
                     for lang in s {
                         langs.push(lang.name);
                     }
-                },
+                }
                 None => {
-                    return Err(CommandError::from(
-                        format!("Unable to find compilers for target '{}'.", language),
-                    ));
+                    return Err(CommandError::from(format!(
+                        "Unable to find compilers for target '{}'.",
+                        language
+                    )));
                 }
             };
         }
         RequestHandler::None => {
-            return Err(CommandError::from(
-                format!("Unable to find compilers for target '{}'.", language),
-            ));
+            return Err(CommandError::from(format!(
+                "Unable to find compilers for target '{}'.",
+                language
+            )));
         }
     }
-
 
     let avatar = {
         let data_read = ctx.data.read().await;
@@ -77,7 +81,7 @@ pub async fn compilers(ctx: &Context, msg: &Message, _args: Args) -> CommandResu
         "Supported Compilers",
         &avatar,
         &msg.author.tag(),
-        ""
+        "",
     );
     let mut menu = Menu::new(ctx, msg, &pages);
     menu.run().await?;

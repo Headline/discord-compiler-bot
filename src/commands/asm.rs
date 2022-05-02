@@ -3,16 +3,16 @@ use serenity::{
     framework::standard::{macros::command, Args, CommandError, CommandResult},
 };
 
-use crate::cache::{ConfigCache, MessageCache, CompilerCache, MessageCacheEntry};
+use crate::cache::{CompilerCache, ConfigCache, MessageCache, MessageCacheEntry};
 use crate::utls::constants::*;
-use crate::utls::{discordhelpers};
+use crate::utls::discordhelpers;
 use crate::utls::discordhelpers::embeds;
 
-use serenity::builder::{CreateEmbed};
+use serenity::builder::CreateEmbed;
 use serenity::model::channel::{Message, ReactionType};
 use serenity::model::user::User;
 
-use crate::utls::{parser};
+use crate::utls::parser;
 
 #[command]
 #[bucket = "nospam"]
@@ -30,21 +30,31 @@ pub async fn asm(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
 
     let data_read = ctx.data.read().await;
     let mut message_cache = data_read.get::<MessageCache>().unwrap().lock().await;
-    message_cache.insert(msg.id.0, MessageCacheEntry::new(asm_embed.clone(), msg.clone()));
+    message_cache.insert(
+        msg.id.0,
+        MessageCacheEntry::new(asm_embed.clone(), msg.clone()),
+    );
     debug!("Command executed");
     Ok(())
 }
 
-pub async fn handle_request(ctx : Context, mut content : String, author : User, msg : &Message) -> Result<CreateEmbed, CommandError> {
+pub async fn handle_request(
+    ctx: Context,
+    mut content: String,
+    author: User,
+    msg: &Message,
+) -> Result<CreateEmbed, CommandError> {
     let data_read = ctx.data.read().await;
     let loading_reaction = {
         let botinfo_lock = data_read.get::<ConfigCache>().unwrap();
         let botinfo = botinfo_lock.read().await;
         if let Some(loading_id) = botinfo.get("LOADING_EMOJI_ID") {
-            let loading_name = botinfo.get("LOADING_EMOJI_NAME").expect("Unable to find loading emoji name").clone();
+            let loading_name = botinfo
+                .get("LOADING_EMOJI_NAME")
+                .expect("Unable to find loading emoji name")
+                .clone();
             discordhelpers::build_reaction(loading_id.parse::<u64>()?, &loading_name)
-        }
-        else {
+        } else {
             ReactionType::Unicode(String::from("⏳"))
         }
     };
@@ -57,16 +67,25 @@ pub async fn handle_request(ctx : Context, mut content : String, author : User, 
 
     // parse user input
     let comp_mngr = data_read.get::<CompilerCache>().unwrap();
-    let result = match parser::get_components(&content, &author, Some(comp_mngr), &msg.referenced_message).await {
-        Ok(r) => r,
-        Err(e) => {
-            return Err(CommandError::from(format!("{}", e)));
-        }
-    };
+    let result =
+        match parser::get_components(&content, &author, Some(comp_mngr), &msg.referenced_message)
+            .await
+        {
+            Ok(r) => r,
+            Err(e) => {
+                return Err(CommandError::from(format!("{}", e)));
+            }
+        };
 
     // send out loading emote
-    if let Err(_) = msg.react(&ctx.http, loading_reaction.clone()).await {
-        return Err(CommandError::from("Unable to react to message, am I missing permissions to react or use external emoji?\n{}"))
+    if msg
+        .react(&ctx.http, loading_reaction.clone())
+        .await
+        .is_err()
+    {
+        return Err(CommandError::from(
+            "Unable to react to message, am I missing permissions to react or use external emoji?",
+        ));
     }
 
     let comp_mngr_lock = comp_mngr.read().await;

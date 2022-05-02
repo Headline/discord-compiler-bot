@@ -10,26 +10,35 @@ pub const ICON_VOTE: &str = "https://i.imgur.com/VXbdwSQ.png";
 pub const ICON_HELP: &str = "https://i.imgur.com/TNzxfMB.png";
 pub const ICON_INVITE: &str = "https://i.imgur.com/CZFt69d.png";
 pub const COMPILER_ICON: &str = "http://i.michaelwflaherty.com/u/XedLoQWCVc.png";
-pub const USER_AGENT : &str = const_format::formatcp!("discord-compiler-bot/{}", env!("CARGO_PKG_VERSION"));
-pub const URL_ALLOW_LIST : [&str; 4] = ["pastebin.com", "gist.githubusercontent.com", "hastebin.com", "raw.githubusercontent.com"];
+pub const USER_AGENT: &str =
+    const_format::formatcp!("discord-compiler-bot/{}", env!("CARGO_PKG_VERSION"));
+pub const URL_ALLOW_LIST: [&str; 4] = [
+    "pastebin.com",
+    "gist.githubusercontent.com",
+    "hastebin.com",
+    "raw.githubusercontent.com",
+];
 
 pub const MAX_OUTPUT_LEN: usize = 250;
 pub const MAX_ERROR_LEN: usize = 997;
 
-
 // Boilerplate Regexes
 lazy_static! {
-    pub static ref JAVA_MAIN_REGEX: Regex = Regex::new("\"[^\"]+\"|(?P<main>void[\\s]+?main[\\s]*?\\()").unwrap();
-    pub static ref C_LIKE_MAIN_REGEX: Regex = Regex::new("\"[^\"]+\"|(?P<main>main[\\s]*?\\()").unwrap();
-    pub static ref CSHARP_MAIN_REGEX: Regex = Regex::new("\"[^\"]+\"|(?P<main>static[\\s]+?void[\\s]+?Main[\\s]*?\\()").unwrap();
+    pub static ref JAVA_MAIN_REGEX: Regex =
+        Regex::new("\"[^\"]+\"|(?P<main>void[\\s]+?main[\\s]*?\\()").unwrap();
+    pub static ref C_LIKE_MAIN_REGEX: Regex =
+        Regex::new("\"[^\"]+\"|(?P<main>main[\\s]*?\\()").unwrap();
+    pub static ref CSHARP_MAIN_REGEX: Regex =
+        Regex::new("\"[^\"]+\"|(?P<main>static[\\s]+?void[\\s]+?Main[\\s]*?\\()").unwrap();
 }
-/*
-    Discord limits the size of the amount of compilers we can display to users, for some languages
-    we'll just grab the first 25 from our API, for C & C++ we will create a curated list manually.
 
-    If you'd like to see a change here feel free to pr to remove one, but justify it's removal.
- */
-pub const CPP_ASM_COMPILERS : [[&str; 2]; 25] = [
+/*
+   Discord limits the size of the amount of compilers we can display to users, for some languages
+   we'll just grab the first 25 from our API, for C & C++ we will create a curated list manually.
+
+   If you'd like to see a change here feel free to pr to remove one, but justify it's removal.
+*/
+pub const CPP_ASM_COMPILERS: [[&str; 2]; 25] = [
     ["x86-64 clang (trunk)", "clang_trunk"],
     ["x86-64 clang 13.0.1", "clang1301"],
     ["x86-64 clang 14.0.0", "clang1400"],
@@ -57,7 +66,7 @@ pub const CPP_ASM_COMPILERS : [[&str; 2]; 25] = [
     ["mips64 gcc 11.2.0", "mips112064"],
 ];
 
-pub const CPP_EXEC_COMPILERS : [[&str; 2]; 18] = [
+pub const CPP_EXEC_COMPILERS: [[&str; 2]; 18] = [
     ["x86-64 clang (trunk)", "clang_trunk"],
     ["x86-64 clang 13.0.1", "clang1301"],
     ["x86-64 clang 14.0.0", "clang1400"],
@@ -78,7 +87,7 @@ pub const CPP_EXEC_COMPILERS : [[&str; 2]; 18] = [
     ["x64 msvc v19.31", "vcpp_v19_31_x64"],
 ];
 
-pub const C_ASM_COMPILERS : [[&str; 2]; 23] = [
+pub const C_ASM_COMPILERS: [[&str; 2]; 23] = [
     ["x86-64 clang (trunk)", "cclang_trunk"],
     ["x86-64 clang 13.0.1", "cclang1301"],
     ["x86-64 clang 14.0.0", "cclang1400"],
@@ -104,7 +113,7 @@ pub const C_ASM_COMPILERS : [[&str; 2]; 23] = [
     ["mips64 gcc 11.2.0", "cmips112064"],
 ];
 
-pub const C_EXEC_COMPILERS : [[&str; 2]; 23] = [
+pub const C_EXEC_COMPILERS: [[&str; 2]; 23] = [
     ["x86-64 clang (trunk)", "cclang_trunk"],
     ["x86-64 clang 13.0.1", "cclang1301"],
     ["x86-64 clang 14.0.0", "cclang1400"],

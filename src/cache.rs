@@ -1,21 +1,21 @@
 use std::collections::HashMap;
 use std::env;
-use std::sync::Arc;
 use std::error::Error;
+use std::sync::Arc;
 
-use tokio::sync::RwLock;
 use tokio::sync::Mutex;
+use tokio::sync::RwLock;
 
-use serenity::prelude::{TypeMap, TypeMapKey};
 use serenity::client::bridge::gateway::ShardManager;
+use serenity::prelude::{TypeMap, TypeMapKey};
 
 use crate::managers::stats::StatsManager;
 use crate::utls::blocklist::Blocklist;
 
-use lru_cache::LruCache;
-use serenity::model::channel::Message;
 use crate::managers::command::CommandManager;
 use crate::managers::compilation::CompilationManager;
+use lru_cache::LruCache;
+use serenity::model::channel::Message;
 
 /** Caching **/
 
@@ -56,18 +56,17 @@ impl TypeMapKey for ShardManagerCache {
 }
 
 pub struct MessageCacheEntry {
-    pub our_msg : Message,
-    pub original_msg : Message
+    pub our_msg: Message,
+    pub original_msg: Message,
 }
 impl MessageCacheEntry {
-    pub fn new(our_msg : Message, original_msg : Message) -> Self {
+    pub fn new(our_msg: Message, original_msg: Message) -> Self {
         MessageCacheEntry {
             our_msg,
-            original_msg
+            original_msg,
         }
     }
 }
-
 
 /// Message  cache to interact with our own messages after they are dispatched
 pub struct MessageCache;
@@ -85,7 +84,7 @@ pub async fn fill(
     data: Arc<RwLock<TypeMap>>,
     prefix: &str,
     id: u64,
-    shard_manager: Arc<tokio::sync::Mutex<ShardManager>>
+    shard_manager: Arc<tokio::sync::Mutex<ShardManager>>,
 ) -> Result<(), Box<dyn Error>> {
     let mut data = data.write().await;
 
@@ -93,8 +92,15 @@ pub async fn fill(
     let mut map = HashMap::<&str, String>::new();
 
     // optional additions
-    let emoji_identifiers = ["SUCCESS_EMOJI_ID", "SUCCESS_EMOJI_NAME", "LOADING_EMOJI_ID", "LOADING_EMOJI_NAME", "LOGO_EMOJI_NAME", "LOGO_EMOJI_ID"];
-    for id in &emoji_identifiers{
+    let emoji_identifiers = [
+        "SUCCESS_EMOJI_ID",
+        "SUCCESS_EMOJI_NAME",
+        "LOADING_EMOJI_ID",
+        "LOADING_EMOJI_NAME",
+        "LOGO_EMOJI_NAME",
+        "LOGO_EMOJI_ID",
+    ];
+    for id in &emoji_identifiers {
         if let Ok(envvar) = env::var(id) {
             if !envvar.is_empty() {
                 map.insert(id, envvar);
