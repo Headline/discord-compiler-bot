@@ -109,12 +109,12 @@ impl ToEmbed<bool> for godbolt::GodboltResponse {
                 i += 1;
             }
             if !append.is_empty() {
-                let title;
-                if i > 1 {
-                    title = format!("Assembly Output Pt. {}", i);
+                let title = if i > 1 {
+                    format!("Assembly Output Pt. {}", i)
                 } else {
-                    title = String::from("Assembly Output")
-                }
+                    String::from("Assembly Output")
+                };
+
                 embed.field(&title, format!("```x86asm\n{}\n```", &append), false);
                 output = true;
             }

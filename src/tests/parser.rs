@@ -18,7 +18,7 @@ async fn standard_parse() {
 
     let reply = None;
     let result = get_components(input, &dummy_user, None, &reply).await;
-    if let Err(_) = &result {
+    if result.is_err() {
         assert!(false, "Parser failed.");
     }
 
@@ -43,7 +43,7 @@ async fn standard_parse_args() {
 
     let reply = None;
     let result = get_components(input, &dummy_user, None, &reply).await;
-    if let Err(_) = &result {
+    if result.is_err() {
         assert!(false, "Parser failed.");
     }
 
@@ -65,7 +65,7 @@ async fn standard_parse_url() {
 
     let reply = None;
     let result = get_components(input, &dummy_user, None, &reply).await;
-    if let Err(_) = &result {
+    if result.is_err() {
         assert!(false, "Parser failed.");
     }
 
@@ -87,7 +87,7 @@ async fn standard_parse_url_args() {
 
     let reply = None;
     let result = get_components(input, &dummy_user, None, &reply).await;
-    if let Err(_) = &result {
+    if result.is_err() {
         assert!(false, "Parser failed.");
     }
 
@@ -113,7 +113,7 @@ async fn standard_parse_stdin() {
 
     let reply = None;
     let result = get_components(input, &dummy_user, None, &reply).await;
-    if let Err(_) = &result {
+    if result.is_err() {
         assert!(false, "Parser failed.");
     }
 
@@ -141,7 +141,7 @@ async fn standard_parse_block_stdin() {
 
     let reply = None;
     let result = get_components(input, &dummy_user, None, &reply).await;
-    if let Err(_) = &result {
+    if result.is_err() {
         assert!(false, "Parser failed.");
     }
 
@@ -167,7 +167,7 @@ async fn standard_parse_deduce_compiler() {
     let reply = None;
     let cm = Arc::new(RwLock::new(CompilationManager::new().await.unwrap()));
     let result = get_components(input, &dummy_user, Some(&cm), &reply).await;
-    if let Err(_) = &result {
+    if result.is_err() {
         assert!(false, "Parser failed.");
     }
 
@@ -193,7 +193,7 @@ async fn standard_parse_deduce_compiler_upper_case() {
     let reply = None;
     let cm = Arc::new(RwLock::new(CompilationManager::new().await.unwrap()));
     let result = get_components(input, &dummy_user, Some(&cm), &reply).await;
-    if let Err(_) = &result {
+    if result.is_err() {
         assert!(false, "Parser failed.");
     }
 
@@ -219,7 +219,7 @@ async fn standard_parse_late_deduce_compiler() {
     let reply = None;
     let cm = Arc::new(RwLock::new(CompilationManager::new().await.unwrap()));
     let result = get_components(input, &dummy_user, Some(&cm), &reply).await;
-    if let Err(_) = &result {
+    if result.is_err() {
         assert!(false, "Parser failed.");
     }
 
@@ -248,7 +248,7 @@ async fn standard_parse_late_deduce_compiler_block_stdin() {
     let reply = None;
     let cm = Arc::new(RwLock::new(CompilationManager::new().await.unwrap()));
     let result = get_components(input, &dummy_user, Some(&cm), &reply).await;
-    if let Err(_) = &result {
+    if result.is_err() {
         assert!(false, "Parser failed.");
     }
 
@@ -271,7 +271,7 @@ async fn standard_parse_one_line() {
     let reply = None;
     let cm = Arc::new(RwLock::new(CompilationManager::new().await.unwrap()));
     let result = get_components(input, &dummy_user, Some(&cm), &reply).await;
-    if let Err(_) = &result {
+    if result.is_err() {
         assert!(false, "Parser failed.");
     }
 
@@ -293,7 +293,7 @@ async fn standard_parse_args_one_line() {
 
     let reply = None;
     let result = get_components(input, &dummy_user, None, &reply).await;
-    if let Err(_) = &result {
+    if result.is_err() {
         assert!(false, "Parser failed.");
     }
 

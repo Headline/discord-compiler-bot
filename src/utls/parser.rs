@@ -42,15 +42,12 @@ pub async fn get_components(input: &str, author : &User, compilation_manager : O
 
     // Find the index for where we should stop parsing user input
     let mut end_point: usize = input.len();
-    if let Some(parse_stop) = input.find("\n") {
+    if let Some(parse_stop) = input.find('\n') {
         end_point = parse_stop;
     }
     if let Some(index) = input.find('`') {
-        if end_point == 0 {
-            end_point = index;
-        }
         // if the ` character is found before \n we should use the ` as our parse stop point
-        else if index < end_point {
+        if end_point == 0 || index < end_point {
             end_point = index;
         }
     }
@@ -83,7 +80,7 @@ pub async fn get_components(input: &str, author : &User, compilation_manager : O
     // looping every argument
     let mut iter = args.iter();
     while let Some(c) = iter.next() {
-        if c.contains("\n") || c.contains("`") {
+        if c.contains('\n') || c.contains('`') {
             break;
         }
 
@@ -115,7 +112,7 @@ pub async fn get_components(input: &str, author : &User, compilation_manager : O
     }
 
     let cmdline_args;
-    if let Some(codeblock_start) = input.find("`") {
+    if let Some(codeblock_start) = input.find('`') {
         if end_point < codeblock_start {
             cmdline_args = String::from(input[end_point..codeblock_start].trim());
         }
@@ -261,7 +258,7 @@ pub async fn find_code_block(result: &mut ParserResult, haystack: &str, author :
         if let Some(statement) = cap.name("statement"){
             let include_stmt = statement.as_str();
             let url = cap.name("url").unwrap().as_str();
-            if let Ok(code) = get_url_code(url, &author).await {
+            if let Ok(code) = get_url_code(url, author).await {
                 println!("Replacing {} with {}", include_stmt, &code);
                 result.code = result.code.replace(include_stmt, &code);
             }
@@ -278,7 +275,7 @@ pub async fn find_code_block(result: &mut ParserResult, haystack: &str, author :
     Ok(true)
 }
 
-pub async fn get_message_attachment(attachments : & Vec<Attachment>) -> Result<(String, String), CommandError> {
+pub async fn get_message_attachment(attachments : &[Attachment]) -> Result<(String, String), CommandError> {
     if !attachments.is_empty() {
         let attachment = attachments.get(0);
         if attachment.is_none() {

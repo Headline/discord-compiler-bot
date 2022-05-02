@@ -65,8 +65,8 @@ pub async fn handle_request(ctx : Context, mut content : String, author : User, 
     };
 
     // send out loading emote
-    if let Err(_) = msg.react(&ctx.http, loading_reaction.clone()).await {
-        return Err(CommandError::from("Unable to react to message, am I missing permissions to react or use external emoji?\n{}"))
+    if msg.react(&ctx.http, loading_reaction.clone()).await.is_err() {
+        return Err(CommandError::from("Unable to react to message, am I missing permissions to react or use external emoji?"))
     }
 
     let comp_mngr_lock = comp_mngr.read().await;

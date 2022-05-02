@@ -12,7 +12,7 @@ pub async fn format(ctx: &Context, msg: &Message, mut args : Args) -> CommandRes
     let mut style = String::from("webkit");
     if !args.is_empty() {
         // do not include ``` codeblocks into arg parsing.. lets just substr and replace args
-        let idx = msg.content.find("`");
+        let idx = msg.content.find('`');
         if let Some(idx) = idx {
             let substr : String = msg.content.chars().take(idx).collect();
             args = Args::new(&substr, &[Delimiter::Single(' ')]);
@@ -64,31 +64,27 @@ pub async fn format(ctx: &Context, msg: &Message, mut args : Args) -> CommandRes
             lang_code = result.target.clone();
             code = result.code
         }
+        else if !msgref.attachments.is_empty() {
+            attachment_name = msgref.attachments[0].filename.clone();
+            let (program_code, _) = get_message_attachment(&msgref.attachments).await?;
+            code = program_code;
+        }
         else {
-            if msgref.attachments.len() > 0 {
-                attachment_name = msgref.attachments[0].filename.clone();
-                let (program_code, _) = get_message_attachment(&msgref.attachments).await?;
-                code = program_code;
-            }
-            else {
-                return Err(CommandError::from("Referenced message has no code or attachment"));
-            }
+            return Err(CommandError::from("Referenced message has no code or attachment"));
         }
     }
-    else {
-        if !msg.attachments.is_empty() {
-            attachment_name = msg.attachments[0].filename.clone();
-            let (program_code, _) = get_message_attachment(&msg.attachments).await?;
-            code = program_code;
-        } else {
-            let mut result = ParserResult::default();
-            if crate::utls::parser::find_code_block(& mut result, &msg.content, &msg.author).await? {
-                lang_code = result.target.clone();
-                code = result.code
-            }
-            else {
-                return Err(CommandError::from("Unable to find code to format!\n\nPlease reply to a message when executing this command or supply the code yourself in a code block or message attachment."));
-            }
+    else if !msg.attachments.is_empty() {
+        attachment_name = msg.attachments[0].filename.clone();
+        let (program_code, _) = get_message_attachment(&msg.attachments).await?;
+        code = program_code;
+    } else {
+        let mut result = ParserResult::default();
+        if crate::utls::parser::find_code_block(& mut result, &msg.content, &msg.author).await? {
+            lang_code = result.target.clone();
+            code = result.code
+        }
+        else {
+            return Err(CommandError::from("Unable to find code to format!\n\nPlease reply to a message when executing this command or supply the code yourself in a code block or message attachment."));
         }
     }
 

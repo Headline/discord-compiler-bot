@@ -15,11 +15,11 @@ pub struct Menu {
 }
 
 impl Menu {
-    pub fn new(ctx: &Context, msg: &Message, items: & Vec<CreateEmbed>) -> Menu {
+    pub fn new(ctx: &Context, msg: &Message, items: &[CreateEmbed]) -> Menu {
         Menu {
             ctx: ctx.clone(),
             msg: msg.clone(),
-            pages: items.clone(),
+            pages: Vec::from(items),
             page: 0,
             components: Menu::build_components(),
         }

@@ -91,12 +91,11 @@ pub struct LegacyRequest {
 }
 impl LegacyRequest {
     pub fn new(amount: Option<u64>) -> LegacyRequest {
-        let request_type;
-        if amount.is_some() {
-            request_type = "servers"
+        let request_type = if amount.is_some() {
+            "servers"
         } else {
-            request_type = "request"
-        }
+            "request"
+        };
 
         LegacyRequest {
             key: String::from(""),

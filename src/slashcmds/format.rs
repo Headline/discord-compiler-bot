@@ -21,12 +21,11 @@ pub async fn format(ctx: &Context, command: &ApplicationCommandInteraction) -> C
     let mut msg = None;
     let mut parse_result = ParserResult::default();
 
-    for (_, value) in &command.data.resolved.messages {
+    if let Some((_, value)) = command.data.resolved.messages.iter().next() {
         if !parser::find_code_block(& mut parse_result, &value.content, &command.user).await? {
             return Err(CommandError::from("Unable to find a codeblock to format!"))
         }
         msg = Some(value);
-        break;
     }
 
     let data = ctx.data.read().await;

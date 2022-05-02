@@ -157,15 +157,15 @@ impl CppEval {
     }
 
     fn do_prints(& mut self) {
-        let input;
-        if let Some(statement_end) = self.input.find(';') {
+        let input = if let Some(statement_end) = self.input.find(';') {
             self.do_rest(statement_end+1);
 
-            input = self.input[..statement_end].to_owned();
+            self.input[..statement_end].to_owned()
         }
         else {
-            input = self.input.clone();
-        }
+            self.input.clone()
+        };
+
         self.build_main(&format!("cout {};", input));
     }
 

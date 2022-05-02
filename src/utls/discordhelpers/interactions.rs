@@ -99,16 +99,16 @@ pub async fn create_more_options_panel(ctx: &Context, interaction : Arc<MessageC
     if let Some(resp) = msg.await_modal_interaction(&ctx.shard).await {
         println!("response: {:?}", resp.kind);
         if let ActionRowComponent::InputText(input) = &resp.data.components[0].components[0] {
-            parse_result.options = input.value.clone().split(" ").map(|p| p.to_owned()).collect();
+            parse_result.options = input.value.clone().split(' ').map(|p| p.to_owned()).collect();
         }
         if let ActionRowComponent::InputText(input) = &resp.data.components[1].components[0] {
-            parse_result.args = input.value.split(" ").map(|p| p.to_owned()).collect();
+            parse_result.args = input.value.split(' ').map(|p| p.to_owned()).collect();
         }
         if let ActionRowComponent::InputText(input) = &resp.data.components[2].components[0] {
             parse_result.stdin = input.value.clone();
         }
         resp.defer(&ctx.http).await?;
-        return Ok(Some(resp.clone()))
+        Ok(Some(resp.clone()))
     }
     else {
         Ok(None)
@@ -271,7 +271,7 @@ where
     let mut parse_result = ParserResult::default();
 
     let mut msg = None;
-    for (_, value) in &command.data.resolved.messages {
+    if let Some((_, value)) = command.data.resolved.messages.iter().next() {
         if !parser::find_code_block(& mut parse_result, &value.content, &command.user).await? {
             command.create_interaction_response(&ctx.http, |resp| {
                 resp.kind(InteractionResponseType::DeferredChannelMessageWithSource)
@@ -282,14 +282,13 @@ where
             return Err(CommandError::from("Unable to find a codeblock to compile!"))
         }
         msg = Some(value);
-        break;
     }
 
     // We never got a target from the codeblock, let's have them manually select a language
     let mut sent_interaction = false;
     if parse_result.target.is_empty() {
         command.create_interaction_response(&ctx.http, |response| {
-            create_language_interaction(response, &languages)
+            create_language_interaction(response, languages)
         }).await?;
 
         let resp = command.get_interaction_response(&ctx.http).await?;

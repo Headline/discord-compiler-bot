@@ -8,7 +8,7 @@ pub struct CGenerator {
 impl BoilerPlateGenerator for CGenerator {
     fn new(input: &str) -> Self {
         let mut formated = input.to_string();
-        formated = formated.replace(";", ";\n"); // separate lines by ;
+        formated = formated.replace(';', ";\n"); // separate lines by ;
 
         Self {
             input : formated
@@ -19,13 +19,11 @@ impl BoilerPlateGenerator for CGenerator {
         let mut main_body = String::default();
         let mut header = String::default();
 
-        let mut lines = self.input.split("\n");
-        while let Some(line) = lines.next() {
+        let lines = self.input.split('\n');
+        for line in lines {
             let trimmed = line.trim();
-            if trimmed.starts_with("using") {
-                header.push_str(&format!("{}\n", trimmed));
-            }
-            else if trimmed.starts_with("#i") {
+            if trimmed.starts_with("using")
+            || trimmed.starts_with("#i"){
                 header.push_str(&format!("{}\n", trimmed));
             }
             else {
@@ -41,10 +39,10 @@ impl BoilerPlateGenerator for CGenerator {
 
     fn needs_boilerplate(&self) -> bool {
         for m in C_LIKE_MAIN_REGEX.captures_iter(&self.input) {
-            if let Some(_) = m.name("main") {
+            if m.name("main").is_some() {
                 return false;
             }
         }
-        return true;
+        true
     }
 }
