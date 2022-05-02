@@ -13,7 +13,9 @@ pub async fn invite(ctx: &Context, msg: &Message, _: Args) -> CommandResult {
     let emb = embeds::build_invite_embed(&invite);
 
     let mut emb_msg = embeds::embed_message(emb);
-    msg.channel_id.send_message(&ctx.http, |_| &mut emb_msg).await?;
+    msg.channel_id
+        .send_message(&ctx.http, |_| &mut emb_msg)
+        .await?;
 
     Ok(())
 }

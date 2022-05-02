@@ -2,8 +2,8 @@ use reqwest::header::{ACCEPT, USER_AGENT};
 use reqwest::Response;
 use serde::*;
 use serenity::async_trait;
-use std::sync::Arc;
 use serenity::model::id::GuildId;
+use std::sync::Arc;
 
 #[async_trait]
 pub trait Sendable: Serialize {
@@ -41,7 +41,7 @@ impl CommandRequest {
         CommandRequest {
             key: String::from(""),
             command: String::from(command),
-            guild: guild_str
+            guild: guild_str,
         }
     }
 }

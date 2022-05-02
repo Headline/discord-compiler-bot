@@ -2,7 +2,7 @@ use crate::boilerplate::generator::BoilerPlateGenerator;
 use crate::utls::constants::C_LIKE_MAIN_REGEX;
 
 pub struct CGenerator {
-    input : String
+    input: String,
 }
 
 impl BoilerPlateGenerator for CGenerator {
@@ -10,9 +10,7 @@ impl BoilerPlateGenerator for CGenerator {
         let mut formated = input.to_string();
         formated = formated.replace(';', ";\n"); // separate lines by ;
 
-        Self {
-            input : formated
-        }
+        Self { input: formated }
     }
 
     fn generate(&self) -> String {
@@ -22,11 +20,9 @@ impl BoilerPlateGenerator for CGenerator {
         let lines = self.input.split('\n');
         for line in lines {
             let trimmed = line.trim();
-            if trimmed.starts_with("using")
-            || trimmed.starts_with("#i"){
+            if trimmed.starts_with("using") || trimmed.starts_with("#i") {
                 header.push_str(&format!("{}\n", trimmed));
-            }
-            else {
+            } else {
                 main_body.push_str(&format!("{}\n", trimmed))
             }
         }

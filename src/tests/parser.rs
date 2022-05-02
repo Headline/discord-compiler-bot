@@ -1,10 +1,9 @@
-#[cfg(test)]
-
-use serenity::model::user::User;
-use crate::utls::parser::get_components;
 use crate::managers::compilation::CompilationManager;
-use tokio::sync::RwLock;
+use crate::utls::parser::get_components;
+#[cfg(test)]
+use serenity::model::user::User;
 use std::sync::Arc;
+use tokio::sync::RwLock;
 
 #[tokio::test]
 async fn standard_parse() {
@@ -59,9 +58,7 @@ async fn standard_parse_args() {
 #[tokio::test]
 async fn standard_parse_url() {
     let dummy_user = User::default();
-    let input = indoc::indoc!(
-        ";compile c++ < https://pastebin.com/raw/ERqDRZva"
-    );
+    let input = indoc::indoc!(";compile c++ < https://pastebin.com/raw/ERqDRZva");
 
     let reply = None;
     let result = get_components(input, &dummy_user, None, &reply).await;
@@ -81,9 +78,7 @@ async fn standard_parse_url() {
 #[tokio::test]
 async fn standard_parse_url_args() {
     let dummy_user = User::default();
-    let input = indoc::indoc!(
-        ";compile c++ < https://pastebin.com/raw/ERqDRZva\ntest1 test2"
-    );
+    let input = indoc::indoc!(";compile c++ < https://pastebin.com/raw/ERqDRZva\ntest1 test2");
 
     let reply = None;
     let result = get_components(input, &dummy_user, None, &reply).await;
@@ -264,9 +259,7 @@ async fn standard_parse_late_deduce_compiler_block_stdin() {
 #[tokio::test]
 async fn standard_parse_one_line() {
     let dummy_user = User::default();
-    let input = indoc::indoc!(
-        ";compile js ```console.log(\"beehee\");```"
-    );
+    let input = indoc::indoc!(";compile js ```console.log(\"beehee\");```");
 
     let reply = None;
     let cm = Arc::new(RwLock::new(CompilationManager::new().await.unwrap()));
@@ -287,9 +280,7 @@ async fn standard_parse_one_line() {
 #[tokio::test]
 async fn standard_parse_args_one_line() {
     let dummy_user = User::default();
-    let input = indoc::indoc!(
-        ";compile c -O3```int main() {return 232;}```"
-    );
+    let input = indoc::indoc!(";compile c -O3```int main() {return 232;}```");
 
     let reply = None;
     let result = get_components(input, &dummy_user, None, &reply).await;

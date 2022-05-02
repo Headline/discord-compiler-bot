@@ -13,7 +13,7 @@ pub struct StatsManager {
     shards: u64,
     boot_count: Vec<u64>,
     leave_queue: u64,
-    join_queue: u64
+    join_queue: u64,
 }
 
 impl StatsManager {
@@ -26,7 +26,7 @@ impl StatsManager {
             leave_queue: 0,
             join_queue: 0,
             shards: 0,
-            boot_count: Vec::new()
+            boot_count: Vec::new(),
         }
     }
 
@@ -67,9 +67,10 @@ impl StatsManager {
     }
 
     pub async fn new_server(&mut self) {
-        if self.servers < 1 { // not all shards have loaded in yet - queue the join for post_servers
+        if self.servers < 1 {
+            // not all shards have loaded in yet - queue the join for post_servers
             self.join_queue += 1;
-            return
+            return;
         }
 
         self.servers += 1;
@@ -80,9 +81,10 @@ impl StatsManager {
     }
 
     pub async fn leave_server(&mut self) {
-        if self.servers < 1 { // not loaded in - queue leave for post_servers
+        if self.servers < 1 {
+            // not loaded in - queue leave for post_servers
             self.leave_queue += 1;
-            return
+            return;
         }
 
         self.servers -= 1;
@@ -105,7 +107,7 @@ impl StatsManager {
         self.shards
     }
 
-    pub fn add_shard(& mut self, server_count : u64) {
+    pub fn add_shard(&mut self, server_count: u64) {
         self.shards += 1;
         self.boot_count.push(server_count);
     }

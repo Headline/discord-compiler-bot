@@ -2,7 +2,7 @@ use serenity::framework::standard::{macros::command, Args, CommandResult};
 use serenity::model::prelude::*;
 use serenity::prelude::*;
 
-use crate::cache::{ConfigCache, CompilerCache};
+use crate::cache::{CompilerCache, ConfigCache};
 use crate::utls::discordhelpers;
 use crate::utls::discordhelpers::menu::Menu;
 
@@ -34,7 +34,7 @@ pub async fn languages(ctx: &Context, msg: &Message, _args: Args) -> CommandResu
         botinfo.get("BOT_AVATAR").unwrap().clone()
     };
 
-    let mut items_vec : Vec<String> = items.into_iter().collect();
+    let mut items_vec: Vec<String> = items.into_iter().collect();
     items_vec.sort();
 
     let pages = discordhelpers::build_menu_items(
@@ -43,7 +43,7 @@ pub async fn languages(ctx: &Context, msg: &Message, _args: Args) -> CommandResu
         "Supported Languages",
         &avatar,
         &msg.author.tag(),
-        "*\\* = supports assembly output*"
+        "*\\* = supports assembly output*",
     );
     let mut menu = Menu::new(ctx, msg, &pages);
     menu.run().await?;

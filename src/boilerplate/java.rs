@@ -2,7 +2,7 @@ use crate::boilerplate::generator::BoilerPlateGenerator;
 use crate::utls::constants::JAVA_MAIN_REGEX;
 
 pub struct JavaGenerator {
-    input : String
+    input: String,
 }
 
 impl BoilerPlateGenerator for JavaGenerator {
@@ -10,9 +10,7 @@ impl BoilerPlateGenerator for JavaGenerator {
         let mut formated = input.to_string();
         formated = formated.replace(';', ";\n"); // separate lines by ;
 
-        Self {
-            input : formated
-        }
+        Self { input: formated }
     }
 
     fn generate(&self) -> String {
@@ -24,13 +22,15 @@ impl BoilerPlateGenerator for JavaGenerator {
             let trimmed = line.trim();
             if trimmed.starts_with("import") {
                 header.push_str(&format!("{}\n", trimmed));
-            }
-            else {
+            } else {
                 main_body.push_str(&format!("{}\n", trimmed))
             }
         }
 
-        format!("{}\nclass Main{{\npublic static void main(String[] args) {{\n{}}}}}", header, main_body)
+        format!(
+            "{}\nclass Main{{\npublic static void main(String[] args) {{\n{}}}}}",
+            header, main_body
+        )
     }
 
     fn needs_boilerplate(&self) -> bool {
