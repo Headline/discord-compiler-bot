@@ -182,7 +182,6 @@ pub async fn get_components(
         return Err(CommandError::from("You must provide a valid language or compiler!\n\n;compile c++ \n\\`\\`\\`\nint main() {}\n\\`\\`\\`"));
     }
 
-    //println!("Parse object: {:?}", result);
     Ok(result)
 }
 

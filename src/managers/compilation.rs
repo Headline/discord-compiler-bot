@@ -8,7 +8,7 @@ use crate::boilerplate::generator::boilerplate_factory;
 use godbolt::{CompilationFilters, CompilerOptions, Godbolt, GodboltError, RequestOptions};
 use wandbox::{CompilationBuilder, Wandbox, WandboxError};
 
-use crate::utls::constants::USER_AGENT;
+use crate::utls::constants::{JAVA_PUBLIC_CLASS_REGEX, USER_AGENT};
 use crate::utls::discordhelpers::embeds::ToEmbed;
 use crate::utls::parser::ParserResult;
 
@@ -158,13 +158,15 @@ impl CompilationManager {
         };
         let compiler = self.gbolt.resolve(target).unwrap();
 
-        // replace boilerplate code if needed
+        // add boilerplate code if needed & fix common mistakes
         let mut code = parse_result.code.clone();
         {
             let generator = boilerplate_factory(&compiler.lang, &code);
             if generator.needs_boilerplate() {
                 code = generator.generate();
             }
+
+            code = fix_common_problems(&compiler.lang, code);
         }
         let response = Godbolt::send_request(&compiler, &code, options, USER_AGENT).await?;
         Ok((compiler.lang, response))
@@ -211,6 +213,8 @@ impl CompilationManager {
             if generator.needs_boilerplate() {
                 code = generator.generate();
             }
+
+            code = fix_common_problems(&lang, code);
         }
 
         let mut builder = CompilationBuilder::new();
@@ -242,5 +246,23 @@ impl CompilationManager {
     }
     pub fn slash_cmd_langs_asm() -> [&'static str; 7] {
         ["C++", "C", "Haskell", "Java", "Python", "Rust", "Zig"]
+    }
+}
+
+fn fix_common_problems(language: &str, code: String) -> String {
+    return match language {
+        "java" => {
+            // Fix compilations that
+            let mut fix_candidate = code.clone();
+            for m in JAVA_PUBLIC_CLASS_REGEX.captures_iter(&code) {
+                if let Some(pub_keyword) = m.name("public") {
+                    fix_candidate.replace_range(pub_keyword.range(), "")
+                }
+            }
+            fix_candidate
+        }
+        _ => {
+            code
+        }
     }
 }
