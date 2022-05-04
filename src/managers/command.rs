@@ -46,6 +46,7 @@ impl CommandManager {
             "cpp" => slashcmds::cpp::cpp(ctx, command).await,
             "invite" => slashcmds::invite::invite(ctx, command).await,
             "format" => slashcmds::format::format(ctx, command).await,
+            "diff" => slashcmds::diff::diff(ctx, command).await,
             e => {
                 println!("OTHER: {}", e);
                 Ok(())
@@ -107,7 +108,6 @@ impl CommandManager {
                                 .description("Geordi-like input")
                         })
                 });
-
                 builder
             })
             .await
