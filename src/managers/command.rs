@@ -108,6 +108,23 @@ impl CommandManager {
                                 .description("Geordi-like input")
                         })
                 });
+                builder.create_application_command(|cmd| {
+                    cmd.kind(ApplicationCommandType::ChatInput)
+                        .name("diff")
+                        .description("Posts a diff of two messages' code blocks.")
+                        .create_option(|opt| {
+                            opt.required(true)
+                                .name("message1")
+                                .kind(ApplicationCommandOptionType::String)
+                                .description("Message id of first code-block")
+                        })
+                        .create_option(|opt| {
+                            opt.required(true)
+                                .name("message2")
+                                .kind(ApplicationCommandOptionType::String)
+                                .description("Message id of second code-block")
+                        })
+                });
                 builder
             })
             .await

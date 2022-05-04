@@ -10,9 +10,6 @@ use serenity::{
 use tokio::sync::MutexGuard;
 
 use chrono::{DateTime, Utc};
-use serenity::model::interactions::application_command::{
-    ApplicationCommandOptionType, ApplicationCommandType,
-};
 
 use crate::{
     cache::*,
@@ -64,27 +61,6 @@ impl ShardsReadyHandler for Handler {
 #[async_trait]
 impl EventHandler for Handler {
     async fn guild_create(&self, ctx: Context, guild: Guild) {
-        guild
-            .create_application_command(&ctx.http, |cmd| {
-                cmd.kind(ApplicationCommandType::ChatInput)
-                    .name("diff")
-                    .description("Posts a diff of two messages' code blocks.")
-                    .create_option(|opt| {
-                        opt.required(true)
-                            .name("message1")
-                            .kind(ApplicationCommandOptionType::String)
-                            .description("Message id of first code-block")
-                    })
-                    .create_option(|opt| {
-                        opt.required(true)
-                            .name("message2")
-                            .kind(ApplicationCommandOptionType::String)
-                            .description("Message id of second code-block")
-                    })
-            })
-            .await
-            .unwrap();
-
         let data = ctx.data.read().await;
 
         let now: DateTime<Utc> = Utc::now();
