@@ -262,13 +262,12 @@ pub async fn manual_dispatch(http: Arc<Http>, id: u64, emb: CreateEmbed) {
     };
 }
 
-pub async fn send_global_presence(shard_manager : &MutexGuard<'_, ShardManager>, sum : u64) {
+pub async fn send_global_presence(shard_manager: &MutexGuard<'_, ShardManager>, sum: u64) {
     let server_count = {
         if sum < 10000 {
             sum.to_string()
-        }
-        else {
-            format!("{:.1}k", sum/1000)
+        } else {
+            format!("{:.1}k", sum / 1000)
         }
     };
 

@@ -25,6 +25,7 @@ content_inspector = "0.2"
 shell-words = "0.1"
 const_format = "0.2"
 lazy_static = "1.4.0"
+similar = "2.1.0"
 #tests
 indoc = "1.0.3"
 test-context = "0.1"

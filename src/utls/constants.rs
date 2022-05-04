@@ -38,7 +38,6 @@ lazy_static! {
         Regex::new("\"[^\"]+\"|(?P<public>public)[\\s]+?class[\\s]*?").unwrap();
 }
 
-
 /*
    Discord limits the size of the amount of compilers we can display to users, for some languages
    we'll just grab the first 25 from our API, for C & C++ we will create a curated list manually.

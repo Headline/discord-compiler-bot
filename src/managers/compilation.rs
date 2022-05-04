@@ -261,8 +261,6 @@ fn fix_common_problems(language: &str, code: String) -> String {
             }
             fix_candidate
         }
-        _ => {
-            code
-        }
-    }
+        _ => code,
+    };
 }
