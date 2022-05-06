@@ -1,7 +1,7 @@
-use crate::boilerplate::c::CGenerator;
-use crate::boilerplate::cpp::CppGenerator;
-use crate::boilerplate::csharp::CSharpGenerator;
-use crate::boilerplate::java::JavaGenerator;
+use crate::boilerplate::{
+    c::CGenerator, cpp::CppGenerator, csharp::CSharpGenerator, java::JavaGenerator,
+    php::PHPGenerator,
+};
 
 pub trait BoilerPlateGenerator {
     fn new(input: &str) -> Self
@@ -56,6 +56,7 @@ pub fn boilerplate_factory(language: &str, code: &str) -> BoilerPlate<dyn Boiler
         "c" => BoilerPlate::new(Box::new(CGenerator::new(code))),
         "java" => BoilerPlate::new(Box::new(JavaGenerator::new(code))),
         "c#" => BoilerPlate::new(Box::new(CSharpGenerator::new(code))),
+        "php" => BoilerPlate::new(Box::new(PHPGenerator::new(code))),
         // since all compilations go through this path, we have a Null generator whose
         // needs_boilerplate() always returns false.
         _ => BoilerPlate::new(Box::new(Null::new(code))),
