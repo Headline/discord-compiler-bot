@@ -88,7 +88,13 @@ pub async fn handle_edit(
     };
 
     // try to clear reactions
-    let _ = old.delete_reactions(&ctx).await;
+    if let Ok(updated_message) = old.channel_id.message(&ctx.http, old.id.0).await {
+        for reaction in &updated_message.reactions {
+            if reaction.me {
+                let _ = discordhelpers::delete_bot_reacts(ctx, &updated_message, reaction.reaction_type.clone()).await;
+            }
+        }
+    }
 
     if content.starts_with(&format!("{}asm", prefix)) {
         if let Err(e) = handle_edit_asm(
