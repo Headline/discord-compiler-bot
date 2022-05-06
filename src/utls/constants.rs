@@ -30,6 +30,8 @@ lazy_static! {
         Regex::new("\"[^\"]*?\"|(?P<main>main[\\s]*?\\()").unwrap();
     pub static ref CSHARP_MAIN_REGEX: Regex =
         Regex::new("\"[^\"]*?\"|(?P<main>static[\\s]+?void[\\s]+?Main[\\s]*?\\()").unwrap();
+    pub static ref PHP_START_REGEX: Regex =
+        Regex::new("\"[^\"]*?\"|(?P<php_start><\\?php)").unwrap();
 }
 
 // Other Regexes
