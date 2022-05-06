@@ -82,6 +82,10 @@ async fn main() -> Result<(), Box<dyn Error>> {
             .join(", ")
     );
 
+    if cfg!(debug_assertions) {
+        warn!("Running bot in DEBUG mode...");
+    }
+
     let prefix = env::var("BOT_PREFIX").expect("Expected bot prefix in .env file");
     let app_id = env::var("APPLICATION_ID").expect("Expected application id in .env file");
     let framework = StandardFramework::new()
