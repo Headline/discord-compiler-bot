@@ -1,26 +1,31 @@
-use serenity::model::prelude::UnavailableGuild;
 use serenity::{
-    async_trait, collector::CollectReaction, framework::standard::macros::hook,
-    framework::standard::CommandResult, framework::standard::DispatchError,
-    model::channel::Message, model::channel::ReactionType, model::event::MessageUpdateEvent,
-    model::gateway::Ready, model::guild::Guild, model::id::ChannelId, model::id::GuildId,
-    model::id::MessageId, model::interactions::Interaction, prelude::*,
+    async_trait,
+    collector::CollectReaction,
+    framework::{standard::macros::hook, standard::CommandResult, standard::DispatchError},
+    model::{
+        channel::Message, channel::ReactionType, event::MessageUpdateEvent, gateway::Ready,
+        guild::Guild, id::ChannelId, id::GuildId, id::MessageId, interactions::Interaction,
+        prelude::UnavailableGuild,
+    },
+    prelude::*,
 };
 
 use tokio::sync::MutexGuard;
 
 use chrono::{DateTime, Utc};
 
+use crate::managers::command::CommandManager;
 use crate::{
     cache::*,
     commands::compile::handle_request,
     managers::compilation::RequestHandler,
     managers::stats::StatsManager,
-    utls::discordhelpers,
-    utls::discordhelpers::embeds,
-    utls::discordhelpers::embeds::embed_message,
-    utls::discordhelpers::interactions::send_error_msg,
-    utls::parser::{get_message_attachment, shortname_to_qualified},
+    utls::{
+        discordhelpers,
+        discordhelpers::embeds,
+        discordhelpers::interactions::send_error_msg,
+        parser::{get_message_attachment, shortname_to_qualified},
+    },
 };
 
 pub struct Handler; // event handler for serenity
@@ -62,6 +67,13 @@ impl ShardsReadyHandler for Handler {
 impl EventHandler for Handler {
     async fn guild_create(&self, ctx: Context, guild: Guild) {
         let data = ctx.data.read().await;
+
+        // in debug, we'll clean out old commands and register on a guild-per-guild basis
+        if cfg!(debug_assertions) {
+            CommandManager::remove_guild_commands(&ctx, &guild).await;
+            let mut cmd_mgr = data.get::<CommandCache>().unwrap().write().await;
+            cmd_mgr.register_commands_guild(&ctx, &guild).await;
+        }
 
         let now: DateTime<Utc> = Utc::now();
         if guild.joined_at.unix_timestamp() + 30 > now.timestamp() {
@@ -216,7 +228,7 @@ impl EventHandler for Handler {
                                 return;
                             }
                         };
-                        let mut emb_msg = embed_message(emb);
+                        let mut emb_msg = embeds::embed_message(emb);
                         emb_msg.reference_message(&new_message);
                         let _ = new_message
                             .channel_id
@@ -266,9 +278,9 @@ impl EventHandler for Handler {
 
     async fn ready(&self, ctx: Context, ready: Ready) {
         info!("[Shard {}] Ready", ctx.shard_id);
+        let data = ctx.data.read().await;
 
         {
-            let data = ctx.data.read().await;
             let mut stats = data.get::<StatsManagerCache>().unwrap().lock().await;
             // occasionally we can have a ready event fire well after execution
             // this check prevents us from double calling all_shards_ready
@@ -286,9 +298,11 @@ impl EventHandler for Handler {
             }
         }
 
-        let data = ctx.data.read().await;
-        let mut cmd_mgr = data.get::<CommandCache>().unwrap().write().await;
-        cmd_mgr.register_commands(&ctx).await;
+        // register commands globally in release
+        if !cfg!(debug_assertions) {
+            let mut cmd_mgr = data.get::<CommandCache>().unwrap().write().await;
+            cmd_mgr.register_commands_global(&ctx).await;
+        }
     }
 
     async fn interaction_create(&self, ctx: Context, interaction: Interaction) {
