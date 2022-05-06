@@ -91,7 +91,12 @@ pub async fn handle_edit(
     if let Ok(updated_message) = old.channel_id.message(&ctx.http, old.id.0).await {
         for reaction in &updated_message.reactions {
             if reaction.me {
-                let _ = discordhelpers::delete_bot_reacts(ctx, &updated_message, reaction.reaction_type.clone()).await;
+                let _ = discordhelpers::delete_bot_reacts(
+                    ctx,
+                    &updated_message,
+                    reaction.reaction_type.clone(),
+                )
+                .await;
             }
         }
     }
