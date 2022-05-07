@@ -60,6 +60,12 @@ impl ShardsReadyHandler for Handler {
         discordhelpers::send_global_presence(&shard_manager, stats.server_count()).await;
 
         info!("Ready in {} guilds", stats.server_count());
+
+        // register commands globally in release
+        if !cfg!(debug_assertions) {
+            let mut cmd_mgr = data.get::<CommandCache>().unwrap().write().await;
+            cmd_mgr.register_commands_global(ctx).await;
+        }
     }
 }
 
@@ -296,12 +302,6 @@ impl EventHandler for Handler {
             if stats.shard_count() == total_shards_to_spawn {
                 self.all_shards_ready(&ctx, &mut stats, &ready).await;
             }
-        }
-
-        // register commands globally in release
-        if !cfg!(debug_assertions) {
-            let mut cmd_mgr = data.get::<CommandCache>().unwrap().write().await;
-            cmd_mgr.register_commands_global(&ctx).await;
         }
     }
 
