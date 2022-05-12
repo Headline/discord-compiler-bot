@@ -1,3 +1,4 @@
+use serenity::framework::standard::CommandError;
 use serenity::{
     framework::standard::CommandResult,
     model::interactions::application_command::ApplicationCommandInteraction,
@@ -84,44 +85,13 @@ pub async fn diff(ctx: &Context, msg: &ApplicationCommandInteraction) -> Command
         return Ok(());
     }
 
-    let content1 = message1_obj.unwrap().content;
-    let content2 = message2_obj.unwrap().content;
+    let msg1 = message1_obj.unwrap();
+    let msg2 = message2_obj.unwrap();
 
-    let mut fake_parse1 = ParserResult::default();
-    let mut fake_parse2 = ParserResult::default();
+    let content1 = get_code_block_or_content(&msg1.content, &msg1.author).await?;
+    let content2 = get_code_block_or_content(&msg2.content, &msg2.author).await?;
 
-    {
-        let block1 = find_code_block(&mut fake_parse1, &content1, &msg.user);
-        let block2 = find_code_block(&mut fake_parse2, &content2, &msg.user);
-
-        if !block1.await? || !block2.await? {
-            msg.create_interaction_response(&ctx.http, |resp| {
-                resp.interaction_response_data(|data| {
-                    data.embed(|emb| {
-                        emb.color(COLOR_FAIL).description(
-                            "Unable to find a code-block to match within a supplied message!",
-                        )
-                    })
-                    .flags(InteractionApplicationCommandCallbackDataFlags::EPHEMERAL)
-                })
-            })
-            .await?;
-            return Ok(());
-        }
-    }
-
-    let code1 = fake_parse1.code.clone();
-    let code2 = fake_parse2.code.clone();
-    let diff = similar::TextDiff::from_lines(&code1, &code2);
-    let mut output = String::new();
-    for change in diff.iter_all_changes() {
-        let sign = match change.tag() {
-            ChangeTag::Delete => "-",
-            ChangeTag::Insert => "+",
-            ChangeTag::Equal => " ",
-        };
-        output.push_str(&format!("{}{}", sign, change));
-    }
+    let output = run_diff(&content1, &content2);
 
     msg.create_interaction_response(&ctx.http, |resp| {
         resp.interaction_response_data(|data| {
@@ -135,4 +105,31 @@ pub async fn diff(ctx: &Context, msg: &ApplicationCommandInteraction) -> Command
     .await?;
 
     Ok(())
+}
+
+pub fn run_diff(first: &str, second: &str) -> String {
+    let diff = similar::TextDiff::from_lines(first, second);
+    let mut output = String::new();
+    for change in diff.iter_all_changes() {
+        let sign = match change.tag() {
+            ChangeTag::Delete => "-",
+            ChangeTag::Insert => "+",
+            ChangeTag::Equal => " ",
+        };
+        output.push_str(&format!("{}{}", sign, change));
+    }
+    output
+}
+
+pub async fn get_code_block_or_content(
+    input: &str,
+    author: &User,
+) -> std::result::Result<String, CommandError> {
+    let mut fake_parse = ParserResult::default();
+    if find_code_block(&mut fake_parse, input, author).await? {
+        Ok(fake_parse.code)
+    } else {
+        // assume content is message content itself
+        Ok(input.to_owned())
+    }
 }

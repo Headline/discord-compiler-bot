@@ -51,18 +51,16 @@ impl CommandManager {
             "cpp" => slashcmds::cpp::cpp(ctx, command).await,
             "invite" => slashcmds::invite::invite(ctx, command).await,
             "format" | "format [beta]" => slashcmds::format::format(ctx, command).await,
-            "diff" => slashcmds::diff::diff(ctx, command).await,
+            "diff" | "diff [beta]" => {
+                if command.data.kind == ApplicationCommandType::Message {
+                    slashcmds::diff_msg::diff_msg(ctx, command).await
+                } else {
+                    slashcmds::diff::diff(ctx, command).await
+                }
+            }
             e => {
                 warn!("Unknown application command received: {}", e);
                 Ok(())
-            }
-        }
-    }
-
-    pub async fn remove_guild_commands(ctx: &Context, guild: &Guild) {
-        if let Ok(commands) = guild.get_application_commands(&ctx.http).await {
-            for cmd in commands {
-                let _ = guild.delete_application_command(&ctx.http, cmd.id).await;
             }
         }
     }
@@ -130,6 +128,17 @@ impl CommandManager {
         cmd = CreateApplicationCommand::default();
         cmd.kind(ApplicationCommandType::Message).name(format!(
             "Format{}",
+            if cfg!(debug_assertions) {
+                " [BETA]"
+            } else {
+                ""
+            }
+        ));
+        cmds.push(cmd);
+
+        cmd = CreateApplicationCommand::default();
+        cmd.kind(ApplicationCommandType::Message).name(format!(
+            "Diff{}",
             if cfg!(debug_assertions) {
                 " [BETA]"
             } else {

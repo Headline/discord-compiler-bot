@@ -2,6 +2,7 @@ use std::collections::HashMap;
 use std::env;
 use std::error::Error;
 use std::sync::Arc;
+use std::time::SystemTime;
 
 use tokio::sync::Mutex;
 use tokio::sync::RwLock;
@@ -16,6 +17,7 @@ use crate::managers::command::CommandManager;
 use crate::managers::compilation::CompilationManager;
 use lru_cache::LruCache;
 use serenity::model::channel::Message;
+use serenity::model::interactions::application_command::ApplicationCommandInteraction;
 
 /** Caching **/
 
@@ -80,6 +82,31 @@ impl TypeMapKey for CommandCache {
     type Value = Arc<RwLock<CommandManager>>;
 }
 
+pub struct DiffCommandEntry {
+    pub expired_timestamp: SystemTime,
+    pub content: String,
+    pub first_interaction: ApplicationCommandInteraction,
+}
+impl DiffCommandEntry {
+    pub fn new(content: &str, msg: &ApplicationCommandInteraction) -> Self {
+        DiffCommandEntry {
+            content: content.to_owned(),
+            expired_timestamp: SystemTime::now() + std::time::Duration::from_secs(30),
+            first_interaction: msg.clone(),
+        }
+    }
+
+    pub fn is_expired(&self) -> bool {
+        self.expired_timestamp < SystemTime::now()
+    }
+}
+
+/// Contains the first message used in the diff message command, w/ expiry timestamp
+pub struct DiffCommandCache;
+impl TypeMapKey for DiffCommandCache {
+    type Value = Arc<Mutex<LruCache<u64, DiffCommandEntry>>>;
+}
+
 pub async fn fill(
     data: Arc<RwLock<TypeMap>>,
     prefix: &str,
@@ -130,7 +157,7 @@ pub async fn fill(
     data.insert::<ShardManagerCache>(shard_manager);
 
     // Message delete cache
-    data.insert::<MessageCache>(Arc::new(tokio::sync::Mutex::new(LruCache::new(25))));
+    data.insert::<MessageCache>(Arc::new(Mutex::new(LruCache::new(25))));
 
     // Compiler manager
     data.insert::<CompilerCache>(Arc::new(RwLock::new(CompilationManager::new().await?)));
@@ -153,8 +180,12 @@ pub async fn fill(
     let blocklist = Blocklist::new();
     data.insert::<BlocklistCache>(Arc::new(RwLock::new(blocklist)));
 
+    // Commands
     let commands = CommandManager::new();
     data.insert::<CommandCache>(Arc::new(RwLock::new(commands)));
+
+    // Diff command message tracker
+    data.insert::<DiffCommandCache>(Arc::new(Mutex::new(LruCache::new(10))));
 
     Ok(())
 }
