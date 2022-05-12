@@ -14,7 +14,6 @@ use tokio::sync::MutexGuard;
 
 use chrono::{DateTime, Utc};
 
-use crate::managers::command::CommandManager;
 use crate::{
     cache::*,
     commands::compile::handle_request,
@@ -74,9 +73,8 @@ impl EventHandler for Handler {
     async fn guild_create(&self, ctx: Context, guild: Guild) {
         let data = ctx.data.read().await;
 
-        // in debug, we'll clean out old commands and register on a guild-per-guild basis
+        // in debug, we'll register on a guild-per-guild basis
         if cfg!(debug_assertions) {
-            CommandManager::remove_guild_commands(&ctx, &guild).await;
             let mut cmd_mgr = data.get::<CommandCache>().unwrap().write().await;
             cmd_mgr.register_commands_guild(&ctx, &guild).await;
         }

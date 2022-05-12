@@ -274,10 +274,58 @@ pub fn create_dismiss_response<'this, 'a>(
         .interaction_response_data(|data| {
             data.set_embeds(Vec::new())
                 .embed(|emb| {
-                    emb.color(COLOR_WARN)
+                    emb.color(COLOR_OKAY)
                         .description("Interaction completed, you may safely dismiss this message.")
                 })
                 .components(|components| components.set_action_rows(Vec::new()))
+        })
+}
+
+pub fn edit_to_dismiss_response(
+    edit: &mut EditInteractionResponse,
+) -> &mut EditInteractionResponse {
+    edit.set_embeds(Vec::new())
+        .embed(|emb| {
+            emb.color(COLOR_OKAY)
+                .description("Interaction completed, you may safely dismiss this message.")
+        })
+        .components(|components| components.set_action_rows(Vec::new()))
+}
+
+pub fn create_diff_select_response<'this, 'a>(
+    resp: &'this mut CreateInteractionResponse<'a>,
+) -> &'this mut CreateInteractionResponse<'a> {
+    resp.kind(InteractionResponseType::ChannelMessageWithSource)
+        .interaction_response_data(|data| {
+            data.flags(InteractionApplicationCommandCallbackDataFlags::EPHEMERAL)
+                .embed(|emb| {
+                    emb.color(COLOR_WARN).description(
+                        "Please re-run this command on another message to generate a diff",
+                    )
+                })
+                .components(|components| {
+                    components.create_action_row(|row| {
+                        row.create_button(|btn| {
+                            btn.custom_id("cancel")
+                                .label("Cancel")
+                                .style(ButtonStyle::Danger)
+                        })
+                    })
+                })
+        })
+}
+
+pub fn create_diff_response<'this, 'a>(
+    resp: &'this mut CreateInteractionResponse<'a>,
+    output: &str,
+) -> &'this mut CreateInteractionResponse<'a> {
+    resp.kind(InteractionResponseType::ChannelMessageWithSource)
+        .interaction_response_data(|data| {
+            data.embed(|emb| {
+                emb.color(COLOR_OKAY)
+                    .title("Diff completed")
+                    .description(format!("```diff\n{}\n```", output))
+            })
         })
 }
 
