@@ -222,6 +222,13 @@ pub fn build_dblvote_embed(tag: String) -> CreateEmbed {
     embed
 }
 
+pub fn panic_embed(panic_info: String) -> CreateEmbed {
+    let mut embed = CreateEmbed::default();
+    embed.title("Oopsie");
+    embed.description(format!("```\n{}\n```", panic_info));
+    embed
+}
+
 pub fn build_welcome_embed() -> CreateEmbed {
     let mut embed = CreateEmbed::default();
     embed.title("Discord Compiler");
