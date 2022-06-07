@@ -23,6 +23,11 @@ pub async fn compilers(ctx: &Context, msg: &Message, _args: Args) -> CommandResu
     let data_read = ctx.data.read().await;
     let compiler_cache = data_read.get::<CompilerCache>().unwrap();
     let compiler_manager = compiler_cache.read().await;
+    if compiler_manager.gbolt.is_none() {
+        return Err(CommandError::from(
+            "Compiler Explorer service is currently down, please try again later.",
+        ));
+    }
 
     // Get our list of compilers
     let mut langs: Vec<String> = Vec::new();
@@ -31,7 +36,7 @@ pub async fn compilers(ctx: &Context, msg: &Message, _args: Args) -> CommandResu
     let language = shortname_to_qualified(&lower_lang);
     match compiler_manager.resolve_target(language) {
         RequestHandler::CompilerExplorer => {
-            for cache_entry in &compiler_manager.gbolt.cache {
+            for cache_entry in &compiler_manager.gbolt.as_ref().unwrap().cache {
                 if cache_entry.language.id == language {
                     for compiler in &cache_entry.compilers {
                         langs.push(format!("{} -> **{}**", &compiler.name, &compiler.id));
@@ -42,6 +47,8 @@ pub async fn compilers(ctx: &Context, msg: &Message, _args: Args) -> CommandResu
         RequestHandler::WandBox => {
             match compiler_manager
                 .wbox
+                .as_ref()
+                .unwrap()
                 .get_compilers(shortname_to_qualified(language))
             {
                 Some(s) => {

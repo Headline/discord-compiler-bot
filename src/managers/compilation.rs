@@ -5,8 +5,8 @@ use serenity::framework::standard::CommandError;
 use serenity::model::user::User;
 
 use crate::boilerplate::generator::boilerplate_factory;
-use godbolt::{CompilationFilters, CompilerOptions, Godbolt, GodboltError, RequestOptions};
-use wandbox::{CompilationBuilder, Wandbox, WandboxError};
+use godbolt::{CompilationFilters, CompilerOptions, Godbolt, RequestOptions};
+use wandbox::{CompilationBuilder, Wandbox};
 
 use crate::utls::constants::{JAVA_PUBLIC_CLASS_REGEX, USER_AGENT};
 use crate::utls::discordhelpers::embeds::ToEmbed;
@@ -39,8 +39,8 @@ pub enum RequestHandler {
 /// works is: if the language supported is owned by Compiler Explorer-, we will use them. Otherwise,
 /// we fallback on to WandBox to see if they can fulfill the request
 pub struct CompilationManager {
-    pub wbox: Wandbox,
-    pub gbolt: Godbolt,
+    pub wbox: Option<Wandbox>,
+    pub gbolt: Option<Godbolt>,
 }
 
 impl CompilationManager {
@@ -51,9 +51,18 @@ impl CompilationManager {
         let mut broken_languages = std::collections::HashSet::new();
         broken_languages.insert(String::from("cpp"));
 
+        let wbox = wandbox::Wandbox::new(Some(broken_compilers), Some(broken_languages)).await;
+        if let Err(e) = &wbox {
+            error!("Unable to load wandbox: {}", e);
+        }
+
+        let gbolt = Godbolt::new().await;
+        if let Err(e) = &gbolt {
+            error!("Unable to load compiler explorer: {}", e);
+        }
         Ok(CompilationManager {
-            wbox: wandbox::Wandbox::new(Some(broken_compilers), Some(broken_languages)).await?,
-            gbolt: Godbolt::new().await?,
+            wbox: wbox.ok(),
+            gbolt: gbolt.ok(),
         })
     }
 
@@ -83,6 +92,13 @@ impl CompilationManager {
         parse_result: &ParserResult,
         author: &User,
     ) -> Result<(String, CreateEmbed), CommandError> {
+        let gbolt = match &self.gbolt {
+            Some(gbolt) => gbolt,
+            None => {
+                return Err(CommandError::from("Compiler Explorer is uninitialized, this may be due to an outage or error. Please try again later."));
+            }
+        };
+
         let filters = CompilationFilters {
             binary: None,
             comment_only: Some(true),
@@ -110,7 +126,7 @@ impl CompilationManager {
         } else {
             &parse_result.target
         };
-        let resolution_result = self.gbolt.resolve(target);
+        let resolution_result = gbolt.resolve(target);
         return match resolution_result {
             None => {
                 Err(CommandError::from(format!("Target '{}' either does not produce assembly or is not currently supported on godbolt.org", target)))
@@ -125,7 +141,14 @@ impl CompilationManager {
     pub async fn compiler_explorer(
         &self,
         parse_result: &ParserResult,
-    ) -> Result<(String, godbolt::GodboltResponse), GodboltError> {
+    ) -> Result<(String, godbolt::GodboltResponse), CommandError> {
+        let gbolt = match &self.gbolt {
+            Some(gbolt) => gbolt,
+            None => {
+                return Err(CommandError::from("Compiler Explorer is uninitialized, this may be due to an outage or error. Please try again later."));
+            }
+        };
+
         let filters = CompilationFilters {
             binary: None,
             comment_only: Some(true),
@@ -156,7 +179,7 @@ impl CompilationManager {
         } else {
             &parse_result.target
         };
-        let compiler = self.gbolt.resolve(target).unwrap();
+        let compiler = gbolt.resolve(target).unwrap();
 
         // add boilerplate code if needed & fix common mistakes
         let mut code = parse_result.code.clone();
@@ -177,22 +200,34 @@ impl CompilationManager {
             return RequestHandler::WandBox;
         }
 
-        if self.gbolt.resolve(target).is_some() {
-            RequestHandler::CompilerExplorer
-        } else if self.wbox.resolve(target) {
-            RequestHandler::WandBox
-        } else {
-            RequestHandler::None
+        if let Some(gbolt) = &self.gbolt {
+            if gbolt.resolve(target).is_some() {
+                return RequestHandler::CompilerExplorer;
+            }
         }
+        if let Some(wbox) = &self.wbox {
+            if wbox.resolve(target) {
+                return RequestHandler::WandBox;
+            }
+        }
+
+        RequestHandler::None
     }
 
     pub async fn wandbox(
         &self,
         parse_result: &ParserResult,
-    ) -> Result<(String, wandbox::CompilationResult), WandboxError> {
+    ) -> Result<(String, wandbox::CompilationResult), CommandError> {
+        let wbox = match &self.wbox {
+            Some(wbox) => wbox,
+            None => {
+                return Err(CommandError::from("WandBox is uninitialized, this may be due to an outage or error. Please try again later."));
+            }
+        };
+
         let lang = {
             let mut found = String::default();
-            for lang in self.wbox.get_languages() {
+            for lang in wbox.get_languages() {
                 if parse_result.target == lang.name {
                     found = parse_result.target.clone();
                 }
@@ -224,7 +259,7 @@ impl CompilationManager {
         builder.save(false);
         builder.options(parse_result.options.clone());
 
-        builder.build(&self.wbox)?;
+        builder.build(wbox)?;
         let res = builder.dispatch().await?;
         Ok((builder.lang, res))
     }

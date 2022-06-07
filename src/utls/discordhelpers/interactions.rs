@@ -149,7 +149,8 @@ pub async fn create_compiler_options(
             )))
         }
         RequestHandler::WandBox => {
-            let compilers = compilers.wbox.get_compilers(language).unwrap();
+            let wbox = compilers.wbox.as_ref().unwrap();
+            let compilers = wbox.get_compilers(language).unwrap();
             let mut first = true;
             for compiler in if compilers.len() > 25 {
                 &compilers[..24]
@@ -173,7 +174,7 @@ pub async fn create_compiler_options(
             let mut default = None;
             let mut list = None;
 
-            for cache in &compilers.gbolt.cache {
+            for cache in &compilers.gbolt.as_ref().unwrap().cache {
                 if cache.language.name.to_lowercase() == language {
                     list = Some(
                         cache

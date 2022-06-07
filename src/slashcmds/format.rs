@@ -27,11 +27,15 @@ pub async fn format(ctx: &Context, command: &ApplicationCommandInteraction) -> C
 
     let data = ctx.data.read().await;
     let comp_mgr = data.get::<CompilerCache>().unwrap().read().await;
-    let gbolt = &comp_mgr.gbolt;
+    if comp_mgr.gbolt.is_none() {
+        return Err(CommandError::from(
+            "Compiler Explorer service is currently down, please try again later.",
+        ));
+    }
 
     command
         .create_interaction_response(&ctx.http, |response| {
-            create_formats_interaction(response, &gbolt.formats)
+            create_formats_interaction(response, &comp_mgr.gbolt.as_ref().unwrap().formats)
         })
         .await?;
 
@@ -66,7 +70,10 @@ pub async fn format(ctx: &Context, command: &ApplicationCommandInteraction) -> C
         return Ok(());
     }
 
-    let styles = &gbolt
+    let styles = &comp_mgr
+        .gbolt
+        .as_ref()
+        .unwrap()
         .formats
         .iter()
         .find(|p| p.format_type == formatter)
