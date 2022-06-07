@@ -199,7 +199,11 @@ pub async fn handle_edit_asm(
 }
 
 pub fn is_success_embed(embed: &CreateEmbed) -> bool {
-    embed.0.get("color").unwrap() == COLOR_OKAY
+    if let Some(color) = embed.0.get("color") {
+        color == COLOR_OKAY
+    } else {
+        false
+    }
 }
 
 pub async fn send_completion_react(
