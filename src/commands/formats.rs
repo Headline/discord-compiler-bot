@@ -1,6 +1,6 @@
 use crate::cache::{CompilerCache, ConfigCache};
 use serenity::builder::CreateEmbed;
-use serenity::framework::standard::{macros::command, Args, CommandResult};
+use serenity::framework::standard::{macros::command, Args, CommandError, CommandResult};
 use serenity::model::prelude::*;
 use serenity::prelude::*;
 
@@ -20,13 +20,18 @@ pub async fn formats(ctx: &Context, msg: &Message, _args: Args) -> CommandResult
     };
 
     let compiler_manager = data.get::<CompilerCache>().unwrap().read().await;
+    if compiler_manager.gbolt.is_none() {
+        return Err(CommandError::from(
+            "Compiler Explorer service is currently down, please try again later.",
+        ));
+    }
 
     let mut emb = CreateEmbed::default();
     emb.thumbnail(ICON_HELP);
     emb.color(COLOR_OKAY);
     emb.title("Formatters:");
     emb.description(format!("Below is the list of all formatters currently supported, an valid example request can be `{}format rust`, or `{}format clang mozilla`", prefix, prefix));
-    for format in &compiler_manager.gbolt.formats {
+    for format in &compiler_manager.gbolt.as_ref().unwrap().formats {
         let mut output = String::new();
         output.push_str("Styles:\n");
         if format.styles.is_empty() {
