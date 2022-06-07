@@ -106,9 +106,11 @@ impl EventHandler for Handler {
                     shard_count: Some(stats.shard_count()),
                 };
 
-                let dbl = data.get::<DblCache>().unwrap().read().await;
-                if let Err(e) = dbl.update_stats(id, new_stats).await {
-                    warn!("Failed to post stats to dbl: {}", e);
+                if let Some(dbl_cache) = data.get::<DblCache>() {
+                    let dbl = dbl_cache.read().await;
+                    if let Err(e) = dbl.update_stats(id, new_stats).await {
+                        warn!("Failed to post stats to dbl: {}", e);
+                    }
                 }
 
                 // update guild count in presence
@@ -151,9 +153,11 @@ impl EventHandler for Handler {
                 shard_count: Some(stats.shard_count()),
             };
 
-            let dbl = data.get::<DblCache>().unwrap().read().await;
-            if let Err(e) = dbl.update_stats(id, new_stats).await {
-                warn!("Failed to post stats to dbl: {}", e);
+            if let Some(dbl_cache) = data.get::<DblCache>() {
+                let dbl = dbl_cache.read().await;
+                if let Err(e) = dbl.update_stats(id, new_stats).await {
+                    warn!("Failed to post stats to dbl: {}", e);
+                }
             }
 
             // update guild count in presence
