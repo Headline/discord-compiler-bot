@@ -11,12 +11,28 @@ use wandbox::*;
 use crate::utls::constants::*;
 use crate::utls::discordhelpers;
 
-pub trait ToEmbed<T> {
-    fn to_embed(self, author: &User, any: T) -> CreateEmbed;
+#[derive(Default)]
+pub struct EmbedOptions {
+    pub is_assembly: bool,
+    pub lang: String,
+    pub compiler: String,
+}
+impl EmbedOptions {
+    pub fn new(is_assembly: bool, lang: String, compiler: String) -> Self {
+        EmbedOptions {
+            is_assembly,
+            lang,
+            compiler,
+        }
+    }
 }
 
-impl ToEmbed<bool> for wandbox::CompilationResult {
-    fn to_embed(self, author: &User, _: bool) -> CreateEmbed {
+pub trait ToEmbed {
+    fn to_embed(self, author: &User, options: &EmbedOptions) -> CreateEmbed;
+}
+
+impl ToEmbed for wandbox::CompilationResult {
+    fn to_embed(self, author: &User, options: &EmbedOptions) -> CreateEmbed {
         let mut embed = CreateEmbed::default();
 
         if !self.status.is_empty() {
@@ -46,13 +62,25 @@ impl ToEmbed<bool> for wandbox::CompilationResult {
             embed.field("URL", &self.url, false);
         }
 
-        embed.footer(|f| f.text(format!("{} | wandbox.org", author.tag())));
+        embed.footer(|f| {
+            let mut text = author.tag();
+
+            if !options.lang.is_empty() {
+                text = format!("{} | {}", text, options.lang);
+            }
+            if !options.compiler.is_empty() {
+                text = format!("{} | {}", text, options.compiler);
+            }
+
+            text = format!("{} | wandbox.org", text);
+            f.text(text)
+        });
         embed
     }
 }
 
-impl ToEmbed<bool> for godbolt::GodboltResponse {
-    fn to_embed(self, author: &User, assembly: bool) -> CreateEmbed {
+impl ToEmbed for godbolt::GodboltResponse {
+    fn to_embed(self, author: &User, options: &EmbedOptions) -> CreateEmbed {
         let mut embed = CreateEmbed::default();
 
         if self.code == 0 {
@@ -61,7 +89,7 @@ impl ToEmbed<bool> for godbolt::GodboltResponse {
             embed.color(COLOR_FAIL);
 
             // if it's an assembly request let's just handle the error case here.
-            if assembly {
+            if options.is_assembly {
                 let mut errs = String::new();
                 for err_res in &self.stderr {
                     let line = format!("{}\n", &err_res.text);
@@ -78,7 +106,7 @@ impl ToEmbed<bool> for godbolt::GodboltResponse {
             }
         };
 
-        if assembly {
+        if options.is_assembly {
             let mut pieces: Vec<String> = Vec::new();
             let mut append: String = String::new();
             if let Some(vec) = &self.asm {
@@ -156,12 +184,18 @@ impl ToEmbed<bool> for godbolt::GodboltResponse {
             //embed.field("Execution Time", format!("`{}ms`", self.execution_time), true);
         }
 
-        let mut appendstr = String::default();
+        let mut appendstr = author.tag();
         if let Some(time) = self.execution_time {
-            appendstr = format!(" | {} ms", time);
+            appendstr = format!("{} | {}ms", appendstr, time);
+        }
+        if !options.lang.is_empty() {
+            appendstr = format!("{} | {}", appendstr, options.lang);
+        }
+        if !options.compiler.is_empty() {
+            appendstr = format!("{} | {}", appendstr, options.compiler);
         }
 
-        embed.footer(|f| f.text(format!("{} | godbolt.org{}", author.tag(), appendstr)));
+        embed.footer(|f| f.text(format!("{} | godbolt.org", appendstr)));
         embed
     }
 }

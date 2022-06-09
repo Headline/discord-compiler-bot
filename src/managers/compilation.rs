@@ -9,8 +9,15 @@ use godbolt::{CompilationFilters, CompilerOptions, Godbolt, RequestOptions};
 use wandbox::{CompilationBuilder, Wandbox};
 
 use crate::utls::constants::{JAVA_PUBLIC_CLASS_REGEX, USER_AGENT};
-use crate::utls::discordhelpers::embeds::ToEmbed;
+use crate::utls::discordhelpers::embeds::{EmbedOptions, ToEmbed};
 use crate::utls::parser::ParserResult;
+
+// struct containing any information resolved during the compilation step
+#[derive(Default)]
+pub struct CompilationDetails {
+    pub language: String,
+    pub compiler: String,
+}
 
 //Traits for compiler lookup
 pub trait LanguageResolvable {
@@ -70,15 +77,21 @@ impl CompilationManager {
         &self,
         parser_result: &ParserResult,
         author: &User,
-    ) -> Result<(String, CreateEmbed), CommandError> {
+    ) -> Result<(CompilationDetails, CreateEmbed), CommandError> {
         return match self.resolve_target(&parser_result.target) {
             RequestHandler::CompilerExplorer => {
                 let result = self.compiler_explorer(parser_result).await?;
-                Ok((result.0, result.1.to_embed(author, false)))
+
+                let options =
+                    EmbedOptions::new(false, result.0.language.clone(), result.0.compiler.clone());
+                Ok((result.0, result.1.to_embed(author, &options)))
             }
             RequestHandler::WandBox => {
                 let result = self.wandbox(parser_result).await?;
-                Ok((result.0, result.1.to_embed(author, false)))
+
+                let options =
+                    EmbedOptions::new(false, result.0.language.clone(), result.0.compiler.clone());
+                Ok((result.0, result.1.to_embed(author, &options)))
             }
             RequestHandler::None => Err(CommandError::from(format!(
                 "Unable to find compiler or language for target '{}'.",
@@ -133,7 +146,8 @@ impl CompilationManager {
             }
             Some(compiler) => {
                 let response = Godbolt::send_request(&compiler, &parse_result.code, options, USER_AGENT).await?;
-                Ok((compiler.lang, response.to_embed(author, true)))
+                let options = EmbedOptions::new(true, target.to_string(), compiler.name);
+                Ok((compiler.lang, response.to_embed(author, &options)))
             }
         };
     }
@@ -141,7 +155,7 @@ impl CompilationManager {
     pub async fn compiler_explorer(
         &self,
         parse_result: &ParserResult,
-    ) -> Result<(String, godbolt::GodboltResponse), CommandError> {
+    ) -> Result<(CompilationDetails, godbolt::GodboltResponse), CommandError> {
         let gbolt = match &self.gbolt {
             Some(gbolt) => gbolt,
             None => {
@@ -181,6 +195,12 @@ impl CompilationManager {
         };
         let compiler = gbolt.resolve(target).unwrap();
 
+        // report discovered information
+        let details = CompilationDetails {
+            compiler: compiler.name.clone(),
+            language: compiler.lang.clone(),
+        };
+
         // add boilerplate code if needed & fix common mistakes
         let mut code = parse_result.code.clone();
         {
@@ -192,7 +212,7 @@ impl CompilationManager {
             code = fix_common_problems(&compiler.lang, code);
         }
         let response = Godbolt::send_request(&compiler, &code, options, USER_AGENT).await?;
-        Ok((compiler.lang, response))
+        Ok((details, response))
     }
 
     pub fn resolve_target(&self, target: &str) -> RequestHandler {
@@ -217,19 +237,21 @@ impl CompilationManager {
     pub async fn wandbox(
         &self,
         parse_result: &ParserResult,
-    ) -> Result<(String, wandbox::CompilationResult), CommandError> {
+    ) -> Result<(CompilationDetails, wandbox::CompilationResult), CommandError> {
         let wbox = match &self.wbox {
             Some(wbox) => wbox,
             None => {
                 return Err(CommandError::from("WandBox is uninitialized, this may be due to an outage or error. Please try again later."));
             }
         };
+        let mut details = CompilationDetails::default();
 
         let lang = {
             let mut found = String::default();
             for lang in wbox.get_languages() {
                 if parse_result.target == lang.name {
                     found = parse_result.target.clone();
+                    details.compiler = lang.compilers[0].name.clone();
                 }
                 for compiler in lang.compilers {
                     if compiler.name == parse_result.target {
@@ -242,6 +264,9 @@ impl CompilationManager {
             }
             found
         };
+
+        details.language = lang.clone();
+
         let mut code = parse_result.code.clone();
         {
             let generator = boilerplate_factory(&lang, &code);
@@ -261,7 +286,7 @@ impl CompilationManager {
 
         builder.build(wbox)?;
         let res = builder.dispatch().await?;
-        Ok((builder.lang, res))
+        Ok((details, res))
     }
 
     pub fn slash_cmd_langs() -> [&'static str; 11] {
