@@ -5,6 +5,7 @@ use serenity::{
     prelude::*,
 };
 
+use crate::utls::discordhelpers::embeds::EmbedOptions;
 use crate::{
     cache::{CompilerCache, ConfigCache, MessageCache, MessageCacheEntry},
     cppeval::eval::CppEval,
@@ -101,6 +102,7 @@ pub async fn handle_request(
 
     // remove our loading emote
     discordhelpers::delete_bot_reacts(&ctx, msg, loading_reaction).await?;
+    let options = EmbedOptions::new(false, fake_parse.target.clone(), String::default());
 
-    Ok(result.1.to_embed(&author, false))
+    Ok(result.1.to_embed(&author, &options))
 }

@@ -114,7 +114,7 @@ pub async fn handle_request(
     let is_success = is_success_embed(&result.1);
     let stats = data_read.get::<StatsManagerCache>().unwrap().lock().await;
     if stats.should_track() {
-        stats.compilation(&result.0, !is_success).await;
+        stats.compilation(&result.0.language, !is_success).await;
     }
 
     let data = ctx.data.read().await;
