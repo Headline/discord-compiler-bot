@@ -93,10 +93,16 @@ impl CompilationManager {
                     EmbedOptions::new(false, result.0.language.clone(), result.0.compiler.clone());
                 Ok((result.0, result.1.to_embed(author, &options)))
             }
-            RequestHandler::None => Err(CommandError::from(format!(
-                "Unable to find compiler or language for target '{}'.",
-                &parser_result.target
-            ))),
+            RequestHandler::None => {
+                let mut target = parser_result.target.clone();
+                if target.starts_with('@') {
+                    target = format!("\\{}", target);
+                }
+                Err(CommandError::from(format!(
+                    "Unable to find compiler or language for target '{}'.",
+                    target
+                )))
+            }
         };
     }
 
