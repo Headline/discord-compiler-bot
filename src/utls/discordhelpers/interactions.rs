@@ -520,12 +520,17 @@ where
         }
     }
 
-    command
+    if let Err(err) = command
         .edit_original_interaction_response(&ctx.http, |resp| {
             edit_to_confirmation_interaction(&result, resp)
         })
         .await
-        .unwrap();
+    {
+        return Err(CommandError::from(format!(
+            "Unable to update response: {}",
+            err
+        )));
+    }
 
     let int_resp = command.get_interaction_response(&ctx.http).await?;
     if let Some(int) = int_resp.await_component_interaction(&ctx.shard).await {
