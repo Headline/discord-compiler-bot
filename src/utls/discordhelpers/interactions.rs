@@ -202,6 +202,14 @@ pub async fn create_compiler_options(
                 }
             }
 
+            if list.is_none() {
+                warn!("No suitable compilers found for: {}", &language);
+                return Err(CommandError::from(format!(
+                    "No suitable compilers found for: {}",
+                    language
+                )));
+            }
+
             for compiler in list.unwrap() {
                 let mut option = CreateSelectMenuOption::default();
                 option.label(compiler[0]);

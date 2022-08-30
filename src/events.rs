@@ -31,19 +31,12 @@ pub struct Handler; // event handler for serenity
 
 #[async_trait]
 trait ShardsReadyHandler {
-    async fn all_shards_ready(
-        &self,
-        ctx: &Context,
-        stats: &mut MutexGuard<'_, StatsManager>,
-    );
+    async fn all_shards_ready(&self, ctx: &Context, stats: &mut MutexGuard<'_, StatsManager>);
 }
 
 #[async_trait]
 impl ShardsReadyHandler for Handler {
-    async fn all_shards_ready(
-        &self,
-        ctx: &Context,
-        stats: &mut MutexGuard<'_, StatsManager>) {
+    async fn all_shards_ready(&self, ctx: &Context, stats: &mut MutexGuard<'_, StatsManager>) {
         let data = ctx.data.read().await;
 
         let shard_manager = data.get::<ShardManagerCache>().unwrap().lock().await;
