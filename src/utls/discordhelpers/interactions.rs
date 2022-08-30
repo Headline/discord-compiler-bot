@@ -202,6 +202,14 @@ pub async fn create_compiler_options(
                 }
             }
 
+            if list.is_none() {
+                warn!("No suitable compilers found for: {}", &language);
+                return Err(CommandError::from(format!(
+                    "No suitable compilers found for: {}",
+                    language
+                )));
+            }
+
             for compiler in list.unwrap() {
                 let mut option = CreateSelectMenuOption::default();
                 option.label(compiler[0]);
@@ -512,12 +520,17 @@ where
         }
     }
 
-    command
+    if let Err(err) = command
         .edit_original_interaction_response(&ctx.http, |resp| {
             edit_to_confirmation_interaction(&result, resp)
         })
         .await
-        .unwrap();
+    {
+        return Err(CommandError::from(format!(
+            "Unable to update response: {}",
+            err
+        )));
+    }
 
     let int_resp = command.get_interaction_response(&ctx.http).await?;
     if let Some(int) = int_resp.await_component_interaction(&ctx.shard).await {
