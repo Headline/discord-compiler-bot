@@ -35,7 +35,6 @@ trait ShardsReadyHandler {
         &self,
         ctx: &Context,
         stats: &mut MutexGuard<'_, StatsManager>,
-        ready: &Ready,
     );
 }
 
@@ -44,12 +43,8 @@ impl ShardsReadyHandler for Handler {
     async fn all_shards_ready(
         &self,
         ctx: &Context,
-        stats: &mut MutexGuard<'_, StatsManager>,
-        ready: &Ready,
-    ) {
+        stats: &mut MutexGuard<'_, StatsManager>) {
         let data = ctx.data.read().await;
-        let mut info = data.get::<ConfigCache>().unwrap().write().await;
-        info.insert("BOT_AVATAR", ready.user.avatar_url().unwrap());
 
         let shard_manager = data.get::<ShardManagerCache>().unwrap().lock().await;
         let guild_count = stats.get_boot_vec_sum();
@@ -301,8 +296,14 @@ impl EventHandler for Handler {
             let guild_count = ready.guilds.len() as u64;
             stats.add_shard(guild_count);
 
+            // insert avatar at first opportunity
+            if stats.shard_count() == 1 {
+                let mut info = data.get::<ConfigCache>().unwrap().write().await;
+                info.insert("BOT_AVATAR", ready.user.avatar_url().unwrap());
+            }
+
             if stats.shard_count() == total_shards_to_spawn {
-                self.all_shards_ready(&ctx, &mut stats, &ready).await;
+                self.all_shards_ready(&ctx, &mut stats).await;
             }
         }
     }
