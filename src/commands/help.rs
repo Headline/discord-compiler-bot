@@ -140,7 +140,7 @@ pub async fn help(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
             e.field("compile", "``` Compiles a script ```", false);
             e.field("compilers", "``` Displays the compilers for the specified language ```", false);
             e.field("languages", "``` Displays all supported languages ```", false);
-            e.field("asm", "```\nOutputs the assembly for the input code```", false);
+            e.field("asm", "``` Outputs the assembly for the input code```", false);
             e.field("botinfo", "``` Displays information about the bot ```", false);
             e.field("cpp", format!("``` Executes c++ code using geordi-like syntax\n See {}help cpp for more info ```", prefix), false);
             e.field("format", "``` Formats code using a code formatter (i.e. clang-format or rustfmt) ```", false);
