@@ -1,4 +1,5 @@
-use std::str;
+use std::fmt::Write as _;
+use std::{env, str};
 
 use serenity::{
     builder::{CreateEmbed, CreateMessage},
@@ -116,7 +117,8 @@ impl ToEmbed for godbolt::GodboltResponse {
                             pieces.push(append.clone());
                             append.clear()
                         }
-                        append.push_str(&format!("{}\n", text));
+                        // append.push_str(&format!("{}\n", text));
+                        writeln!(append, "{}", text).unwrap();
                     }
                 }
             }
@@ -147,17 +149,20 @@ impl ToEmbed for godbolt::GodboltResponse {
         } else {
             let mut output = String::default();
             for line in &self.stdout {
-                output.push_str(&format!("{}\n", line.text));
+                // output.push_str(&format!("{}\n", line.text));
+                writeln!(output, "{}", line.text).unwrap();
             }
 
             let mut errs = String::default();
             if let Some(errors) = self.build_result.unwrap().stderr {
                 for line in errors {
-                    errs.push_str(&format!("{}\n", line.text));
+                    // errs.push_str(&format!("{}\n", line.text));
+                    writeln!(errs, "{}", line.text).unwrap();
                 }
             }
             for line in &self.stderr {
-                errs.push_str(&format!("{}\n", line.text));
+                // errs.push_str(&format!("{}\n", line.text));
+                writeln!(errs, "{}", line.text).unwrap();
             }
 
             let stdout = output.trim();
@@ -265,6 +270,7 @@ pub fn panic_embed(panic_info: String) -> CreateEmbed {
 
 pub fn build_welcome_embed() -> CreateEmbed {
     let mut embed = CreateEmbed::default();
+    let prefix = env::var("BOT_PREFIX").expect("Bot prefix is not set!");
     embed.title("Discord Compiler");
     embed.color(COLOR_OKAY);
     embed.thumbnail(COMPILER_ICON);
@@ -272,7 +278,7 @@ pub fn build_welcome_embed() -> CreateEmbed {
     embed.field("Introduction", "I can take code that you give me and execute it, display generated assembly, or format it!", true);
     embed.field(
         "Example Request",
-        ";compile python\n```py\nprint('hello world')\n```",
+        format!("{}compile python\n```py\nprint('hello world')\n```", prefix),
         true,
     );
     embed.field("Learning Time!", "If you like reading the manuals of things, read our [getting started](https://github.com/Headline/discord-compiler-bot/wiki/Getting-Started) wiki or if you are confident type `;help` to view all commands.", false);
