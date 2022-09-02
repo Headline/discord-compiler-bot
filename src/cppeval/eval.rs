@@ -1,4 +1,5 @@
 use core::fmt;
+use std::fmt::Write as _;
 
 #[derive(Debug, Clone)]
 pub struct EvalError {
@@ -70,8 +71,9 @@ impl CppEval {
             let main = capture[1].trim().to_string();
             let rest = self.input.replacen(&main, "", 1).trim().to_string();
 
-            self.output.push_str(&format!("{}\n", rest));
-            self.output.push_str(&format!("{}\n", main));
+            // self.output.push_str(&format!("{}\n", rest));
+            // self.output.push_str(&format!("{}\n", main));
+            writeln!(self.output, "{}\n{}", rest, main).unwrap();
         } else {
             return Err(EvalError::new("No main() specified. Invalid request"));
         }
@@ -177,8 +179,9 @@ impl CppEval {
     }
 
     fn build_main(&mut self, statements: &str) {
-        self.output
-            .push_str(&format!("\nint main (void) {{\n{}\n}}", statements));
+        // self.output
+        //     .push_str(&format!("\nint main (void) {{\n{}\n}}", statements));
+        writeln!(self.output, "\nint main (void) {{\n{}\n}}", statements).unwrap();
     }
 
     /*    fn add_ostreaming(& mut self) {

@@ -78,7 +78,7 @@ impl CompilationManager {
         parser_result: &ParserResult,
         author: &User,
     ) -> Result<(CompilationDetails, CreateEmbed), CommandError> {
-        return match self.resolve_target(&parser_result.target) {
+        match self.resolve_target(&parser_result.target) {
             RequestHandler::CompilerExplorer => {
                 let result = self.compiler_explorer(parser_result).await?;
 
@@ -103,7 +103,7 @@ impl CompilationManager {
                     target
                 )))
             }
-        };
+        }
     }
 
     pub async fn assembly(
@@ -146,7 +146,7 @@ impl CompilationManager {
             &parse_result.target
         };
         let resolution_result = gbolt.resolve(target);
-        return match resolution_result {
+        match resolution_result {
             None => {
                 Err(CommandError::from(format!("Target '{}' either does not produce assembly or is not currently supported on godbolt.org", target)))
             }
@@ -155,7 +155,7 @@ impl CompilationManager {
                 let options = EmbedOptions::new(true, target.to_string(), compiler.name);
                 Ok((compiler.lang, response.to_embed(author, &options)))
             }
-        };
+        }
     }
 
     pub async fn compiler_explorer(
@@ -316,7 +316,7 @@ impl CompilationManager {
 }
 
 fn fix_common_problems(language: &str, code: String) -> String {
-    return match language {
+    match language {
         "java" => {
             // Fix compilations that
             let mut fix_candidate = code.clone();
@@ -328,5 +328,5 @@ fn fix_common_problems(language: &str, code: String) -> String {
             fix_candidate
         }
         _ => code,
-    };
+    }
 }

@@ -1,3 +1,5 @@
+use std::fmt::Write as _;
+
 use crate::cache::{CompilerCache, ConfigCache};
 use serenity::builder::CreateEmbed;
 use serenity::framework::standard::{macros::command, Args, CommandError, CommandResult};
@@ -38,7 +40,8 @@ pub async fn formats(ctx: &Context, msg: &Message, _args: Args) -> CommandResult
             output.push_str("    *(None)*\n");
         }
         for style in &format.styles {
-            output.push_str(&format!("    *- {}*\n", style));
+            // output.push_str(&format!("    *- {}*\n", style));
+            writeln!(output, "    *- {}*", style).unwrap();
         }
         emb.field(&format.format_type, &output, false);
     }
