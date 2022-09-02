@@ -122,6 +122,8 @@ pub async fn fill(
     let emoji_identifiers = [
         "SUCCESS_EMOJI_ID",
         "SUCCESS_EMOJI_NAME",
+        "FAIL_EMOJI_NAME",
+        "FAIL_EMOJI_ID",
         "LOADING_EMOJI_ID",
         "LOADING_EMOJI_NAME",
         "LOGO_EMOJI_NAME",

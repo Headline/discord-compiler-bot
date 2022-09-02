@@ -37,7 +37,7 @@ chrono = "0.4.19"
 
 
 [dependencies.serenity]
-version = "0.11"
+version = "=0.11.1"
 default-features = false
 features = ["collector", "gateway", "builder", "standard_framework", "http", "model", "client", "framework", "utils", "rustls_backend"]
 
