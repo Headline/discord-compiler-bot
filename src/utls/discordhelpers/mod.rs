@@ -15,6 +15,8 @@ use serenity::client::Context;
 use serenity::framework::standard::CommandResult;
 use tokio::sync::MutexGuard;
 
+use std::fmt::Write as _;
+
 pub fn build_menu_items(
     items: Vec<String>,
     items_per_page: usize,
@@ -39,11 +41,18 @@ pub fn build_menu_items(
             if i > items_per_page {
                 break;
             }
-            description.push_str(&format!(
-                "**{}**) {}\n",
+            // description.push_str(&format!(
+            //     "**{}**) {}\n",
+            //     current_page * items_per_page + i + 1,
+            //     item
+            // ))
+            writeln!(
+                description,
+                "**{}**) {}",
                 current_page * items_per_page + i + 1,
                 item
-            ))
+            )
+            .unwrap();
         }
         emb.color(COLOR_OKAY);
         emb.title(title);
@@ -273,7 +282,7 @@ pub fn conform_external_str(input: &str, max_len: usize) -> String {
 }
 
 pub async fn manual_dispatch(http: Arc<Http>, id: u64, emb: CreateEmbed) {
-    match serenity::model::id::ChannelId(id)
+    if let Err(e) = serenity::model::id::ChannelId(id)
         .send_message(&http, |m| {
             m.embed(|mut e| {
                 e.0 = emb.0;
@@ -282,9 +291,8 @@ pub async fn manual_dispatch(http: Arc<Http>, id: u64, emb: CreateEmbed) {
         })
         .await
     {
-        Ok(m) => m,
-        Err(e) => return error!("Unable to dispatch manually: {}", e),
-    };
+        error!("Unable to dispatch manually: {}", e);
+    }
 }
 
 pub async fn send_global_presence(shard_manager: &MutexGuard<'_, ShardManager>, sum: u64) {

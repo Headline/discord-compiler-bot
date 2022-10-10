@@ -1,3 +1,5 @@
+use std::fmt::Write as _;
+
 use serenity::framework::standard::CommandError;
 use serenity::{
     framework::standard::CommandResult,
@@ -116,7 +118,8 @@ pub fn run_diff(first: &str, second: &str) -> String {
             ChangeTag::Insert => "+",
             ChangeTag::Equal => " ",
         };
-        output.push_str(&format!("{}{}", sign, change));
+        // output.push_str(&format!("{}{}", sign, change));
+        writeln!(output, "{}{}", sign, change).unwrap();
     }
     output
 }

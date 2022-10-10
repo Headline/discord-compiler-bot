@@ -64,7 +64,7 @@ pub async fn get_components(
     // the syntax highlighting str later.
     if let Some(comp_mngr) = compilation_manager {
         let lang_lookup = comp_mngr.read().await;
-        if let Some(param) = args.get(0) {
+        if let Some(param) = args.first() {
             let lower_param = param.trim().to_lowercase();
             let language = shortname_to_qualified(&lower_param);
             if !matches!(lang_lookup.resolve_target(language), RequestHandler::None) {
@@ -74,7 +74,7 @@ pub async fn get_components(
         }
     } else {
         // no compilation manager, just assume target is supplied
-        if let Some(param) = args.get(0) {
+        if let Some(param) = args.first() {
             let lower_param = param.trim().to_lowercase();
             let language = shortname_to_qualified(&lower_param);
             args.remove(0);
@@ -217,10 +217,10 @@ async fn get_url_code(url: &str, author: &User) -> Result<String, CommandError> 
         }
     };
 
-    return match response.text().await {
+    match response.text().await {
         Ok(t) => Ok(t),
         Err(_e) => Err(CommandError::from("Unable to grab resource")),
-    };
+    }
 }
 
 pub async fn find_code_block(

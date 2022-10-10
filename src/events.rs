@@ -9,6 +9,7 @@ use serenity::{
     },
     prelude::*,
 };
+use std::env;
 
 use tokio::sync::MutexGuard;
 
@@ -194,9 +195,10 @@ impl EventHandler for Handler {
                         .await;
                     let _ = new_message.delete_reactions(&ctx.http).await;
                     if collector.is_some() {
+                        let prefix = env::var("BOT_PREFIX").expect("Bot prefix is not set!");
                         let emb = match handle_request(
                             ctx.clone(),
-                            format!(";compile\n```{}\n{}\n```", language, code),
+                            format!("{}compile\n```{}\n{}\n```", prefix, language, code),
                             new_message.author.clone(),
                             &new_message,
                         )

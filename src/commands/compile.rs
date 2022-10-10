@@ -1,3 +1,5 @@
+use std::fmt::Write as _;
+
 use serenity::framework::standard::{macros::command, Args, CommandResult};
 
 use crate::cache::{MessageCache, MessageCacheEntry};
@@ -68,7 +70,8 @@ pub async fn handle_request(
     // Try to load in an attachment
     let (code, ext) = parser::get_message_attachment(&msg.attachments).await?;
     if !code.is_empty() {
-        content.push_str(&format!("\n```{}\n{}\n```\n", ext, code));
+        // content.push_str(&format!("\n```{}\n{}\n```\n", ext, code));
+        writeln!(&mut content, "\n```{}\n{}\n```\n", ext, code).unwrap();
     }
 
     // parse user input

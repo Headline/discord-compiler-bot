@@ -1,3 +1,5 @@
+use std::fmt::Write as _;
+
 use crate::boilerplate::generator::BoilerPlateGenerator;
 use crate::utls::constants::JAVA_MAIN_REGEX;
 
@@ -21,9 +23,11 @@ impl BoilerPlateGenerator for JavaGenerator {
         for line in lines {
             let trimmed = line.trim();
             if trimmed.starts_with("import") {
-                header.push_str(&format!("{}\n", trimmed));
+                // header.push_str(&format!("{}\n", trimmed));
+                writeln!(header, "{}", trimmed).unwrap();
             } else {
-                main_body.push_str(&format!("{}\n", trimmed))
+                // main_body.push_str(&format!("{}\n", trimmed))
+                writeln!(main_body, "{}", trimmed).unwrap();
             }
         }
 
