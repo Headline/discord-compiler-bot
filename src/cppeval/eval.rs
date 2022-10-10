@@ -49,17 +49,13 @@ impl CppEval {
 
         if self.input.starts_with('{') {
             // parsing a statement here
-            if let Err(e) = self.do_statements() {
-                return Err(e);
-            }
+            self.do_statements()?;
         } else if self.input.starts_with("<<") {
             // just outputting
             self.do_prints();
         } else {
             // they're handling their own main
-            if let Err(e) = self.do_user_handled() {
-                return Err(e);
-            }
+            self.do_user_handled()?;
         }
 
         Ok(self.output.clone())
