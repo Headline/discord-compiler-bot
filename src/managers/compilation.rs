@@ -222,7 +222,7 @@ impl CompilationManager {
     }
 
     pub fn resolve_target(&self, target: &str) -> RequestHandler {
-        if target == "scala" || target == "nim" {
+        if target == "scala" || target == "nim" || target == "typescript" {
             return RequestHandler::WandBox;
         }
 
