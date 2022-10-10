@@ -18,6 +18,7 @@ pub fn shortname_to_qualified(language: &str) -> &str {
         "cpp" => "c++",
         "rs" => "rust",
         "js" => "javascript",
+        "ts" => "typescript",
         "csharp" => "c#",
         "cs" => "c#",
         "py" => "python",
