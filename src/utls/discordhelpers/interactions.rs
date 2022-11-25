@@ -105,11 +105,8 @@ pub async fn create_more_options_panel(
         .await
         .unwrap();
 
-    println!("awaiting response...");
     let msg = interaction.get_interaction_response(&ctx.http).await?;
-    println!("response got...");
     if let Some(resp) = msg.await_modal_interaction(&ctx.shard).await {
-        println!("response: {:?}", resp.kind);
         if let ActionRowComponent::InputText(input) = &resp.data.components[0].components[0] {
             parse_result.options = input
                 .value
