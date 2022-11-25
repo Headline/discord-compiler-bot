@@ -126,12 +126,9 @@ async fn main() -> Result<(), Box<dyn Error>> {
             if let Ok(plog_parse) = plog.parse::<u64>() {
                 let panic_str = info.to_string();
                 tokio::spawn({
-                     async move {
-                         manual_dispatch(http, plog_parse, panic_embed(panic_str)).await
-                     }
-                 });
-            }
-            else {
+                    async move { manual_dispatch(http, plog_parse, panic_embed(panic_str)).await }
+                });
+            } else {
                 warn!("Unable to parse channel id64 from PANIC_LOG, is it valid?");
             }
             default_panic(info);

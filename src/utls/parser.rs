@@ -22,6 +22,7 @@ pub fn shortname_to_qualified(language: &str) -> &str {
         "csharp" => "c#",
         "cs" => "c#",
         "py" => "python",
+        "bash" => "bash script",
         _ => language,
     }
 }
