@@ -15,14 +15,21 @@ pub fn shortname_to_qualified(language: &str) -> &str {
     match language {
         // Replace cpp with c++ since we removed the c pre-processor
         // support for wandbox. This is okay for godbolt requests, too.
-        "cpp" => "c++",
+        "cpp" | "hpp" | "h++" => "c++",
+        "h" => "c",
         "rs" => "rust",
         "js" => "javascript",
         "ts" => "typescript",
-        "csharp" => "c#",
-        "cs" => "c#",
+        "csharp" | "cs" => "c#",
         "py" => "python",
-        "bash" => "bash script",
+        "bash" | "sh" => "bash script",
+        "rb" => "ruby",
+        "kt" => "kotlin",
+        "golang" => "go",
+        "fs" | "f#" => "fsharp",
+        "hs" | "lhs" => "haskell",
+        "jl" => "julia",
+        "gvy" => "groovy",
         _ => language,
     }
 }
