@@ -127,7 +127,9 @@ impl ToEmbed for godbolt::GodboltResponse {
             let mut i = 1;
             for str in pieces {
                 let title = format!("Assembly Output Pt. {}", i);
-                embed.field(&title, format!("```x86asm\n{}\n```", &str), false);
+
+                let piece = discordhelpers::conform_external_str(&str, MAX_OUTPUT_LEN);
+                embed.field(&title, format!("```x86asm\n{}\n```", &piece), false);
                 output = true;
                 i += 1;
             }
@@ -138,7 +140,8 @@ impl ToEmbed for godbolt::GodboltResponse {
                     String::from("Assembly Output")
                 };
 
-                embed.field(&title, format!("```x86asm\n{}\n```", &append), false);
+                let str = discordhelpers::conform_external_str(&append, MAX_OUTPUT_LEN);
+                embed.field(&title, format!("```x86asm\n{}\n```", &str), false);
                 output = true;
             }
 
