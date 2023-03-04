@@ -2,15 +2,11 @@ use crate::cache::StatsManagerCache;
 use crate::slashcmds;
 
 use serenity::{
-    builder::CreateApplicationCommand,
-    client::Context,
-    framework::standard::CommandResult,
-    model::{
-        guild::Guild, interactions::application_command::ApplicationCommand,
-        interactions::application_command::ApplicationCommandInteraction,
-        interactions::application_command::ApplicationCommandOptionType,
-        interactions::application_command::ApplicationCommandType,
-    },
+    builder::CreateApplicationCommand, client::Context, framework::standard::CommandResult,
+    model::application::command::Command, model::application::command::CommandOptionType,
+    model::application::command::CommandType,
+    model::application::interaction::application_command::ApplicationCommandInteraction,
+    model::guild::Guild,
 };
 
 pub struct CommandManager {
@@ -52,7 +48,7 @@ impl CommandManager {
             "invite" => slashcmds::invite::invite(ctx, command).await,
             "format" | "format [beta]" => slashcmds::format::format(ctx, command).await,
             "diff" | "diff [beta]" => {
-                if command.data.kind == ApplicationCommandType::Message {
+                if command.data.kind == CommandType::Message {
                     slashcmds::diff_msg::diff_msg(ctx, command).await
                 } else {
                     slashcmds::diff::diff(ctx, command).await
@@ -90,7 +86,7 @@ impl CommandManager {
         }
         self.commands_registered = true;
 
-        match ApplicationCommand::set_global_application_commands(&ctx.http, |setter| {
+        match Command::set_global_application_commands(&ctx.http, |setter| {
             setter.set_application_commands(self.commands.clone())
         })
         .await
@@ -104,7 +100,7 @@ impl CommandManager {
         let mut cmds = Vec::new();
 
         let mut cmd = CreateApplicationCommand::default();
-        cmd.kind(ApplicationCommandType::Message).name(format!(
+        cmd.kind(CommandType::Message).name(format!(
             "Compile{}",
             if cfg!(debug_assertions) {
                 " [BETA]"
@@ -115,7 +111,7 @@ impl CommandManager {
         cmds.push(cmd);
 
         cmd = CreateApplicationCommand::default();
-        cmd.kind(ApplicationCommandType::Message).name(format!(
+        cmd.kind(CommandType::Message).name(format!(
             "Assembly{}",
             if cfg!(debug_assertions) {
                 " [BETA]"
@@ -126,7 +122,7 @@ impl CommandManager {
         cmds.push(cmd);
 
         cmd = CreateApplicationCommand::default();
-        cmd.kind(ApplicationCommandType::Message).name(format!(
+        cmd.kind(CommandType::Message).name(format!(
             "Format{}",
             if cfg!(debug_assertions) {
                 " [BETA]"
@@ -137,7 +133,7 @@ impl CommandManager {
         cmds.push(cmd);
 
         cmd = CreateApplicationCommand::default();
-        cmd.kind(ApplicationCommandType::Message).name(format!(
+        cmd.kind(CommandType::Message).name(format!(
             "Diff{}",
             if cfg!(debug_assertions) {
                 " [BETA]"
@@ -148,49 +144,49 @@ impl CommandManager {
         cmds.push(cmd);
 
         cmd = CreateApplicationCommand::default();
-        cmd.kind(ApplicationCommandType::ChatInput)
+        cmd.kind(CommandType::ChatInput)
             .name("help")
             .description("Information on how to use the compiler");
         cmds.push(cmd);
 
         cmd = CreateApplicationCommand::default();
-        cmd.kind(ApplicationCommandType::ChatInput)
+        cmd.kind(CommandType::ChatInput)
             .name("invite")
             .description("Grab my invite link to invite me to your server");
         cmds.push(cmd);
 
         cmd = CreateApplicationCommand::default();
-        cmd.kind(ApplicationCommandType::ChatInput)
+        cmd.kind(CommandType::ChatInput)
             .name("ping")
             .description("Test my ping to Discord's endpoint");
         cmds.push(cmd);
 
         cmd = CreateApplicationCommand::default();
-        cmd.kind(ApplicationCommandType::ChatInput)
+        cmd.kind(CommandType::ChatInput)
             .name("cpp")
             .description("Shorthand C++ compilation using geordi-like syntax")
             .create_option(|opt| {
                 opt.required(false)
                     .name("input")
-                    .kind(ApplicationCommandOptionType::String)
+                    .kind(CommandOptionType::String)
                     .description("Geordi-like input")
             });
         cmds.push(cmd);
 
         cmd = CreateApplicationCommand::default();
-        cmd.kind(ApplicationCommandType::ChatInput)
+        cmd.kind(CommandType::ChatInput)
             .name("diff")
             .description("Posts a diff of two message code blocks")
             .create_option(|opt| {
                 opt.required(true)
                     .name("message1")
-                    .kind(ApplicationCommandOptionType::String)
+                    .kind(CommandOptionType::String)
                     .description("Message id of first code-block")
             })
             .create_option(|opt| {
                 opt.required(true)
                     .name("message2")
-                    .kind(ApplicationCommandOptionType::String)
+                    .kind(CommandOptionType::String)
                     .description("Message id of second code-block")
             });
         cmds.push(cmd);

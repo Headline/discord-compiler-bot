@@ -1,9 +1,9 @@
 [package]
 name = "discord-compiler-bot"
 description = "Discord bot to compile your spaghetti code."
-version = "3.5.2"
+version = "3.5.3"
 authors = ["Michael Flaherty (Headline#9999)"]
-edition = "2018"
+edition = "2021"
 build = "src/build.rs"
 
 [dev-dependencies]
@@ -15,19 +15,20 @@ reqwest = { version = "0.11" }
 dotenv = "0.15.0"
 regex = "1"
 log = "0.4"
-pretty_env_logger = "0.3"
+pretty_env_logger = "0.4.0"
 strip-ansi-escapes = "0.1.0"
 serde = { version = "1.0.*", features = ["derive"] }
 serde_json = "1.0"
 lru-cache = "0.1"
 async-trait = "0.1"
 content_inspector = "0.2"
-shell-words = "0.1"
+shell-words = "1.1.0"
 const_format = "0.2"
 lazy_static = "1.4.0"
 similar = "2.1.0"
+
 #tests
-indoc = "1.0.3"
+indoc = "2.0.0"
 test-context = "0.1"
 #dbl
 dbl-rs = "0.3"
@@ -37,7 +38,7 @@ chrono = "0.4.19"
 
 
 [dependencies.serenity]
-version = "=0.11.1"
+version = "=0.11.5"
 default-features = false
 features = ["collector", "gateway", "builder", "standard_framework", "http", "model", "client", "framework", "utils", "rustls_backend"]
 

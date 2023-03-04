@@ -7,9 +7,10 @@ use godbolt::{Format, Godbolt};
 use serenity::{
     builder::{CreateInteractionResponse, EditInteractionResponse},
     framework::standard::{CommandError, CommandResult},
-    model::interactions::application_command::ApplicationCommandInteraction,
-    model::interactions::message_component::ButtonStyle,
-    model::prelude::*,
+    model::application::component::ButtonStyle,
+    model::application::interaction::application_command::ApplicationCommandInteraction,
+    model::application::interaction::InteractionResponseType,
+    model::application::interaction::MessageFlags,
     prelude::*,
 };
 use std::time::Duration;
@@ -200,7 +201,7 @@ fn create_formats_interaction<'this, 'a>(
         .kind(InteractionResponseType::ChannelMessageWithSource)
         .interaction_response_data(|data| {
             data.content("Select a formatter to use:")
-                .flags(InteractionApplicationCommandCallbackDataFlags::EPHEMERAL)
+                .flags(MessageFlags::EPHEMERAL)
                 .components(|cmps| {
                     cmps.create_action_row(|row| {
                         row.create_select_menu(|menu| {

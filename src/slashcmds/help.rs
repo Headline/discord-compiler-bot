@@ -1,7 +1,7 @@
 use serenity::{
     client::Context, framework::standard::CommandResult,
-    model::interactions::application_command::ApplicationCommandInteraction,
-    model::prelude::message_component::ButtonStyle,
+    model::application::component::ButtonStyle,
+    model::application::interaction::application_command::ApplicationCommandInteraction,
 };
 
 use crate::{cache::ConfigCache, utls::constants::*};

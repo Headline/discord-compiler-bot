@@ -27,10 +27,13 @@ pub async fn compile(ctx: &Context, msg: &Message, _args: Args) -> CommandResult
     let embed = handle_request(ctx.clone(), msg.content.clone(), msg.author.clone(), msg).await?;
 
     // Send our final embed
-    let mut message = embeds::embed_message(embed);
+    let message = embeds::embed_message(embed);
     let compilation_embed = msg
         .channel_id
-        .send_message(&ctx.http, |_| &mut message)
+        .send_message(&ctx.http, |e| {
+            *e = message;
+            e
+        })
         .await?;
 
     // Success/fail react

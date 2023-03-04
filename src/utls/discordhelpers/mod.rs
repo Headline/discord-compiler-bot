@@ -284,8 +284,8 @@ pub fn conform_external_str(input: &str, max_len: usize) -> String {
 pub async fn manual_dispatch(http: Arc<Http>, id: u64, emb: CreateEmbed) {
     if let Err(e) = serenity::model::id::ChannelId(id)
         .send_message(&http, |m| {
-            m.embed(|mut e| {
-                e.0 = emb.0;
+            m.embed(|e| {
+                *e = emb;
                 e
             })
         })

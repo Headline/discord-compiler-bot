@@ -2,8 +2,8 @@ use futures_util::StreamExt;
 use serenity::builder::{CreateComponents, CreateEmbed};
 use serenity::client::Context;
 use serenity::framework::standard::CommandError;
+use serenity::model::application::component::ButtonStyle;
 use serenity::model::channel::Message;
-use serenity::model::interactions::message_component::ButtonStyle;
 use std::time::Duration;
 
 pub struct Menu {

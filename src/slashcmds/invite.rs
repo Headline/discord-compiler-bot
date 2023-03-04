@@ -1,7 +1,7 @@
 use serenity::{
     framework::standard::CommandResult,
-    model::interactions::application_command::ApplicationCommandInteraction, model::prelude::*,
-    prelude::*,
+    model::application::interaction::application_command::ApplicationCommandInteraction,
+    model::application::interaction::InteractionResponseType, prelude::*,
 };
 
 use crate::{cache::ConfigCache, utls::discordhelpers::embeds};

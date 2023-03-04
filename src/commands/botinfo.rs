@@ -62,7 +62,7 @@ pub async fn botinfo(ctx: &Context, msg: &Message, _args: Args) -> CommandResult
                 );
 
                 e.fields(vec![
-                    ("Language", "Rust 2018", false),
+                    ("Language", "Rust 2021", false),
                     ("Software Version", env!("CARGO_PKG_VERSION"), false),
                     ("Author", env!("CARGO_PKG_AUTHORS"), false),
                     ("Build Information", str.as_str(), false),
