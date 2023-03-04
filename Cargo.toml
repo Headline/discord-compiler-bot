@@ -1,9 +1,9 @@
 [package]
 name = "discord-compiler-bot"
 description = "Discord bot to compile your spaghetti code."
-version = "3.5.2"
+version = "3.5.3"
 authors = ["Michael Flaherty (Headline#9999)"]
-edition = "2018"
+edition = "2021"
 build = "src/build.rs"
 
 [dev-dependencies]
@@ -26,6 +26,7 @@ shell-words = "0.1"
 const_format = "0.2"
 lazy_static = "1.4.0"
 similar = "2.1.0"
+
 #tests
 indoc = "1.0.3"
 test-context = "0.1"
