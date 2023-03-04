@@ -20,14 +20,7 @@ use crate::utls::parser;
 #[bucket = "nospam"]
 pub async fn asm(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
     let emb = handle_request(ctx.clone(), msg.content.clone(), msg.author.clone(), msg).await?;
-    let emb_msg = embeds::embed_message(emb);
-    let asm_embed = msg
-        .channel_id
-        .send_message(&ctx.http, |e| {
-            *e = emb_msg;
-            e
-        })
-        .await?;
+    let asm_embed = embeds::dispatch_embed(&ctx.http, msg.channel_id, emb).await?;
 
     // Success/fail react
     let compilation_successful = asm_embed.embeds[0].colour.unwrap().0 == COLOR_OKAY;

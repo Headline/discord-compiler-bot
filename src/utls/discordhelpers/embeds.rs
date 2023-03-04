@@ -1,6 +1,7 @@
 use std::fmt::Write as _;
 use std::{env, str};
 
+use serenity::http::Http;
 use serenity::{
     builder::{CreateEmbed, CreateMessage},
     client::Context,
@@ -254,6 +255,20 @@ pub fn embed_message(emb: CreateEmbed) -> CreateMessage<'static> {
         e
     });
     msg
+}
+
+pub async fn dispatch_embed(
+    http: impl AsRef<Http>,
+    channel: ChannelId,
+    emb: CreateEmbed,
+) -> serenity::Result<Message> {
+    let emb_msg = embed_message(emb);
+    channel
+        .send_message(http, |e| {
+            *e = emb_msg;
+            e
+        })
+        .await
 }
 
 pub fn build_dblvote_embed(tag: String) -> CreateEmbed {

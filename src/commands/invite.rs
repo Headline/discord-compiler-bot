@@ -11,14 +11,6 @@ pub async fn invite(ctx: &Context, msg: &Message, _: Args) -> CommandResult {
     let invite = env::var("INVITE_LINK").expect("Expected invite link envvar");
 
     let emb = embeds::build_invite_embed(&invite);
-
-    let emb_msg = embeds::embed_message(emb);
-    msg.channel_id
-        .send_message(&ctx.http, |e| {
-            *e = emb_msg;
-            e
-        })
-        .await?;
-
+    embeds::dispatch_embed(&ctx.http, msg.channel_id, emb).await?;
     Ok(())
 }
