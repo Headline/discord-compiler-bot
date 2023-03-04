@@ -1,6 +1,6 @@
 use serenity::{
     client::Context, framework::standard::CommandError, framework::standard::CommandResult,
-    model::interactions::application_command::ApplicationCommandInteraction,
+    model::application::interaction::application_command::ApplicationCommandInteraction,
 };
 
 use tokio::sync::RwLockReadGuard;

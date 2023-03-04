@@ -3,9 +3,9 @@ use serenity::{
     collector::CollectReaction,
     framework::{standard::macros::hook, standard::CommandResult, standard::DispatchError},
     model::{
-        channel::Message, channel::ReactionType, event::MessageUpdateEvent, gateway::Ready,
-        guild::Guild, id::ChannelId, id::GuildId, id::MessageId, interactions::Interaction,
-        prelude::UnavailableGuild,
+        application::interaction::Interaction, channel::Message, channel::ReactionType,
+        event::MessageUpdateEvent, gateway::Ready, guild::Guild, id::ChannelId, id::GuildId,
+        id::MessageId, prelude::UnavailableGuild,
     },
     prelude::*,
 };
@@ -110,9 +110,12 @@ impl EventHandler for Handler {
             info!("Joining {}", guild.name);
 
             if let Some(system_channel) = guild.system_channel_id {
-                let mut message = embeds::embed_message(embeds::build_welcome_embed());
+                let message = embeds::embed_message(embeds::build_welcome_embed());
                 let _ = system_channel
-                    .send_message(&ctx.http, |_| &mut message)
+                    .send_message(&ctx.http, |e| {
+                        *e = message;
+                        e
+                    })
                     .await;
             }
         }
@@ -210,10 +213,13 @@ impl EventHandler for Handler {
                                     &new_message.author,
                                     &format!("{}", e),
                                 );
-                                let mut emb_msg = embeds::embed_message(emb);
+                                let emb_msg = embeds::embed_message(emb);
                                 if let Ok(sent) = new_message
                                     .channel_id
-                                    .send_message(&ctx.http, |_| &mut emb_msg)
+                                    .send_message(&ctx.http, |e| {
+                                        *e = emb_msg;
+                                        e
+                                    })
                                     .await
                                 {
                                     let mut message_cache =
@@ -230,7 +236,10 @@ impl EventHandler for Handler {
                         emb_msg.reference_message(&new_message);
                         let _ = new_message
                             .channel_id
-                            .send_message(&ctx.http, |_| &mut emb_msg)
+                            .send_message(&ctx.http, |e| {
+                                *e = emb_msg;
+                                e
+                            })
                             .await;
                     }
                 }
@@ -357,13 +366,15 @@ pub async fn before(ctx: &Context, msg: &Message, _: &str) -> bool {
             If you feel that this has been done in error, request an unban in the support server.",
             );
 
-            let mut emb_msg = embeds::embed_message(emb);
-            if msg
+            let emb_msg = embeds::embed_message(emb);
+            let msg_response = msg
                 .channel_id
-                .send_message(&ctx.http, |_| &mut emb_msg)
-                .await
-                .is_ok()
-            {
+                .send_message(&ctx.http, |e| {
+                    *e = emb_msg;
+                    e
+                })
+                .await;
+            if msg_response.is_ok() {
                 if author_blocklisted {
                     warn!("Blocked user {} [{}]", msg.author.tag(), msg.author.id.0);
                 } else {
@@ -388,10 +399,13 @@ pub async fn after(
 
     if let Err(e) = command_result {
         let emb = embeds::build_fail_embed(&msg.author, &format!("{}", e));
-        let mut emb_msg = embeds::embed_message(emb);
+        let emb_msg = embeds::embed_message(emb);
         if let Ok(sent) = msg
             .channel_id
-            .send_message(&ctx.http, |_| &mut emb_msg)
+            .send_message(&ctx.http, |e| {
+                *e = emb_msg;
+                e
+            })
             .await
         {
             let mut message_cache = data.get::<MessageCache>().unwrap().lock().await;
@@ -410,12 +424,13 @@ pub async fn after(
 pub async fn dispatch_error(ctx: &Context, msg: &Message, error: DispatchError, _: &str) {
     if let DispatchError::Ratelimited(_) = error {
         let emb = embeds::build_fail_embed(&msg.author, "You are sending requests too fast!");
-        let mut emb_msg = embeds::embed_message(emb);
-        if msg
+        let emb_msg = embeds::embed_message(emb);
+        let _ = msg
             .channel_id
-            .send_message(&ctx.http, |_| &mut emb_msg)
-            .await
-            .is_err()
-        {}
+            .send_message(&ctx.http, |e| {
+                *e = emb_msg;
+                e
+            })
+            .await;
     }
 }

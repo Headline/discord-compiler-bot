@@ -1,8 +1,8 @@
 use serenity::{
-    framework::standard::CommandResult,
-    model::interactions::application_command::ApplicationCommandInteraction,
-    model::interactions::application_command::ApplicationCommandInteractionDataOptionValue,
-    model::prelude::*, prelude::*,
+    client::Context, framework::standard::CommandResult,
+    model::application::interaction::application_command::ApplicationCommandInteraction,
+    model::application::interaction::application_command::CommandDataOptionValue,
+    model::application::interaction::InteractionResponseType,
 };
 
 use crate::utls::discordhelpers::embeds::EmbedOptions;
@@ -44,7 +44,7 @@ pub async fn cpp(ctx: &Context, msg: &ApplicationCommandInteraction) -> CommandR
         .as_ref()
         .expect("Expected data option value");
 
-    if let ApplicationCommandInteractionDataOptionValue::String(input) = geordi_input {
+    if let CommandDataOptionValue::String(input) = geordi_input {
         let mut eval = CppEval::new(input);
         let out = eval.evaluate()?;
 

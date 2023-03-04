@@ -20,12 +20,15 @@ use crate::{
 #[bucket = "nospam"]
 pub async fn cpp(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
     let emb = handle_request(ctx.clone(), msg.content.clone(), msg.author.clone(), msg).await?;
-    let mut emb_msg = embeds::embed_message(emb);
+    let emb_msg = embeds::embed_message(emb);
 
     // Dispatch our request
     let compilation_embed = msg
         .channel_id
-        .send_message(&ctx.http, |_| &mut emb_msg)
+        .send_message(&ctx.http, |e| {
+            *e = emb_msg;
+            e
+        })
         .await?;
 
     // add delete cache

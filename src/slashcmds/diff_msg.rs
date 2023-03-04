@@ -2,7 +2,8 @@ use std::time::Duration;
 
 use serenity::{
     framework::standard::CommandResult,
-    model::interactions::application_command::ApplicationCommandInteraction, prelude::*,
+    model::application::interaction::application_command::ApplicationCommandInteraction,
+    prelude::*,
 };
 
 use crate::slashcmds::diff::run_diff;

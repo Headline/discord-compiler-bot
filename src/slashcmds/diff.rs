@@ -3,9 +3,9 @@ use std::fmt::Write as _;
 use serenity::framework::standard::CommandError;
 use serenity::{
     framework::standard::CommandResult,
-    model::interactions::application_command::ApplicationCommandInteraction,
-    model::interactions::application_command::ApplicationCommandInteractionDataOptionValue,
-    model::prelude::*, prelude::*,
+    model::application::interaction::application_command::ApplicationCommandInteraction,
+    model::application::interaction::application_command::CommandDataOptionValue,
+    model::application::interaction::MessageFlags, model::prelude::*, prelude::*,
 };
 
 use similar::ChangeTag;
@@ -35,11 +35,11 @@ pub async fn diff(ctx: &Context, msg: &ApplicationCommandInteraction) -> Command
         .expect("Expected data option value");
 
     let mut message1_parse = None;
-    if let ApplicationCommandInteractionDataOptionValue::String(input) = message1 {
+    if let CommandDataOptionValue::String(input) = message1 {
         message1_parse = input.parse::<u64>().ok();
     }
     let mut message2_parse = None;
-    if let ApplicationCommandInteractionDataOptionValue::String(input) = message2 {
+    if let CommandDataOptionValue::String(input) = message2 {
         message2_parse = input.parse::<u64>().ok();
     }
 
@@ -54,7 +54,7 @@ pub async fn diff(ctx: &Context, msg: &ApplicationCommandInteraction) -> Command
                         User Settings > Advanced tab",
                     )
                 })
-                .flags(InteractionApplicationCommandCallbackDataFlags::EPHEMERAL)
+                .flags(MessageFlags::EPHEMERAL)
             })
         })
         .await?;
@@ -80,7 +80,7 @@ pub async fn diff(ctx: &Context, msg: &ApplicationCommandInteraction) -> Command
                         this channel and the Message IDs are correct.",
                     )
                 })
-                .flags(InteractionApplicationCommandCallbackDataFlags::EPHEMERAL)
+                .flags(MessageFlags::EPHEMERAL)
             })
         })
         .await?;

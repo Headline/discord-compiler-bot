@@ -16,8 +16,8 @@ use crate::utls::blocklist::Blocklist;
 use crate::managers::command::CommandManager;
 use crate::managers::compilation::CompilationManager;
 use lru_cache::LruCache;
+use serenity::model::application::interaction::application_command::ApplicationCommandInteraction;
 use serenity::model::channel::Message;
-use serenity::model::interactions::application_command::ApplicationCommandInteraction;
 
 /** Caching **/
 

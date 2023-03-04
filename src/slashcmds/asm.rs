@@ -1,7 +1,7 @@
 use serenity::{
     client::Context,
     framework::standard::{CommandError, CommandResult},
-    model::interactions::application_command::ApplicationCommandInteraction,
+    model::application::interaction::application_command::ApplicationCommandInteraction,
 };
 
 use crate::{

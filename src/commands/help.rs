@@ -121,9 +121,12 @@ pub async fn help(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
 
         emb.description(description);
 
-        let mut emb_msg = embeds::embed_message(emb);
+        let emb_msg = embeds::embed_message(emb);
         msg.channel_id
-            .send_message(&ctx.http, |_| &mut emb_msg)
+            .send_message(&ctx.http, |e| {
+                *e = emb_msg;
+                e
+            })
             .await?;
 
         return Ok(());
