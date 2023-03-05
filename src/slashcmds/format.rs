@@ -39,7 +39,6 @@ pub async fn format(ctx: &Context, command: &ApplicationCommandInteraction) -> C
             create_formats_interaction(response, &comp_mgr.gbolt.as_ref().unwrap().formats)
         })
         .await?;
-
     // Handle response from select menu / button interactions
     let resp = command.get_interaction_response(&ctx.http).await?;
     let mut cib = resp
@@ -80,32 +79,36 @@ pub async fn format(ctx: &Context, command: &ApplicationCommandInteraction) -> C
         .find(|p| p.format_type == formatter)
         .unwrap()
         .styles;
-    command
-        .edit_original_interaction_response(&ctx.http, |resp| {
-            create_styles_interaction(resp, styles)
-        })
-        .await?;
 
-    let resp = command.get_interaction_response(&ctx.http).await?;
-    cib = resp
-        .await_component_interactions(&ctx.shard)
-        .timeout(Duration::from_secs(30));
-    cic = cib.build();
-    selected = false;
+    // WebKit is our default value for clang-fmt
     let mut style = String::from("WebKit");
-    while let Some(interaction) = &cic.next().await {
-        match interaction.data.custom_id.as_str() {
-            "style" => {
-                style = interaction.data.values[0].clone();
-                interaction.defer(&ctx.http).await?;
-            }
-            "select" => {
-                selected = true;
-                cic.stop();
-                break;
-            }
-            _ => {
-                unreachable!("Cannot get here..");
+    if !styles.is_empty() {
+        command
+            .edit_original_interaction_response(&ctx.http, |resp| {
+                create_styles_interaction(resp, styles)
+            })
+            .await?;
+
+        let resp = command.get_interaction_response(&ctx.http).await?;
+        cib = resp
+            .await_component_interactions(&ctx.shard)
+            .timeout(Duration::from_secs(30));
+        cic = cib.build();
+        selected = false;
+        while let Some(interaction) = &cic.next().await {
+            match interaction.data.custom_id.as_str() {
+                "style" => {
+                    style = interaction.data.values[0].clone();
+                    interaction.defer(&ctx.http).await?;
+                }
+                "select" => {
+                    selected = true;
+                    cic.stop();
+                    break;
+                }
+                _ => {
+                    unreachable!("Cannot get here..");
+                }
             }
         }
     }
