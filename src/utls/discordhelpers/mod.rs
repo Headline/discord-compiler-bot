@@ -15,6 +15,7 @@ use serenity::client::Context;
 use serenity::framework::standard::CommandResult;
 use tokio::sync::MutexGuard;
 
+use crate::commands::compile;
 use std::fmt::Write as _;
 
 pub fn build_menu_items(
@@ -121,7 +122,7 @@ pub async fn handle_edit(
         .await
         {
             let err = embeds::build_fail_embed(&author, &e.to_string());
-            embeds::edit_message_embed(ctx, &mut old, err).await;
+            embeds::edit_message_embed(ctx, &mut old, err, None).await;
         }
     } else if content.starts_with(&format!("{}compile", prefix)) {
         if let Err(e) = handle_edit_compile(
@@ -134,7 +135,7 @@ pub async fn handle_edit(
         .await
         {
             let err = embeds::build_fail_embed(&author, &e.to_string());
-            embeds::edit_message_embed(ctx, &mut old, err).await;
+            embeds::edit_message_embed(ctx, &mut old, err, None).await;
         }
     } else if content.starts_with(&format!("{}cpp", prefix)) {
         if let Err(e) = handle_edit_cpp(
@@ -147,11 +148,11 @@ pub async fn handle_edit(
         .await
         {
             let err = embeds::build_fail_embed(&author, &e.to_string());
-            embeds::edit_message_embed(ctx, &mut old, err).await;
+            embeds::edit_message_embed(ctx, &mut old, err, None).await;
         }
     } else {
         let err = embeds::build_fail_embed(&author, "Invalid command for edit functionality!");
-        embeds::edit_message_embed(ctx, &mut old, err).await;
+        embeds::edit_message_embed(ctx, &mut old, err, None).await;
     }
 }
 
@@ -162,13 +163,13 @@ pub async fn handle_edit_cpp(
     mut old: Message,
     original_msg: Message,
 ) -> CommandResult {
-    let embed =
+    let (embed, details) =
         crate::commands::cpp::handle_request(ctx.clone(), content, author, &original_msg).await?;
 
     let compilation_successful = embed.0.get("color").unwrap() == COLOR_OKAY;
     discordhelpers::send_completion_react(ctx, &old, compilation_successful).await?;
 
-    embeds::edit_message_embed(ctx, &mut old, embed).await;
+    embeds::edit_message_embed(ctx, &mut old, embed, Some(details)).await;
     Ok(())
 }
 
@@ -179,14 +180,13 @@ pub async fn handle_edit_compile(
     mut old: Message,
     original_msg: Message,
 ) -> CommandResult {
-    let embed =
-        crate::commands::compile::handle_request(ctx.clone(), content, author, &original_msg)
-            .await?;
+    let (embed, compilation_details) =
+        compile::handle_request(ctx.clone(), content, author, &original_msg).await?;
 
     let compilation_successful = embed.0.get("color").unwrap() == COLOR_OKAY;
     discordhelpers::send_completion_react(ctx, &old, compilation_successful).await?;
 
-    embeds::edit_message_embed(ctx, &mut old, embed).await;
+    embeds::edit_message_embed(ctx, &mut old, embed, Some(compilation_details)).await;
     Ok(())
 }
 
@@ -197,11 +197,11 @@ pub async fn handle_edit_asm(
     mut old: Message,
     original_msg: Message,
 ) -> CommandResult {
-    let emb =
+    let (emb, details) =
         crate::commands::asm::handle_request(ctx.clone(), content, author, &original_msg).await?;
 
     let success = emb.0.get("color").unwrap() == COLOR_OKAY;
-    embeds::edit_message_embed(ctx, &mut old, emb).await;
+    embeds::edit_message_embed(ctx, &mut old, emb, Some(details)).await;
 
     send_completion_react(ctx, &old, success).await?;
     Ok(())

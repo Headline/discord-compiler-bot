@@ -60,7 +60,7 @@ pub async fn cpp(ctx: &Context, msg: &ApplicationCommandInteraction) -> CommandR
         let data_read = ctx.data.read().await;
         let compiler_lock = data_read.get::<CompilerCache>().unwrap().read().await;
         let result = compiler_lock.compiler_explorer(&fake_parse).await?;
-        let options = EmbedOptions::new(false, fake_parse.target.clone(), String::default());
+        let options = EmbedOptions::new(false, result.0);
 
         msg.edit_original_interaction_response(&ctx.http, |resp| {
             resp.add_embed(result.1.to_embed(&msg.user, &options))

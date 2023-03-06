@@ -5,6 +5,7 @@ use serenity::{
     prelude::*,
 };
 
+use crate::managers::compilation::CompilationDetails;
 use crate::utls::discordhelpers::embeds::EmbedOptions;
 use crate::{
     cache::{CompilerCache, ConfigCache, MessageCache, MessageCacheEntry},
@@ -19,7 +20,8 @@ use crate::{
 #[aliases("c++")]
 #[bucket = "nospam"]
 pub async fn cpp(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
-    let emb = handle_request(ctx.clone(), msg.content.clone(), msg.author.clone(), msg).await?;
+    let (emb, _) =
+        handle_request(ctx.clone(), msg.content.clone(), msg.author.clone(), msg).await?;
 
     // Dispatch our request
     let compilation_embed = embeds::dispatch_embed(&ctx.http, msg.channel_id, emb).await?;
@@ -40,7 +42,7 @@ pub async fn handle_request(
     content: String,
     author: User,
     msg: &Message,
-) -> std::result::Result<CreateEmbed, CommandError> {
+) -> std::result::Result<(CreateEmbed, CompilationDetails), CommandError> {
     let loading_reaction = {
         let data_read = ctx.data.read().await;
         let botinfo_lock = data_read.get::<ConfigCache>().unwrap();
@@ -98,7 +100,6 @@ pub async fn handle_request(
 
     // remove our loading emote
     discordhelpers::delete_bot_reacts(&ctx, msg, loading_reaction).await?;
-    let options = EmbedOptions::new(false, fake_parse.target.clone(), String::default());
-
-    Ok(result.1.to_embed(&author, &options))
+    let options = EmbedOptions::new(false, result.0.clone());
+    Ok((result.1.to_embed(&author, &options), result.0))
 }

@@ -10,7 +10,9 @@ use crate::utls::constants::*;
 use crate::utls::discordhelpers;
 use crate::utls::discordhelpers::embeds;
 
+use crate::managers::compilation::CompilationDetails;
 use serenity::builder::CreateEmbed;
+use serenity::model::application::component::ButtonStyle;
 use serenity::model::channel::{Message, ReactionType};
 use serenity::model::user::User;
 
@@ -19,8 +21,30 @@ use crate::utls::parser;
 #[command]
 #[bucket = "nospam"]
 pub async fn asm(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
-    let emb = handle_request(ctx.clone(), msg.content.clone(), msg.author.clone(), msg).await?;
-    let asm_embed = embeds::dispatch_embed(&ctx.http, msg.channel_id, emb).await?;
+    let (embed, compilation_details) =
+        handle_request(ctx.clone(), msg.content.clone(), msg.author.clone(), msg).await?;
+
+    // Send our final embed
+    let mut new_msg = embeds::embed_message(embed);
+    if let Some(b64) = compilation_details.base64 {
+        new_msg.components(|cmp| {
+            cmp.create_action_row(|row| {
+                row.create_button(|btn| {
+                    btn.style(ButtonStyle::Link)
+                        .url(format!("https://godbolt.org/clientstate/{}", b64))
+                        .label("View on godbolt.org")
+                })
+            })
+        });
+    }
+
+    let asm_embed = msg
+        .channel_id
+        .send_message(&ctx.http, |e| {
+            *e = new_msg.clone();
+            e
+        })
+        .await?;
 
     // Success/fail react
     let compilation_successful = asm_embed.embeds[0].colour.unwrap().0 == COLOR_OKAY;
@@ -41,7 +65,7 @@ pub async fn handle_request(
     mut content: String,
     author: User,
     msg: &Message,
-) -> Result<CreateEmbed, CommandError> {
+) -> Result<(CreateEmbed, CompilationDetails), CommandError> {
     let data_read = ctx.data.read().await;
     let loading_reaction = {
         let botinfo_lock = data_read.get::<ConfigCache>().unwrap();
@@ -102,5 +126,5 @@ pub async fn handle_request(
     // remove our loading emote
     discordhelpers::delete_bot_reacts(&ctx, msg, loading_reaction).await?;
 
-    Ok(response.1)
+    Ok((response.1, response.0))
 }

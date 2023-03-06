@@ -14,6 +14,7 @@ use std::env;
 use tokio::sync::MutexGuard;
 
 use chrono::{DateTime, Utc};
+use serenity::model::application::component::ButtonStyle;
 
 use crate::{
     cache::*,
@@ -198,7 +199,7 @@ impl EventHandler for Handler {
                     let _ = new_message.delete_reactions(&ctx.http).await;
                     if collector.is_some() {
                         let prefix = env::var("BOT_PREFIX").expect("Bot prefix is not set!");
-                        let emb = match handle_request(
+                        let (emb, details) = match handle_request(
                             ctx.clone(),
                             format!("{}compile\n```{}\n{}\n```", prefix, language, code),
                             new_message.author.clone(),
@@ -206,7 +207,7 @@ impl EventHandler for Handler {
                         )
                         .await
                         {
-                            Ok(emb) => emb,
+                            Ok((emb, details)) => (emb, details),
                             Err(e) => {
                                 let emb = embeds::build_fail_embed(
                                     &new_message.author,
@@ -227,8 +228,28 @@ impl EventHandler for Handler {
                                 return;
                             }
                         };
-                        let _ =
-                            embeds::dispatch_embed(&ctx.http, new_message.channel_id, emb).await;
+
+                        // Send our final embed
+                        let mut new_msg = embeds::embed_message(emb);
+                        if let Some(b64) = details.base64 {
+                            new_msg.components(|cmp| {
+                                cmp.create_action_row(|row| {
+                                    row.create_button(|btn| {
+                                        btn.style(ButtonStyle::Link)
+                                            .url(format!("https://godbolt.org/clientstate/{}", b64))
+                                            .label("View on godbolt.org")
+                                    })
+                                })
+                            });
+                        }
+
+                        let _ = new_message
+                            .channel_id
+                            .send_message(&ctx.http, |e| {
+                                *e = new_msg.clone();
+                                e
+                            })
+                            .await;
                     }
                 }
             }

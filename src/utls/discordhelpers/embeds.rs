@@ -2,12 +2,14 @@ use std::fmt::Write as _;
 use std::{env, str};
 
 use serenity::http::Http;
+use serenity::model::application::component::ButtonStyle;
 use serenity::{
     builder::{CreateEmbed, CreateMessage},
     client::Context,
     model::prelude::*,
 };
 
+use crate::managers::compilation::CompilationDetails;
 use wandbox::*;
 
 use crate::utls::constants::*;
@@ -16,15 +18,14 @@ use crate::utls::discordhelpers;
 #[derive(Default)]
 pub struct EmbedOptions {
     pub is_assembly: bool,
-    pub lang: String,
-    pub compiler: String,
+    pub compilation_info: CompilationDetails,
 }
+
 impl EmbedOptions {
-    pub fn new(is_assembly: bool, lang: String, compiler: String) -> Self {
+    pub fn new(is_assembly: bool, compilation_info: CompilationDetails) -> Self {
         EmbedOptions {
             is_assembly,
-            lang,
-            compiler,
+            compilation_info,
         }
     }
 }
@@ -67,11 +68,11 @@ impl ToEmbed for wandbox::CompilationResult {
         embed.footer(|f| {
             let mut text = author.tag();
 
-            if !options.lang.is_empty() {
-                text = format!("{} | {}", text, options.lang);
+            if !options.compilation_info.language.is_empty() {
+                text = format!("{} | {}", text, options.compilation_info.language);
             }
-            if !options.compiler.is_empty() {
-                text = format!("{} | {}", text, options.compiler);
+            if !options.compilation_info.compiler.is_empty() {
+                text = format!("{} | {}", text, options.compilation_info.compiler);
             }
 
             text = format!("{} | wandbox.org", text);
@@ -197,11 +198,11 @@ impl ToEmbed for godbolt::GodboltResponse {
         if let Some(time) = self.execution_time {
             appendstr = format!("{} | {}ms", appendstr, time);
         }
-        if !options.lang.is_empty() {
-            appendstr = format!("{} | {}", appendstr, options.lang);
+        if !options.compilation_info.language.is_empty() {
+            appendstr = format!("{} | {}", appendstr, options.compilation_info.language);
         }
-        if !options.compiler.is_empty() {
-            appendstr = format!("{} | {}", appendstr, options.compiler);
+        if !options.compilation_info.compiler.is_empty() {
+            appendstr = format!("{} | {}", appendstr, options.compilation_info.compiler);
         }
 
         embed.footer(|f| f.text(format!("{} | godbolt.org", appendstr)));
@@ -209,9 +210,28 @@ impl ToEmbed for godbolt::GodboltResponse {
     }
 }
 
-pub async fn edit_message_embed(ctx: &Context, old: &mut Message, emb: CreateEmbed) {
+pub async fn edit_message_embed(
+    ctx: &Context,
+    old: &mut Message,
+    emb: CreateEmbed,
+    compilation_details: Option<CompilationDetails>,
+) {
     let _ = old
         .edit(ctx, |m| {
+            if let Some(details) = compilation_details {
+                if let Some(b64) = details.base64 {
+                    m.components(|cmp| {
+                        cmp.create_action_row(|row| {
+                            row.create_button(|btn| {
+                                btn.style(ButtonStyle::Link)
+                                    .url(format!("https://godbolt.org/clientstate/{}", b64))
+                                    .label("View on godbolt.org")
+                            })
+                        })
+                    });
+                }
+            }
+
             m.embed(|e| {
                 e.0 = emb.0;
                 e
