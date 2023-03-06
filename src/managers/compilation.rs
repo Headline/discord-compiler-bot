@@ -13,10 +13,11 @@ use crate::utls::discordhelpers::embeds::{EmbedOptions, ToEmbed};
 use crate::utls::parser::ParserResult;
 
 // struct containing any information resolved during the compilation step
-#[derive(Default)]
+#[derive(Default, Clone)]
 pub struct CompilationDetails {
     pub language: String,
     pub compiler: String,
+    pub base64: Option<String>,
 }
 
 //Traits for compiler lookup
@@ -82,15 +83,13 @@ impl CompilationManager {
             RequestHandler::CompilerExplorer => {
                 let result = self.compiler_explorer(parser_result).await?;
 
-                let options =
-                    EmbedOptions::new(false, result.0.language.clone(), result.0.compiler.clone());
+                let options = EmbedOptions::new(false, result.0.clone());
                 Ok((result.0, result.1.to_embed(author, &options)))
             }
             RequestHandler::WandBox => {
                 let result = self.wandbox(parser_result).await?;
 
-                let options =
-                    EmbedOptions::new(false, result.0.language.clone(), result.0.compiler.clone());
+                let options = EmbedOptions::new(false, result.0.clone());
                 Ok((result.0, result.1.to_embed(author, &options)))
             }
             RequestHandler::None => {
@@ -110,7 +109,7 @@ impl CompilationManager {
         &self,
         parse_result: &ParserResult,
         author: &User,
-    ) -> Result<(String, CreateEmbed), CommandError> {
+    ) -> Result<(CompilationDetails, CreateEmbed), CommandError> {
         let gbolt = match &self.gbolt {
             Some(gbolt) => gbolt,
             None => {
@@ -151,9 +150,17 @@ impl CompilationManager {
                 Err(CommandError::from(format!("Target '{}' either does not produce assembly or is not currently supported on godbolt.org", target)))
             }
             Some(compiler) => {
-                let response = Godbolt::send_request(&compiler, &parse_result.code, options, USER_AGENT).await?;
-                let options = EmbedOptions::new(true, target.to_string(), compiler.name);
-                Ok((compiler.lang, response.to_embed(author, &options)))
+                let response = Godbolt::send_request(&compiler, &parse_result.code, options.clone(), USER_AGENT).await?;
+                let base64 = Godbolt::get_base64(&compiler, &parse_result.code, options)?;
+
+                let details = CompilationDetails {
+                    language: target.to_string(),
+                    compiler: compiler.name,
+                    base64: Some(base64)
+                };
+
+                let options = EmbedOptions::new(true, details.clone());
+                Ok((details, response.to_embed(author, &options)))
             }
         }
     }
@@ -201,12 +208,6 @@ impl CompilationManager {
         };
         let compiler = gbolt.resolve(target).unwrap();
 
-        // report discovered information
-        let details = CompilationDetails {
-            compiler: compiler.name.clone(),
-            language: compiler.lang.clone(),
-        };
-
         // add boilerplate code if needed & fix common mistakes
         let mut code = parse_result.code.clone();
         {
@@ -217,7 +218,16 @@ impl CompilationManager {
 
             code = fix_common_problems(&compiler.lang, code);
         }
+        let base64 = Godbolt::get_base64(&compiler, &code, options.clone())?;
         let response = Godbolt::send_request(&compiler, &code, options, USER_AGENT).await?;
+
+        // report discovered information
+        let details = CompilationDetails {
+            compiler: compiler.name.clone(),
+            language: compiler.lang.clone(),
+            base64: Some(base64),
+        };
+
         Ok((details, response))
     }
 
