@@ -232,15 +232,20 @@ impl EventHandler for Handler {
                         // Send our final embed
                         let mut new_msg = embeds::embed_message(emb);
                         if let Some(b64) = details.base64 {
-                            new_msg.components(|cmp| {
-                                cmp.create_action_row(|row| {
-                                    row.create_button(|btn| {
-                                        btn.style(ButtonStyle::Link)
-                                            .url(format!("https://godbolt.org/clientstate/{}", b64))
-                                            .label("View on godbolt.org")
+                            if b64.len() < 479 {
+                                new_msg.components(|cmp| {
+                                    cmp.create_action_row(|row| {
+                                        row.create_button(|btn| {
+                                            btn.style(ButtonStyle::Link)
+                                                .url(format!(
+                                                    "https://godbolt.org/clientstate/{}",
+                                                    b64
+                                                ))
+                                                .label("View on godbolt.org")
+                                        })
                                     })
-                                })
-                            });
+                                });
+                            }
                         }
 
                         let _ = new_message

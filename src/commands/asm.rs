@@ -27,15 +27,17 @@ pub async fn asm(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
     // Send our final embed
     let mut new_msg = embeds::embed_message(embed);
     if let Some(b64) = compilation_details.base64 {
-        new_msg.components(|cmp| {
-            cmp.create_action_row(|row| {
-                row.create_button(|btn| {
-                    btn.style(ButtonStyle::Link)
-                        .url(format!("https://godbolt.org/clientstate/{}", b64))
-                        .label("View on godbolt.org")
+        if b64.len() < 479 {
+            new_msg.components(|cmp| {
+                cmp.create_action_row(|row| {
+                    row.create_button(|btn| {
+                        btn.style(ButtonStyle::Link)
+                            .url(format!("https://godbolt.org/clientstate/{}", b64))
+                            .label("View on godbolt.org")
+                    })
                 })
-            })
-        });
+            });
+        }
     }
 
     let asm_embed = msg

@@ -220,15 +220,17 @@ pub async fn edit_message_embed(
         .edit(ctx, |m| {
             if let Some(details) = compilation_details {
                 if let Some(b64) = details.base64 {
-                    m.components(|cmp| {
-                        cmp.create_action_row(|row| {
-                            row.create_button(|btn| {
-                                btn.style(ButtonStyle::Link)
-                                    .url(format!("https://godbolt.org/clientstate/{}", b64))
-                                    .label("View on godbolt.org")
+                    if b64.len() < 479 {
+                        m.components(|cmp| {
+                            cmp.create_action_row(|row| {
+                                row.create_button(|btn| {
+                                    btn.style(ButtonStyle::Link)
+                                        .url(format!("https://godbolt.org/clientstate/{}", b64))
+                                        .label("View on godbolt.org")
+                                })
                             })
-                        })
-                    });
+                        });
+                    }
                 }
             }
 
