@@ -5,7 +5,7 @@ use serenity::{
     framework::standard::{macros::command, Args, CommandError, CommandResult},
 };
 
-use crate::cache::{CompilerCache, ConfigCache, MessageCache, MessageCacheEntry};
+use crate::cache::{CompilerCache, ConfigCache, LinkAPICache, MessageCache, MessageCacheEntry};
 use crate::utls::constants::*;
 use crate::utls::discordhelpers;
 use crate::utls::discordhelpers::embeds;
@@ -26,17 +26,22 @@ pub async fn asm(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
 
     // Send our final embed
     let mut new_msg = embeds::embed_message(embed);
-    if let Some(b64) = compilation_details.base64 {
-        if b64.len() < 479 {
-            new_msg.components(|cmp| {
-                cmp.create_action_row(|row| {
-                    row.create_button(|btn| {
-                        btn.style(ButtonStyle::Link)
-                            .url(format!("https://godbolt.org/clientstate/{}", b64))
-                            .label("View on godbolt.org")
+    let data = ctx.data.read().await;
+    if let Some(link_cache) = data.get::<LinkAPICache>() {
+        if let Some(b64) = compilation_details.base64 {
+            let long_url = format!("https://godbolt.org/clientstate/{}", b64);
+            let link_cache_lock = link_cache.read().await;
+            if let Some(url) = link_cache_lock.get_link(long_url).await {
+                new_msg.components(|cmp| {
+                    cmp.create_action_row(|row| {
+                        row.create_button(|btn| {
+                            btn.style(ButtonStyle::Link)
+                                .url(url)
+                                .label("View on godbolt.org")
+                        })
                     })
-                })
-            });
+                });
+            }
         }
     }
 

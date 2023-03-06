@@ -9,6 +9,7 @@ use serenity::{
     model::prelude::*,
 };
 
+use crate::cache::LinkAPICache;
 use crate::managers::compilation::CompilationDetails;
 use wandbox::*;
 
@@ -216,24 +217,31 @@ pub async fn edit_message_embed(
     emb: CreateEmbed,
     compilation_details: Option<CompilationDetails>,
 ) {
+    let mut url = None;
+    if let Some(details) = compilation_details {
+        let data = ctx.data.read().await;
+        if let Some(link_cache) = data.get::<LinkAPICache>() {
+            if let Some(b64) = details.base64 {
+                let long_url = format!("https://godbolt.org/clientstate/{}", b64);
+                let link_cache_lock = link_cache.read().await;
+                url = link_cache_lock.get_link(long_url).await
+            }
+        }
+    }
+
     let _ = old
         .edit(ctx, |m| {
-            if let Some(details) = compilation_details {
-                if let Some(b64) = details.base64 {
-                    if b64.len() < 479 {
-                        m.components(|cmp| {
-                            cmp.create_action_row(|row| {
-                                row.create_button(|btn| {
-                                    btn.style(ButtonStyle::Link)
-                                        .url(format!("https://godbolt.org/clientstate/{}", b64))
-                                        .label("View on godbolt.org")
-                                })
-                            })
-                        });
-                    }
-                }
+            if let Some(shorturl) = url {
+                m.components(|cmp| {
+                    cmp.create_action_row(|row| {
+                        row.create_button(|btn| {
+                            btn.style(ButtonStyle::Link)
+                                .url(shorturl)
+                                .label("View on godbolt.org")
+                        })
+                    })
+                });
             }
-
             m.embed(|e| {
                 e.0 = emb.0;
                 e

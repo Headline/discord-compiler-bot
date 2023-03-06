@@ -231,20 +231,22 @@ impl EventHandler for Handler {
 
                         // Send our final embed
                         let mut new_msg = embeds::embed_message(emb);
-                        if let Some(b64) = details.base64 {
-                            if b64.len() < 479 {
-                                new_msg.components(|cmp| {
-                                    cmp.create_action_row(|row| {
-                                        row.create_button(|btn| {
-                                            btn.style(ButtonStyle::Link)
-                                                .url(format!(
-                                                    "https://godbolt.org/clientstate/{}",
-                                                    b64
-                                                ))
-                                                .label("View on godbolt.org")
+                        let data = ctx.data.read().await;
+                        if let Some(link_cache) = data.get::<LinkAPICache>() {
+                            if let Some(b64) = details.base64 {
+                                let long_url = format!("https://godbolt.org/clientstate/{}", b64);
+                                let link_cache_lock = link_cache.read().await;
+                                if let Some(url) = link_cache_lock.get_link(long_url).await {
+                                    new_msg.components(|cmp| {
+                                        cmp.create_action_row(|row| {
+                                            row.create_button(|btn| {
+                                                btn.style(ButtonStyle::Link)
+                                                    .url(url)
+                                                    .label("View on godbolt.org")
+                                            })
                                         })
-                                    })
-                                });
+                                    });
+                                }
                             }
                         }
 
