@@ -36,8 +36,8 @@ pub async fn diff_msg(ctx: &Context, msg: &ApplicationCommandInteraction) -> Com
         .await
         .unwrap();
         {
-            let mut diff_cache = diff_cache_lock.lock().await;
             let content = get_code_block_or_content(&new_msg.content, &new_msg.author).await?;
+            let mut diff_cache = diff_cache_lock.lock().await;
             diff_cache.insert(msg.user.id.0, DiffCommandEntry::new(&content, msg));
         }
         let resp = msg.get_interaction_response(&ctx.http).await?;
@@ -48,8 +48,6 @@ pub async fn diff_msg(ctx: &Context, msg: &ApplicationCommandInteraction) -> Com
             .await;
         if let Some(interaction) = button_resp {
             interaction.defer(&ctx.http).await?;
-            let mut diff_cache = diff_cache_lock.lock().await;
-            diff_cache.remove(interaction.user.id.as_u64());
             msg.edit_original_interaction_response(&ctx.http, |edit| {
                 edit.set_embeds(Vec::new())
                     .embed(|emb| {
@@ -60,6 +58,9 @@ pub async fn diff_msg(ctx: &Context, msg: &ApplicationCommandInteraction) -> Com
                     .components(|cmps| cmps.set_action_rows(Vec::new()))
             })
             .await?;
+
+            let mut diff_cache = diff_cache_lock.lock().await;
+            diff_cache.remove(interaction.user.id.as_u64());
         } else {
             // Button expired
             msg.edit_original_interaction_response(&ctx.http, |edit| {

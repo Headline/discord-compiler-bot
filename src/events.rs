@@ -11,8 +11,6 @@ use serenity::{
 };
 use std::env;
 
-use tokio::sync::MutexGuard;
-
 use chrono::{DateTime, Utc};
 use serenity::model::application::component::ButtonStyle;
 
@@ -20,7 +18,6 @@ use crate::{
     cache::*,
     commands::compile::handle_request,
     managers::compilation::RequestHandler,
-    managers::stats::StatsManager,
     utls::{
         discordhelpers,
         discordhelpers::embeds,
@@ -33,22 +30,24 @@ pub struct Handler; // event handler for serenity
 
 #[async_trait]
 trait ShardsReadyHandler {
-    async fn all_shards_ready(&self, ctx: &Context, stats: &mut MutexGuard<'_, StatsManager>);
+    async fn all_shards_ready(&self, ctx: &Context);
 }
 
 #[async_trait]
 impl ShardsReadyHandler for Handler {
-    async fn all_shards_ready(&self, ctx: &Context, stats: &mut MutexGuard<'_, StatsManager>) {
+    async fn all_shards_ready(&self, ctx: &Context) {
         let data = ctx.data.read().await;
+        let server_count = {
+            let mut stats = data.get::<StatsManagerCache>().unwrap().lock().await;
+            let guild_count = stats.get_boot_vec_sum();
+            stats.post_servers(guild_count).await;
+            stats.server_count()
+        };
 
+        // lock the shard manager to update our presences
         let shard_manager = data.get::<ShardManagerCache>().unwrap().lock().await;
-        let guild_count = stats.get_boot_vec_sum();
-
-        stats.post_servers(guild_count).await;
-
-        discordhelpers::send_global_presence(&shard_manager, stats.server_count()).await;
-
-        info!("Ready in {} guilds", stats.server_count());
+        discordhelpers::send_global_presence(&shard_manager, server_count).await;
+        info!("Ready in {} guilds", server_count);
 
         // register commands globally in release
         if !cfg!(debug_assertions) {
@@ -86,14 +85,17 @@ impl EventHandler for Handler {
             }
 
             // publish/queue new server to stats
-            let mut stats = data.get::<StatsManagerCache>().unwrap().lock().await;
-            stats.new_server().await;
+            let (server_count, shard_count) = {
+                let mut stats = data.get::<StatsManagerCache>().unwrap().lock().await;
+                stats.new_server().await;
+                (stats.server_count(), stats.shard_count())
+            };
 
             // ensure we're actually loaded in before we start posting our server counts
-            if stats.server_count() > 0 {
+            if server_count > 0 {
                 let new_stats = dbl::types::ShardStats::Cumulative {
-                    server_count: stats.server_count(),
-                    shard_count: Some(stats.shard_count()),
+                    server_count,
+                    shard_count: Some(shard_count),
                 };
 
                 if let Some(dbl_cache) = data.get::<DblCache>() {
@@ -105,7 +107,7 @@ impl EventHandler for Handler {
 
                 // update guild count in presence
                 let shard_manager = data.get::<ShardManagerCache>().unwrap().lock().await;
-                discordhelpers::send_global_presence(&shard_manager, stats.server_count()).await;
+                discordhelpers::send_global_presence(&shard_manager, server_count).await;
             }
 
             info!("Joining {}", guild.name);
@@ -135,14 +137,17 @@ impl EventHandler for Handler {
         }
 
         // publish/queue new server to stats
-        let mut stats = data.get::<StatsManagerCache>().unwrap().lock().await;
-        stats.leave_server().await;
+        let (server_count, shard_count) = {
+            let mut stats = data.get::<StatsManagerCache>().unwrap().lock().await;
+            stats.leave_server().await;
+            (stats.server_count(), stats.shard_count())
+        };
 
         // ensure we're actually loaded in before we start posting our server counts
-        if stats.server_count() > 0 {
+        if server_count > 0 {
             let new_stats = dbl::types::ShardStats::Cumulative {
-                server_count: stats.server_count(),
-                shard_count: Some(stats.shard_count()),
+                server_count,
+                shard_count: Some(shard_count),
             };
 
             if let Some(dbl_cache) = data.get::<DblCache>() {
@@ -154,7 +159,7 @@ impl EventHandler for Handler {
 
             // update guild count in presence
             let shard_manager = data.get::<ShardManagerCache>().unwrap().lock().await;
-            discordhelpers::send_global_presence(&shard_manager, stats.server_count()).await;
+            discordhelpers::send_global_presence(&shard_manager, server_count).await;
         }
 
         info!("Leaving {}", &incomplete.id);
@@ -270,20 +275,25 @@ impl EventHandler for Handler {
         id: MessageId,
         _guild_id: Option<GuildId>,
     ) {
-        let data = ctx.data.read().await;
-        let mut message_cache = data.get::<MessageCache>().unwrap().lock().await;
-        if let Some(msg) = message_cache.get_mut(id.as_u64()) {
-            if msg.our_msg.delete(ctx.http).await.is_err() {
-                // ignore for now
-            }
-            message_cache.remove(id.as_u64());
+        let maybe_message = {
+            let data = ctx.data.read().await;
+            let mut message_cache = data.get::<MessageCache>().unwrap().lock().await;
+            message_cache.remove(id.as_u64())
+        };
+
+        if let Some(msg) = maybe_message {
+            let _ = msg.our_msg.delete(ctx.http).await;
         }
     }
 
     async fn message_update(&self, ctx: Context, new_data: MessageUpdateEvent) {
-        let data = ctx.data.read().await;
-        let mut message_cache = data.get::<MessageCache>().unwrap().lock().await;
-        if let Some(msg) = message_cache.get_mut(&new_data.id.0) {
+        let maybe_message = {
+            let data = ctx.data.read().await;
+            let mut message_cache = data.get::<MessageCache>().unwrap().lock().await;
+            message_cache.get_mut(&new_data.id.0).map(|msg| msg.clone())
+        };
+
+        if let Some(msg) = maybe_message {
             if let Some(new_msg) = new_data.content {
                 if let Some(author) = new_data.author {
                     discordhelpers::handle_edit(
@@ -301,18 +311,9 @@ impl EventHandler for Handler {
 
     async fn ready(&self, ctx: Context, ready: Ready) {
         info!("[Shard {}] Ready", ctx.shard_id);
-        let data = ctx.data.read().await;
-
-        {
+        let shard_count = {
+            let data = ctx.data.read().await;
             let mut stats = data.get::<StatsManagerCache>().unwrap().lock().await;
-            // occasionally we can have a ready event fire well after execution
-            // this check prevents us from double calling all_shards_ready
-            let total_shards_to_spawn = ready.shard.unwrap()[1];
-            if stats.shard_count() + 1 > total_shards_to_spawn {
-                info!("Skipping duplicate ready event...");
-                return;
-            }
-
             let guild_count = ready.guilds.len() as u64;
             stats.add_shard(guild_count);
 
@@ -321,18 +322,31 @@ impl EventHandler for Handler {
                 let mut info = data.get::<ConfigCache>().unwrap().write().await;
                 info.insert("BOT_AVATAR", ready.user.avatar_url().unwrap());
             }
+            stats.shard_count()
+        };
 
-            if stats.shard_count() == total_shards_to_spawn {
-                self.all_shards_ready(&ctx, &mut stats).await;
-            }
+        // occasionally we can have a ready event fire well after execution
+        // this check prevents us from double calling all_shards_ready
+        let total_shards_to_spawn = ready.shard.unwrap()[1];
+        if shard_count + 1 > total_shards_to_spawn {
+            info!("Skipping duplicate ready event...");
+            return;
+        }
+
+        if shard_count == total_shards_to_spawn {
+            self.all_shards_ready(&ctx).await;
         }
     }
 
     async fn interaction_create(&self, ctx: Context, interaction: Interaction) {
         if let Interaction::ApplicationCommand(command) = interaction {
-            let data_read = ctx.data.read().await;
-            let commands = data_read.get::<CommandCache>().unwrap().read().await;
-            match commands.on_command(&ctx, &command).await {
+            let cmd_result = {
+                let data_read = ctx.data.read().await;
+                let commands = data_read.get::<CommandCache>().unwrap().read().await;
+                commands.on_command(&ctx, &command).await
+            };
+
+            match cmd_result {
                 Ok(_) => {}
                 Err(e) => {
                     // in order to respond to messages with errors, we'll first try to
@@ -354,42 +368,42 @@ impl EventHandler for Handler {
 
 #[hook]
 pub async fn before(ctx: &Context, msg: &Message, _: &str) -> bool {
-    let data = ctx.data.read().await;
-    {
-        let stats = data.get::<StatsManagerCache>().unwrap().lock().await;
-        if stats.should_track() {
-            stats.post_request().await;
-        }
-    }
-
     // we'll go with 0 if we couldn't grab guild id
     let mut guild_id = 0;
     if let Some(id) = msg.guild_id {
         guild_id = id.0;
     }
 
-    // check user against our blocklist
-    {
-        let blocklist = data.get::<BlocklistCache>().unwrap().read().await;
-        let author_blocklisted = blocklist.contains(msg.author.id.0);
-        let guild_blocklisted = blocklist.contains(guild_id);
-
-        if author_blocklisted || guild_blocklisted {
-            let emb = embeds::build_fail_embed(
-                &msg.author,
-                "This server or your user is blocked from executing commands.
-            This may have happened due to abuse, spam, or other reasons.
-            If you feel that this has been done in error, request an unban in the support server.",
-            );
-
-            let _ = embeds::dispatch_embed(&ctx.http, msg.channel_id, emb).await;
-            if author_blocklisted {
-                warn!("Blocked user {} [{}]", msg.author.tag(), msg.author.id.0);
-            } else {
-                warn!("Blocked guild {}", guild_id);
-            }
-            return false;
+    let (author_blocked, guild_blocked) = {
+        let data = ctx.data.read().await;
+        let stats = data.get::<StatsManagerCache>().unwrap().lock().await;
+        if stats.should_track() {
+            stats.post_request().await;
         }
+        let blocklist = data.get::<BlocklistCache>().unwrap().read().await;
+        (
+            blocklist.contains(msg.author.id.0),
+            blocklist.contains(guild_id),
+        )
+    };
+
+    // check user against our blocklist
+
+    if author_blocked || guild_blocked {
+        let emb = embeds::build_fail_embed(
+            &msg.author,
+            "This server or your user is blocked from executing commands.
+        This may have happened due to abuse, spam, or other reasons.
+        If you feel that this has been done in error, request an unban in the support server.",
+        );
+
+        let _ = embeds::dispatch_embed(&ctx.http, msg.channel_id, emb).await;
+        if author_blocked {
+            warn!("Blocked user {} [{}]", msg.author.tag(), msg.author.id.0);
+        } else {
+            warn!("Blocked guild {}", guild_id);
+        }
+        return false;
     }
 
     true

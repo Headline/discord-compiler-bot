@@ -64,10 +64,12 @@ impl TypeMapKey for LinkAPICache {
     type Value = Arc<RwLock<LinkAPI>>;
 }
 
+#[derive(Clone)]
 pub struct MessageCacheEntry {
     pub our_msg: Message,
     pub original_msg: Message,
 }
+
 impl MessageCacheEntry {
     pub fn new(our_msg: Message, original_msg: Message) -> Self {
         MessageCacheEntry {
