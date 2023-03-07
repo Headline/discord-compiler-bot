@@ -48,12 +48,6 @@ impl ShardsReadyHandler for Handler {
         let shard_manager = data.get::<ShardManagerCache>().unwrap().lock().await;
         discordhelpers::send_global_presence(&shard_manager, server_count).await;
         info!("Ready in {} guilds", server_count);
-
-        // register commands globally in release
-        if !cfg!(debug_assertions) {
-            let mut cmd_mgr = data.get::<CommandCache>().unwrap().write().await;
-            cmd_mgr.register_commands_global(ctx).await;
-        }
     }
 }
 
@@ -61,12 +55,6 @@ impl ShardsReadyHandler for Handler {
 impl EventHandler for Handler {
     async fn guild_create(&self, ctx: Context, guild: Guild) {
         let data = ctx.data.read().await;
-
-        // in debug, we'll register on a guild-per-guild basis
-        if cfg!(debug_assertions) {
-            let mut cmd_mgr = data.get::<CommandCache>().unwrap().write().await;
-            cmd_mgr.register_commands_guild(&ctx, &guild).await;
-        }
 
         let now: DateTime<Utc> = Utc::now();
         if guild.joined_at.unix_timestamp() + 30 > now.timestamp() {

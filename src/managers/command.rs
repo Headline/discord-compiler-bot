@@ -100,47 +100,21 @@ impl CommandManager {
         let mut cmds = Vec::new();
 
         let mut cmd = CreateApplicationCommand::default();
-        cmd.kind(CommandType::Message).name(format!(
-            "Compile{}",
-            if cfg!(debug_assertions) {
-                " [BETA]"
-            } else {
-                ""
-            }
-        ));
+        cmd.kind(CommandType::Message)
+            .name(format!("Compile{}", ""));
         cmds.push(cmd);
 
         cmd = CreateApplicationCommand::default();
-        cmd.kind(CommandType::Message).name(format!(
-            "Assembly{}",
-            if cfg!(debug_assertions) {
-                " [BETA]"
-            } else {
-                ""
-            }
-        ));
+        cmd.kind(CommandType::Message)
+            .name(format!("Assembly{}", ""));
         cmds.push(cmd);
 
         cmd = CreateApplicationCommand::default();
-        cmd.kind(CommandType::Message).name(format!(
-            "Format{}",
-            if cfg!(debug_assertions) {
-                " [BETA]"
-            } else {
-                ""
-            }
-        ));
+        cmd.kind(CommandType::Message).name(format!("Format{}", ""));
         cmds.push(cmd);
 
         cmd = CreateApplicationCommand::default();
-        cmd.kind(CommandType::Message).name(format!(
-            "Diff{}",
-            if cfg!(debug_assertions) {
-                " [BETA]"
-            } else {
-                ""
-            }
-        ));
+        cmd.kind(CommandType::Message).name(format!("Diff{}", ""));
         cmds.push(cmd);
 
         cmd = CreateApplicationCommand::default();
