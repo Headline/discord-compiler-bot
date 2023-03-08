@@ -311,9 +311,18 @@ impl EventHandler for Handler {
 
     async fn ready(&self, ctx: Context, ready: Ready) {
         info!("[Shard {}] Ready", ctx.shard_id);
+        let total_shards_to_spawn = ready.shard.unwrap()[1];
+
         let shard_count = {
             let data = ctx.data.read().await;
             let mut stats = data.get::<StatsManagerCache>().unwrap().lock().await;
+            // occasionally we can have a ready event fire well after execution
+            // this check prevents us from double calling all_shards_ready
+            if stats.shard_count() + 1 > total_shards_to_spawn {
+                info!("Skipping duplicate ready event...");
+                return;
+            }
+
             let guild_count = ready.guilds.len() as u64;
             stats.add_shard(guild_count);
 
@@ -324,14 +333,6 @@ impl EventHandler for Handler {
             }
             stats.shard_count()
         };
-
-        // occasionally we can have a ready event fire well after execution
-        // this check prevents us from double calling all_shards_ready
-        let total_shards_to_spawn = ready.shard.unwrap()[1];
-        if shard_count + 1 > total_shards_to_spawn {
-            info!("Skipping duplicate ready event...");
-            return;
-        }
 
         if shard_count == total_shards_to_spawn {
             self.all_shards_ready(&ctx).await;
