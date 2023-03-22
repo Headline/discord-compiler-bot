@@ -71,7 +71,8 @@ impl CppEval {
             // self.output.push_str(&format!("{}\n", main));
             writeln!(self.output, "{}\n{}", rest, main).unwrap();
         } else {
-            return Err(EvalError::new("No main() specified. Invalid request"));
+            return Err(EvalError::new("Invalid short-hand request, main() not found.\n\n\
+            *This command expects geordi-like input. Did you mean to use ;compile to execute c++ code?*"));
         }
 
         Ok(())
