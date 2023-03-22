@@ -1,11 +1,10 @@
-use crate::utls::constants::URL_ALLOW_LIST;
+use crate::utls::constants::{CODE_BLOCK_REGEX, C_LIKE_INCLUDE_REGEX, URL_ALLOW_LIST};
 
 use serenity::framework::standard::CommandError;
 use serenity::model::channel::{Attachment, Message};
 use serenity::model::user::User;
 
 use crate::managers::compilation::{CompilationManager, RequestHandler};
-use regex::Regex;
 use std::path::Path;
 use std::sync::Arc;
 use tokio::sync::RwLock;
@@ -236,8 +235,7 @@ pub async fn find_code_block(
     haystack: &str,
     author: &User,
 ) -> Result<bool, CommandError> {
-    let re = regex::Regex::new(r"```(?:(?P<language>[^\s`]*)\r?\n)?(?P<code>[\s\S]*?)```").unwrap();
-    let matches = re.captures_iter(haystack);
+    let matches = CODE_BLOCK_REGEX.captures_iter(haystack);
 
     let mut captures = Vec::new();
     let list = matches.enumerate();
@@ -263,8 +261,7 @@ pub async fn find_code_block(
     }
 
     let code_copy = result.code.clone();
-    let include_regex = Regex::new("\"[^\"]+\"|(?P<statement>#include\\s<(?P<url>.+?)>)").unwrap();
-    let matches = include_regex.captures_iter(&code_copy).enumerate();
+    let matches = C_LIKE_INCLUDE_REGEX.captures_iter(&code_copy).enumerate();
     for (_, cap) in matches {
         if let Some(statement) = cap.name("statement") {
             let include_stmt = statement.as_str();

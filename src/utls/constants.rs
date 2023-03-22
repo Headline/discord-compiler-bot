@@ -36,8 +36,14 @@ lazy_static! {
 
 // Other Regexes
 lazy_static! {
+    pub static ref GEORDI_MAIN_REGEX: Regex =
+        Regex::new(r"(([a-zA-Z]*?)[\s]+main\((.*?)\)[\s]+\{[\s\S]*?\})").unwrap();
     pub static ref JAVA_PUBLIC_CLASS_REGEX: Regex =
         Regex::new("\"[^\"]*?\"|(?P<public>public)[\\s]+?class[\\s]*?").unwrap();
+    pub static ref C_LIKE_INCLUDE_REGEX: Regex =
+        Regex::new("\"[^\"]+\"|(?P<statement>#include\\s<(?P<url>.+?)>)").unwrap();
+    pub static ref CODE_BLOCK_REGEX: Regex =
+        Regex::new(r"```(?:(?P<language>[^\s`]*)\r?\n)?(?P<code>[\s\S]*?)```").unwrap();
 }
 
 /*
