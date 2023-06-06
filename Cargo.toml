@@ -2,7 +2,7 @@
 name = "discord-compiler-bot"
 description = "Discord bot to compile your spaghetti code."
 version = "3.5.6"
-authors = ["Michael Flaherty (Headline#9999)"]
+authors = ["Michael Flaherty (discord: @headline)"]
 edition = "2021"
 build = "src/build.rs"
 
