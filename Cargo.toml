@@ -1,8 +1,8 @@
 [package]
 name = "discord-compiler-bot"
 description = "Discord bot to compile your spaghetti code."
-version = "3.5.6"
-authors = ["Michael Flaherty (discord: @headline)"]
+version = "3.5.7"
+authors = ["Michael Flaherty"]
 edition = "2021"
 build = "src/build.rs"
 
@@ -42,7 +42,7 @@ chrono = "0.4.19"
 
 
 [dependencies.serenity]
-version = "=0.11.5"
+version = "=0.11.6"
 default-features = false
 features = ["collector", "gateway", "builder", "standard_framework", "http", "model", "client", "framework", "utils", "rustls_backend"]
 
