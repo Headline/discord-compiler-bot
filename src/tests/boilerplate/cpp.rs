@@ -84,3 +84,13 @@ async fn no_bplate_narfd_main() {
     );
     assert!(!gen.needs_boilerplate());
 }
+
+#[tokio::test]
+async fn no_bplate_abcq2_main() {
+    let gen = CppGenerator::new(
+        "#include <stdio.h>
+            int foo() { return '\"'; }
+            int main() { puts(\"test\"); }",
+    );
+    assert!(!gen.needs_boilerplate())
+}

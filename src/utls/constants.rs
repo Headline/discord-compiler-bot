@@ -25,13 +25,13 @@ pub const MAX_ERROR_LEN: usize = 997;
 // Boilerplate Regexes
 lazy_static! {
     pub static ref JAVA_MAIN_REGEX: Regex =
-        Regex::new("\"[^\"]*?\"|(?P<main>void[\\s]+?main[\\s]*?\\()").unwrap();
+        Regex::new("\"[^\"\n]*?\"|(?P<main>void[\\s]+?main[\\s]*?\\()").unwrap();
     pub static ref C_LIKE_MAIN_REGEX: Regex =
-        Regex::new("\"[^\"]*?\"|(?P<main>main[\\s]*?\\()").unwrap();
+        Regex::new("\"[^\"\n]*?\"|(?P<main>main[\\s]*?\\()").unwrap();
     pub static ref CSHARP_MAIN_REGEX: Regex =
-        Regex::new("\"[^\"]*?\"|(?P<main>static[\\s]+?void[\\s]+?Main[\\s]*?\\()").unwrap();
+        Regex::new("\"[^\"\n]*?\"|(?P<main>static[\\s]+?void[\\s]+?Main[\\s]*?\\()").unwrap();
     pub static ref PHP_START_REGEX: Regex =
-        Regex::new("\"[^\"]*?\"|(?P<php_start><\\?php)").unwrap();
+        Regex::new("\"[^\"\n]*?\"|(?P<php_start><\\?php)").unwrap();
 }
 
 // Other Regexes
