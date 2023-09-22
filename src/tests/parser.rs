@@ -296,3 +296,28 @@ async fn standard_parse_args_one_line() {
     assert_eq!(parser_result.url, "");
     assert_eq!(parser_result.code, "int main() {return 232;}");
 }
+
+#[tokio::test]
+async fn parse_url_with_block_stdin() {
+    let dummy_user = User::default();
+    let input = indoc::indoc!(
+        ";compile rust < https://pastebin.com/raw/ERqDRZva
+        ```
+        testing 1 2 3
+        ```"
+    );
+
+    let reply = None;
+    let result = get_components(input, &dummy_user, None, &reply).await;
+    if result.is_err() {
+        panic!("Parser failed.");
+    }
+
+    let parser_result = result.unwrap();
+    assert_eq!(parser_result.target, "rust");
+    assert_eq!(parser_result.args.len(), 0);
+    assert_eq!(parser_result.options.len(), 0);
+    assert_eq!(parser_result.stdin, "testing 1 2 3\n");
+    assert_eq!(parser_result.url, "https://pastebin.com/raw/ERqDRZva");
+    assert_eq!(parser_result.code, "int main() {}");
+}
