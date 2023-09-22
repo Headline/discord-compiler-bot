@@ -143,22 +143,12 @@ pub async fn get_components(
         // let's assume we found the stdin and what they're replying to is the code.
         // Anything else probably doesn't make sense.
         if let Some(replied_msg) = reply {
-            let attachment = get_message_attachment(&replied_msg.attachments).await?;
-            if !attachment.0.is_empty() {
-                if !result.target.is_empty() {
-                    result.target = attachment.1;
-                }
-                // shift previos code to stdin, we have found code
+            let mut fake_result = ParserResult::default();
+            if find_code_block(&mut fake_result, &replied_msg.content, author).await? {
+                // we found a code block - lets assume the reply's codeblock is our actual code
                 result.stdin = result.code;
-                result.code = String::default();
-                result.code = attachment.0;
-            } else {
-                let mut fake_result = ParserResult::default();
-                if find_code_block(&mut fake_result, &replied_msg.content, author).await? {
-                    // we found a code block - lets assume the reply's codeblock is our actual code
-                    result.stdin = result.code;
-                    result.code = fake_result.code;
-                }
+                result.code = fake_result.code;
+                result.target = fake_result.target
             }
         }
     } else {
@@ -292,11 +282,11 @@ pub async fn get_message_attachment(
             return Ok((String::new(), String::new()));
         }
         let attached = attachment.unwrap();
-        if attached.size > 512 * 1024 {
-            // 512 KiB seems enough
+        if attached.size > 512 * 1000 {
+            // 512 KB seems enough
             return Err(CommandError::from(format!(
-                "Uploaded file too large: `{} MiB`",
-                attached.size
+                "Uploaded file too large: `{} KB`",
+                attached.size / 1000
             )));
         }
         return match reqwest::get(&attached.url).await {

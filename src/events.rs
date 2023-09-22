@@ -1,29 +1,19 @@
 use serenity::{
     async_trait,
-    collector::CollectReaction,
     framework::{standard::macros::hook, standard::CommandResult, standard::DispatchError},
     model::{
-        application::interaction::Interaction, channel::Message, channel::ReactionType,
-        event::MessageUpdateEvent, gateway::Ready, guild::Guild, id::ChannelId, id::GuildId,
-        id::MessageId, prelude::UnavailableGuild,
+        application::interaction::Interaction, channel::Message, event::MessageUpdateEvent,
+        gateway::Ready, guild::Guild, id::ChannelId, id::GuildId, id::MessageId,
+        prelude::UnavailableGuild,
     },
     prelude::*,
 };
-use std::env;
 
 use chrono::{DateTime, Utc};
-use serenity::model::application::component::ButtonStyle;
 
 use crate::{
     cache::*,
-    commands::compile::handle_request,
-    managers::compilation::RequestHandler,
-    utls::{
-        discordhelpers,
-        discordhelpers::embeds,
-        discordhelpers::interactions::send_error_msg,
-        parser::{get_message_attachment, shortname_to_qualified},
-    },
+    utls::{discordhelpers, discordhelpers::embeds, discordhelpers::interactions::send_error_msg},
 };
 
 pub struct Handler; // event handler for serenity
@@ -165,109 +155,6 @@ impl EventHandler for Handler {
         info!("Leaving {}", &incomplete.id);
     }
 
-    async fn message(&self, ctx: Context, new_message: Message) {
-        if !new_message.attachments.is_empty() {
-            if let Ok((code, language)) = get_message_attachment(&new_message.attachments).await {
-                let data = ctx.data.read().await;
-                let target = {
-                    let cm = data.get::<CompilerCache>().unwrap().read().await;
-                    cm.resolve_target(shortname_to_qualified(&language))
-                };
-
-                if !matches!(target, RequestHandler::None) {
-                    let reaction = {
-                        let botinfo = data.get::<ConfigCache>().unwrap().read().await;
-                        if let Some(id) = botinfo.get("LOGO_EMOJI_ID") {
-                            let name = botinfo
-                                .get("LOGO_EMOJI_NAME")
-                                .expect("Unable to find loading emoji name")
-                                .clone();
-                            discordhelpers::build_reaction(id.parse::<u64>().unwrap(), &name)
-                        } else {
-                            ReactionType::Unicode(String::from("💻"))
-                        }
-                    };
-
-                    if new_message
-                        .react(&ctx.http, reaction.clone())
-                        .await
-                        .is_err()
-                    {
-                        return;
-                    }
-
-                    let collector = CollectReaction::new(ctx.clone())
-                        .message_id(new_message.id)
-                        .timeout(core::time::Duration::new(30, 0))
-                        .filter(move |r| r.emoji.eq(&reaction))
-                        .await;
-                    let _ = new_message.delete_reactions(&ctx.http).await;
-                    if collector.is_some() {
-                        let prefix = env::var("BOT_PREFIX").expect("Bot prefix is not set!");
-                        let (emb, details) = match handle_request(
-                            ctx.clone(),
-                            format!("{}compile\n```{}\n{}\n```", prefix, language, code),
-                            new_message.author.clone(),
-                            &new_message,
-                        )
-                        .await
-                        {
-                            Ok((emb, details)) => (emb, details),
-                            Err(e) => {
-                                let emb = embeds::build_fail_embed(
-                                    &new_message.author,
-                                    &format!("{}", e),
-                                );
-
-                                let sent_fail =
-                                    embeds::dispatch_embed(&ctx.http, new_message.channel_id, emb)
-                                        .await;
-                                if let Ok(sent) = sent_fail {
-                                    let mut message_cache =
-                                        data.get::<MessageCache>().unwrap().lock().await;
-                                    message_cache.insert(
-                                        new_message.id.0,
-                                        MessageCacheEntry::new(sent, new_message),
-                                    );
-                                }
-                                return;
-                            }
-                        };
-
-                        // Send our final embed
-                        let mut new_msg = embeds::embed_message(emb);
-                        let data = ctx.data.read().await;
-                        if let Some(link_cache) = data.get::<LinkAPICache>() {
-                            if let Some(b64) = details.base64 {
-                                let long_url = format!("https://godbolt.org/clientstate/{}", b64);
-                                let link_cache_lock = link_cache.read().await;
-                                if let Some(url) = link_cache_lock.get_link(long_url).await {
-                                    new_msg.components(|cmp| {
-                                        cmp.create_action_row(|row| {
-                                            row.create_button(|btn| {
-                                                btn.style(ButtonStyle::Link)
-                                                    .url(url)
-                                                    .label("View on godbolt.org")
-                                            })
-                                        })
-                                    });
-                                }
-                            }
-                        }
-
-                        let _ = new_message
-                            .channel_id
-                            .send_message(&ctx.http, |e| {
-                                *e = new_msg.clone();
-                                e
-                            })
-                            .await;
-                    }
-                }
-            }
-        }
-    }
-
     async fn message_delete(
         &self,
         ctx: Context,
@@ -334,7 +221,9 @@ impl EventHandler for Handler {
             stats.shard_count()
         };
 
-        if shard_count == total_shards_to_spawn {
+        // special case here if single sharded - our presence must update in this case
+        // other wise it will blank out
+        if shard_count == total_shards_to_spawn || total_shards_to_spawn == 1 {
             self.all_shards_ready(&ctx).await;
         }
     }

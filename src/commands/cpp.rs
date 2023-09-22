@@ -1,3 +1,4 @@
+use serenity::model::application::component::ButtonStyle;
 use serenity::{
     builder::CreateEmbed,
     framework::standard::{macros::command, Args, CommandError, CommandResult},
@@ -5,6 +6,7 @@ use serenity::{
     prelude::*,
 };
 
+use crate::cache::LinkAPICache;
 use crate::managers::compilation::CompilationDetails;
 use crate::utls::discordhelpers::embeds::EmbedOptions;
 use crate::{
@@ -20,11 +22,38 @@ use crate::{
 #[aliases("c++")]
 #[bucket = "nospam"]
 pub async fn cpp(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
-    let (emb, _) =
+    let (emb, compilation_details) =
         handle_request(ctx.clone(), msg.content.clone(), msg.author.clone(), msg).await?;
 
+    // Send our final embed
+    let mut new_msg = embeds::embed_message(emb);
+    let data = ctx.data.read().await;
+    if let Some(link_cache) = data.get::<LinkAPICache>() {
+        if let Some(b64) = compilation_details.base64 {
+            let long_url = format!("https://godbolt.org/clientstate/{}", b64);
+            let link_cache_lock = link_cache.read().await;
+            if let Some(url) = link_cache_lock.get_link(long_url).await {
+                new_msg.components(|cmp| {
+                    cmp.create_action_row(|row| {
+                        row.create_button(|btn| {
+                            btn.style(ButtonStyle::Link)
+                                .url(url)
+                                .label("View on godbolt.org")
+                        })
+                    })
+                });
+            }
+        }
+    }
+
     // Dispatch our request
-    let compilation_embed = embeds::dispatch_embed(&ctx.http, msg.channel_id, emb).await?;
+    let compilation_embed = msg
+        .channel_id
+        .send_message(&ctx.http, |e| {
+            *e = new_msg.clone();
+            e
+        })
+        .await?;
 
     // add delete cache
     let data_read = ctx.data.read().await;
