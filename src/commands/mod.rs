@@ -7,6 +7,7 @@ pub mod cpp;
 pub mod format;
 pub mod formats;
 pub mod help;
+pub mod insights;
 pub mod invite;
 pub mod languages;
 pub mod ping;

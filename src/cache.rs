@@ -13,6 +13,7 @@ use serenity::prelude::{TypeMap, TypeMapKey};
 use crate::managers::stats::StatsManager;
 use crate::utls::blocklist::Blocklist;
 
+use crate::apis::insights::InsightsAPI;
 use crate::apis::quick_link::LinkAPI;
 use crate::managers::command::CommandManager;
 use crate::managers::compilation::CompilationManager;
@@ -62,6 +63,12 @@ impl TypeMapKey for ShardManagerCache {
 pub struct LinkAPICache;
 impl TypeMapKey for LinkAPICache {
     type Value = Arc<RwLock<LinkAPI>>;
+}
+
+/// Contains the cpp insights api - used for ;insights
+pub struct InsightsAPICache;
+impl TypeMapKey for InsightsAPICache {
+    type Value = Arc<Mutex<InsightsAPI>>;
 }
 
 #[derive(Clone)]
@@ -188,6 +195,10 @@ pub async fn fill(
             data.insert::<LinkAPICache>(Arc::new(RwLock::new(link_man)));
         }
     }
+
+    // Cpp insights
+    let insights = InsightsAPI::new();
+    data.insert::<InsightsAPICache>(Arc::new(Mutex::new(insights)));
 
     // Stats tracking
     let stats = StatsManager::new();

@@ -28,7 +28,7 @@ extern crate pretty_env_logger;
 /** Command Registration **/
 use crate::commands::{
     asm::*, block::*, botinfo::*, compile::*, compilers::*, cpp::*, format::*, formats::*, help::*,
-    invite::*, languages::*, ping::*, unblock::*,
+    insights::*, invite::*, languages::*, ping::*, unblock::*,
 };
 use crate::utls::discordhelpers::embeds::panic_embed;
 use crate::utls::discordhelpers::manual_dispatch;
@@ -36,7 +36,7 @@ use crate::utls::discordhelpers::manual_dispatch;
 #[group]
 #[commands(
     botinfo, compile, languages, compilers, ping, help, asm, block, unblock, invite, cpp, formats,
-    format
+    format, insights
 )]
 struct General;
 

@@ -133,7 +133,7 @@ pub async fn help(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
             e.color(COLOR_OKAY);
             e.title("Commands");
             e.field("invite", "``` Grabs the bot's invite link ```", false);
-            e.field("compile", "``` Compiles a script ```", false);
+            e.field("compile", "``` Compiles and executes code ```", false);
             e.field("compilers", "``` Displays the compilers for the specified language ```", false);
             e.field("languages", "``` Displays all supported languages ```", false);
             e.field("asm", "``` Outputs the assembly for the input code```", false);
@@ -141,6 +141,7 @@ pub async fn help(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
             e.field("cpp", format!("``` Executes c++ code using geordi-like syntax\n See {}help cpp for more info ```", prefix), false);
             e.field("format", "``` Formats code using a code formatter (i.e. clang-format or rustfmt) ```", false);
             e.field("formats", "``` Displays all formatting options & styles ```", false);
+            e.field("insights", "``` Sends a code block to cppinsights.io ```", false);
             e
         })
     }).await?;
