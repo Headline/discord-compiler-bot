@@ -1,16 +1,36 @@
+use serenity::builder::CreateEmbed;
 use serenity::framework::standard::{macros::command, Args, CommandError, CommandResult};
 use serenity::model::prelude::*;
 use serenity::prelude::*;
 
 use crate::apis::insights::InsightsRequest;
 
-use crate::cache::{ConfigCache, InsightsAPICache};
-use crate::utls::constants::{COLOR_FAIL, COLOR_OKAY};
-use crate::utls::parser::ParserResult;
+use crate::cache::{ConfigCache, InsightsAPICache, MessageCache, MessageCacheEntry};
+use crate::utls::discordhelpers::embeds::build_insights_response_embed;
 use crate::utls::{discordhelpers, parser};
 
 #[command]
 pub async fn insights(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
+    let embed = handle_request(ctx.clone(), msg.content.clone(), msg.author.clone(), msg).await?;
+    if let Ok(sent_msg) =
+        discordhelpers::embeds::dispatch_embed(&ctx.http, msg.channel_id, embed).await
+    {
+        // add delete cache
+        let data_read = ctx.data.read().await;
+        let mut delete_cache = data_read.get::<MessageCache>().unwrap().lock().await;
+        delete_cache.insert(msg.id.0, MessageCacheEntry::new(sent_msg, msg.clone()));
+    }
+
+    debug!("Command executed");
+    Ok(())
+}
+
+pub async fn handle_request(
+    ctx: Context,
+    content: String,
+    author: User,
+    msg: &Message,
+) -> std::result::Result<CreateEmbed, CommandError> {
     let data_read = ctx.data.read().await;
     let insights_lock = data_read.get::<InsightsAPICache>().unwrap();
     let botinfo_lock = data_read.get::<ConfigCache>().unwrap();
@@ -28,13 +48,16 @@ pub async fn insights(ctx: &Context, msg: &Message, _args: Args) -> CommandResul
         }
     };
 
-    let mut parse_result = ParserResult::default();
-    if !parser::find_code_block(&mut parse_result, &msg.content, &msg.author).await? {
-        return Err(CommandError::from("Unable to find a codeblock to format!"));
-    }
+    let parse_result =
+        parser::get_components(&content, &author, None, &msg.referenced_message, true).await?;
+
     let req = InsightsRequest {
         code: parse_result.code,
-        insights_options: vec![String::from("cpp2c")], // hard coded version for now
+        insights_options: if parse_result.options.is_empty() {
+            vec![String::from("cpp20"), String::from("use-libcpp")]
+        } else {
+            parse_result.options
+        },
     };
 
     if msg
@@ -51,38 +74,14 @@ pub async fn insights(ctx: &Context, msg: &Message, _args: Args) -> CommandResul
         let insights = insights_lock.lock().await;
         insights.get_insights(req).await
     };
+    discordhelpers::delete_bot_reacts(&ctx, msg, loading_reaction).await?;
 
-    discordhelpers::delete_bot_reacts(ctx, msg, loading_reaction).await?;
-
-    if let Some(resp_obj) = resp {
-        let error = resp_obj.return_code != 0;
-        let sent = msg
-            .channel_id
-            .send_message(&ctx.http, |m| {
-                m.embed(|emb| {
-                    emb.color(if error { COLOR_FAIL } else { COLOR_OKAY })
-                        .title("cppinsights.io")
-                        .description(format!(
-                            "```cpp\n{}\n```",
-                            if error {
-                                resp_obj.stderr
-                            } else {
-                                resp_obj.stdout
-                            }
-                        ))
-                })
-            })
-            .await;
-
-        if let Ok(sent_msg) = sent {
-            discordhelpers::send_completion_react(ctx, &sent_msg, !error).await?;
-        }
+    return if let Some(resp_obj) = resp {
+        info!("Insights response retval: {}", resp_obj.return_code);
+        Ok(build_insights_response_embed(&author, resp_obj))
     } else {
-        return Err(CommandError::from(
+        Err(CommandError::from(
             "Unable to retrieve insights at this time! Please try again later.",
-        ));
-    }
-
-    debug!("Command executed");
-    Ok(())
+        ))
+    };
 }

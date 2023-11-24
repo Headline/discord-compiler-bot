@@ -101,6 +101,7 @@ pub async fn handle_request(
         &author,
         Some(compilation_manager),
         &msg.referenced_message,
+        false,
     )
     .await?;
 

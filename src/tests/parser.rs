@@ -16,7 +16,7 @@ async fn standard_parse() {
     );
 
     let reply = None;
-    let result = get_components(input, &dummy_user, None, &reply).await;
+    let result = get_components(input, &dummy_user, None, &reply, false).await;
     if result.is_err() {
         panic!("Parser failed.");
     }
@@ -41,7 +41,7 @@ async fn standard_parse_args() {
     );
 
     let reply = None;
-    let result = get_components(input, &dummy_user, None, &reply).await;
+    let result = get_components(input, &dummy_user, None, &reply, false).await;
     if result.is_err() {
         panic!("Parser failed.");
     }
@@ -61,7 +61,7 @@ async fn standard_parse_url() {
     let input = indoc::indoc!(";compile c++ < https://pastebin.com/raw/ERqDRZva");
 
     let reply = None;
-    let result = get_components(input, &dummy_user, None, &reply).await;
+    let result = get_components(input, &dummy_user, None, &reply, false).await;
     if result.is_err() {
         panic!("Parser failed.");
     }
@@ -81,7 +81,7 @@ async fn standard_parse_url_args() {
     let input = indoc::indoc!(";compile c++ < https://pastebin.com/raw/ERqDRZva\ntest1 test2");
 
     let reply = None;
-    let result = get_components(input, &dummy_user, None, &reply).await;
+    let result = get_components(input, &dummy_user, None, &reply, false).await;
     if result.is_err() {
         panic!("Parser failed.");
     }
@@ -107,7 +107,7 @@ async fn standard_parse_stdin() {
     );
 
     let reply = None;
-    let result = get_components(input, &dummy_user, None, &reply).await;
+    let result = get_components(input, &dummy_user, None, &reply, false).await;
     if result.is_err() {
         panic!("Parser failed.");
     }
@@ -135,7 +135,7 @@ async fn standard_parse_block_stdin() {
     );
 
     let reply = None;
-    let result = get_components(input, &dummy_user, None, &reply).await;
+    let result = get_components(input, &dummy_user, None, &reply, false).await;
     if result.is_err() {
         panic!("Parser failed.");
     }
@@ -161,7 +161,7 @@ async fn standard_parse_deduce_compiler() {
 
     let reply = None;
     let cm = Arc::new(RwLock::new(CompilationManager::new().await.unwrap()));
-    let result = get_components(input, &dummy_user, Some(&cm), &reply).await;
+    let result = get_components(input, &dummy_user, Some(&cm), &reply, false).await;
     if result.is_err() {
         panic!("Parser failed.");
     }
@@ -187,7 +187,7 @@ async fn standard_parse_deduce_compiler_upper_case() {
 
     let reply = None;
     let cm = Arc::new(RwLock::new(CompilationManager::new().await.unwrap()));
-    let result = get_components(input, &dummy_user, Some(&cm), &reply).await;
+    let result = get_components(input, &dummy_user, Some(&cm), &reply, false).await;
     if result.is_err() {
         panic!("Parser failed.");
     }
@@ -213,7 +213,7 @@ async fn standard_parse_late_deduce_compiler() {
 
     let reply = None;
     let cm = Arc::new(RwLock::new(CompilationManager::new().await.unwrap()));
-    let result = get_components(input, &dummy_user, Some(&cm), &reply).await;
+    let result = get_components(input, &dummy_user, Some(&cm), &reply, false).await;
     if result.is_err() {
         panic!("Parser failed.");
     }
@@ -242,7 +242,7 @@ async fn standard_parse_late_deduce_compiler_block_stdin() {
 
     let reply = None;
     let cm = Arc::new(RwLock::new(CompilationManager::new().await.unwrap()));
-    let result = get_components(input, &dummy_user, Some(&cm), &reply).await;
+    let result = get_components(input, &dummy_user, Some(&cm), &reply, false).await;
     if result.is_err() {
         panic!("Parser failed.");
     }
@@ -263,7 +263,7 @@ async fn standard_parse_one_line() {
 
     let reply = None;
     let cm = Arc::new(RwLock::new(CompilationManager::new().await.unwrap()));
-    let result = get_components(input, &dummy_user, Some(&cm), &reply).await;
+    let result = get_components(input, &dummy_user, Some(&cm), &reply, false).await;
     if result.is_err() {
         panic!("Parser failed.");
     }
@@ -283,7 +283,7 @@ async fn standard_parse_args_one_line() {
     let input = indoc::indoc!(";compile c -O3```int main() {return 232;}```");
 
     let reply = None;
-    let result = get_components(input, &dummy_user, None, &reply).await;
+    let result = get_components(input, &dummy_user, None, &reply, false).await;
     if result.is_err() {
         panic!("Parser failed.");
     }
@@ -308,7 +308,7 @@ async fn parse_url_with_block_stdin() {
     );
 
     let reply = None;
-    let result = get_components(input, &dummy_user, None, &reply).await;
+    let result = get_components(input, &dummy_user, None, &reply, false).await;
     if result.is_err() {
         panic!("Parser failed.");
     }

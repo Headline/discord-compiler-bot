@@ -9,6 +9,7 @@ use serenity::{
     model::prelude::*,
 };
 
+use crate::apis::insights::InsightsResponse;
 use crate::cache::LinkAPICache;
 use crate::managers::compilation::CompilationDetails;
 use wandbox::*;
@@ -271,6 +272,31 @@ pub fn build_small_compilation_embed(author: &User, res: &mut CompilationResult)
     embed.footer(|f| {
         f.text(format!(
             "Requested by: {} | Powered by wandbox.org",
+            author.tag()
+        ))
+    });
+
+    embed
+}
+
+pub fn build_insights_response_embed(author: &User, res: InsightsResponse) -> CreateEmbed {
+    let mut embed = CreateEmbed::default();
+
+    let error = res.return_code != 0;
+    if !error {
+        embed.color(COLOR_OKAY);
+    } else {
+        embed.color(COLOR_FAIL);
+    }
+
+    embed.description(format!(
+        "```cpp\n{}```",
+        if error { res.stderr } else { res.stdout }
+    ));
+
+    embed.footer(|f| {
+        f.text(format!(
+            "Requested by: {} | Powered by cppinsights.io",
             author.tag()
         ))
     });

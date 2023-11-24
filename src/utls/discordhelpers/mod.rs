@@ -150,10 +150,41 @@ pub async fn handle_edit(
             let err = embeds::build_fail_embed(&author, &e.to_string());
             embeds::edit_message_embed(ctx, &mut old, err, None).await;
         }
+    } else if content.starts_with(&format!("{}insights", prefix)) {
+        if let Err(e) = handle_edit_insights(
+            ctx,
+            content,
+            author.clone(),
+            old.clone(),
+            original_message.clone(),
+        )
+        .await
+        {
+            let err = embeds::build_fail_embed(&author, &e.to_string());
+            embeds::edit_message_embed(ctx, &mut old, err, None).await;
+        }
     } else {
         let err = embeds::build_fail_embed(&author, "Invalid command for edit functionality!");
         embeds::edit_message_embed(ctx, &mut old, err, None).await;
     }
+}
+
+pub async fn handle_edit_insights(
+    ctx: &Context,
+    content: String,
+    author: User,
+    mut old: Message,
+    original_msg: Message,
+) -> CommandResult {
+    let embed =
+        crate::commands::insights::handle_request(ctx.clone(), content, author, &original_msg)
+            .await?;
+
+    let compilation_successful = embed.0.get("color").unwrap() == COLOR_OKAY;
+    discordhelpers::send_completion_react(ctx, &old, compilation_successful).await?;
+
+    embeds::edit_message_embed(ctx, &mut old, embed, None).await;
+    Ok(())
 }
 
 pub async fn handle_edit_cpp(

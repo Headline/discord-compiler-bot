@@ -49,6 +49,7 @@ pub async fn get_components(
     author: &User,
     compilation_manager: Option<&Arc<RwLock<CompilationManager>>>,
     reply: &Option<Box<Message>>,
+    ignore_lang: bool,
 ) -> Result<ParserResult, CommandError> {
     let mut result = ParserResult::default();
 
@@ -81,11 +82,13 @@ pub async fn get_components(
         }
     } else {
         // no compilation manager, just assume target is supplied
-        if let Some(param) = args.first() {
-            let lower_param = param.trim().to_lowercase();
-            let language = shortname_to_qualified(&lower_param);
-            args.remove(0);
-            result.target = language.to_owned();
+        if !ignore_lang {
+            if let Some(param) = args.first() {
+                let lower_param = param.trim().to_lowercase();
+                let language = shortname_to_qualified(&lower_param);
+                args.remove(0);
+                result.target = language.to_owned();
+            }
         }
     }
 

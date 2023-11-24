@@ -97,15 +97,20 @@ pub async fn handle_request(
 
     // parse user input
     let comp_mngr = data_read.get::<CompilerCache>().unwrap();
-    let result =
-        match parser::get_components(&content, &author, Some(comp_mngr), &msg.referenced_message)
-            .await
-        {
-            Ok(r) => r,
-            Err(e) => {
-                return Err(CommandError::from(format!("{}", e)));
-            }
-        };
+    let result = match parser::get_components(
+        &content,
+        &author,
+        Some(comp_mngr),
+        &msg.referenced_message,
+        false,
+    )
+    .await
+    {
+        Ok(r) => r,
+        Err(e) => {
+            return Err(CommandError::from(format!("{}", e)));
+        }
+    };
 
     // send out loading emote
     if msg
