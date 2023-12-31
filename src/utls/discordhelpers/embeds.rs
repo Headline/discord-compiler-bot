@@ -2,7 +2,6 @@ use std::fmt::Write as _;
 use std::{env, str};
 
 use serenity::http::Http;
-use serenity::model::application::component::ButtonStyle;
 use serenity::{
     builder::{CreateEmbed, CreateMessage},
     client::Context,
@@ -304,7 +303,7 @@ pub fn build_insights_response_embed(author: &User, res: InsightsResponse) -> Cr
     embed
 }
 
-pub fn embed_message(emb: CreateEmbed) -> CreateMessage<'static> {
+pub fn embed_message(emb: CreateEmbed) -> CreateMessage {
     let mut msg = CreateMessage::default();
     msg.embed(|e| {
         e.0 = emb.0;
@@ -405,27 +404,23 @@ pub fn build_complog_embed(
     input_code: &str,
     lang: &str,
     tag: &str,
-    id: u64,
+    id: UserId,
     guild: &str,
 ) -> CreateEmbed {
-    let mut embed = CreateEmbed::default();
-    if !success {
-        embed.color(COLOR_FAIL);
-    } else {
-        embed.color(COLOR_OKAY);
-    }
-    embed.title("Compilation requested");
-    embed.field("Language", lang, true);
-    embed.field("Author", tag, true);
-    embed.field("Author ID", id, true);
-    embed.field("Guild", guild, true);
+    let mut embed = CreateEmbed::new()
+        .color(if success {COLOR_OKAY} else {COLOR_FAIL})
+        .title("Compilation requested")
+        .field("Language", lang, true)
+        .field("Author", tag, true)
+        .field("Author ID", id.to_string(), true)
+        .field("Guild", guild, true);
+
     let mut code = String::from(input_code);
     if code.len() > MAX_OUTPUT_LEN {
         code = code.chars().take(MAX_OUTPUT_LEN).collect()
     }
-    embed.field("Code", format!("```{}\n{}\n```", lang, code), false);
 
-    embed
+    embed.field("Code", format!("```{}\n{}\n```", lang, code), false)
 }
 
 pub fn build_fail_embed(author: &User, err: &str) -> CreateEmbed {

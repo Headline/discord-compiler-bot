@@ -2,13 +2,12 @@ use serenity::{
     async_trait,
     framework::{standard::macros::hook, standard::CommandResult, standard::DispatchError},
     model::{
-        application::interaction::Interaction, channel::Message, event::MessageUpdateEvent,
+        channel::Message, event::MessageUpdateEvent,
         gateway::Ready, guild::Guild, id::ChannelId, id::GuildId, id::MessageId,
         prelude::UnavailableGuild,
     },
-    prelude::*,
+    prelude::*, all::Interaction,
 };
-
 use chrono::{DateTime, Utc};
 
 use crate::{
@@ -49,7 +48,7 @@ impl ShardsReadyHandler for Handler {
 
 #[async_trait]
 impl EventHandler for Handler {
-    async fn guild_create(&self, ctx: Context, guild: Guild) {
+    async fn guild_create(&self, ctx: Context, guild: Guild, is_new : Option<bool>) {
         let data = ctx.data.read().await;
 
         // in debug, we'll register on a guild-per-guild basis
@@ -85,7 +84,7 @@ impl EventHandler for Handler {
             if server_count > 0 {
                 let new_stats = dbl::types::ShardStats::Cumulative {
                     server_count,
-                    shard_count: Some(shard_count),
+                    shard_count: Some(shard_count as u64),
                 };
 
                 if let Some(dbl_cache) = data.get::<DblCache>() {
@@ -113,7 +112,7 @@ impl EventHandler for Handler {
         }
     }
 
-    async fn guild_delete(&self, ctx: Context, incomplete: UnavailableGuild) {
+    async fn guild_delete(&self, ctx: Context, incomplete: UnavailableGuild, full : Option<Guild>) {
         let data = ctx.data.read().await;
 
         // post new server to join log
@@ -137,7 +136,7 @@ impl EventHandler for Handler {
         if server_count > 0 {
             let new_stats = dbl::types::ShardStats::Cumulative {
                 server_count,
-                shard_count: Some(shard_count),
+                shard_count: Some(shard_count as u64),
             };
 
             if let Some(dbl_cache) = data.get::<DblCache>() {
@@ -165,7 +164,7 @@ impl EventHandler for Handler {
         let maybe_message = {
             let data = ctx.data.read().await;
             let mut message_cache = data.get::<MessageCache>().unwrap().lock().await;
-            message_cache.remove(id.as_u64())
+            message_cache.remove(&id.get())
         };
 
         if let Some(msg) = maybe_message {
@@ -173,11 +172,11 @@ impl EventHandler for Handler {
         }
     }
 
-    async fn message_update(&self, ctx: Context, new_data: MessageUpdateEvent) {
+    async fn message_update(&self, ctx: Context, old_if_available: Option<Message>, new: Option<Message>, new_data: MessageUpdateEvent) {
         let maybe_message = {
             let data = ctx.data.read().await;
             let mut message_cache = data.get::<MessageCache>().unwrap().lock().await;
-            message_cache.get_mut(&new_data.id.0).map(|msg| msg.clone())
+            message_cache.get_mut(&new_data.id.get()).map(|msg| msg.clone())
         };
 
         if let Some(msg) = maybe_message {
@@ -198,7 +197,7 @@ impl EventHandler for Handler {
 
     async fn ready(&self, ctx: Context, ready: Ready) {
         info!("[Shard {}] Ready", ctx.shard_id);
-        let total_shards_to_spawn = ready.shard.unwrap()[1];
+        let total_shards_to_spawn = ready.shard.unwrap().total;
 
         let shard_count = {
             let data = ctx.data.read().await;
@@ -229,7 +228,7 @@ impl EventHandler for Handler {
     }
 
     async fn interaction_create(&self, ctx: Context, interaction: Interaction) {
-        if let Interaction::ApplicationCommand(command) = interaction {
+        if let Interaction::Command(command) = interaction {
             let cmd_result = {
                 let data_read = ctx.data.read().await;
                 let commands = data_read.get::<CommandCache>().unwrap().read().await;
@@ -261,7 +260,7 @@ pub async fn before(ctx: &Context, msg: &Message, _: &str) -> bool {
     // we'll go with 0 if we couldn't grab guild id
     let mut guild_id = 0;
     if let Some(id) = msg.guild_id {
-        guild_id = id.0;
+        guild_id = id.get();
     }
 
     let (author_blocked, guild_blocked) = {
@@ -272,7 +271,7 @@ pub async fn before(ctx: &Context, msg: &Message, _: &str) -> bool {
         }
         let blocklist = data.get::<BlocklistCache>().unwrap().read().await;
         (
-            blocklist.contains(msg.author.id.0),
+            blocklist.contains(msg.author.id.get()),
             blocklist.contains(guild_id),
         )
     };
@@ -289,7 +288,7 @@ pub async fn before(ctx: &Context, msg: &Message, _: &str) -> bool {
 
         let _ = embeds::dispatch_embed(&ctx.http, msg.channel_id, emb).await;
         if author_blocked {
-            warn!("Blocked user {} [{}]", msg.author.tag(), msg.author.id.0);
+            warn!("Blocked user {} [{}]", msg.author.tag(), msg.author.id.get());
         } else {
             warn!("Blocked guild {}", guild_id);
         }
@@ -313,7 +312,7 @@ pub async fn after(
         let sent_fail = embeds::dispatch_embed(&ctx.http, msg.channel_id, emb).await;
         if let Ok(sent) = sent_fail {
             let mut message_cache = data.get::<MessageCache>().unwrap().lock().await;
-            message_cache.insert(msg.id.0, MessageCacheEntry::new(sent, msg.clone()));
+            message_cache.insert(msg.id.get(), MessageCacheEntry::new(sent, msg.clone()));
         }
     }
 

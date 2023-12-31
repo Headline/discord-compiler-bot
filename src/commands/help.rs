@@ -6,6 +6,7 @@ use serenity::{
     model::prelude::*,
     prelude::*,
 };
+use serenity::all::CreateMessage;
 
 use crate::utls::constants::*;
 use crate::utls::discordhelpers::embeds;
@@ -126,25 +127,25 @@ pub async fn help(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
     }
 
     let prefix = env::var("BOT_PREFIX").expect("Prefix has not been set!");
-    msg.channel_id.send_message(&ctx.http, |m| {
-        m.embed(|e| {
-            e.thumbnail(ICON_HELP);
-            e.description(format!("For help with a specific command, type `{}help <command>`\n\nStruggling? Check out [our wiki](https://github.com/Headline/discord-compiler-bot/wiki)", prefix));
-            e.color(COLOR_OKAY);
-            e.title("Commands");
-            e.field("invite", "``` Grabs the bot's invite link ```", false);
-            e.field("compile", "``` Compiles and executes code ```", false);
-            e.field("compilers", "``` Displays the compilers for the specified language ```", false);
-            e.field("languages", "``` Displays all supported languages ```", false);
-            e.field("asm", "``` Outputs the assembly for the input code```", false);
-            e.field("botinfo", "``` Displays information about the bot ```", false);
-            e.field("cpp", format!("``` Executes c++ code using geordi-like syntax\n See {}help cpp for more info ```", prefix), false);
-            e.field("format", "``` Formats code using a code formatter (i.e. clang-format or rustfmt) ```", false);
-            e.field("formats", "``` Displays all formatting options & styles ```", false);
-            e.field("insights", "``` Sends a code block to cppinsights.io ```", false);
-            e
-        })
-    }).await?;
+    let embed = CreateEmbed::new()
+        .thumbnail(ICON_HELP)
+        .description(format!("For help with a specific command, type `{}help <command>`\n\nStruggling? Check out [our wiki](https://github.com/Headline/discord-compiler-bot/wiki)", prefix))
+        .color(COLOR_OKAY)
+        .title("Commands")
+        .field("invite", "``` Grabs the bot's invite link ```", false)
+        .field("compile", "``` Compiles and executes code ```", false)
+        .field("compilers", "``` Displays the compilers for the specified language ```", false)
+        .field("languages", "``` Displays all supported languages ```", false)
+        .field("asm", "``` Outputs the assembly for the input code```", false)
+        .field("botinfo", "``` Displays information about the bot ```", false)
+        .field("cpp", format!("``` Executes c++ code using geordi-like syntax\n See {}help cpp for more info ```", prefix), false)
+        .field("format", "``` Formats code using a code formatter (i.e. clang-format or rustfmt) ```", false)
+        .field("formats", "``` Displays all formatting options & styles ```", false)
+        .field("insights", "``` Sends a code block to cppinsights.io ```", false);
+
+    let new_msg = CreateMessage::new()
+        .embed(embed);
+    msg.channel_id.send_message(&ctx.http, new_msg).await?;
 
     debug!("Command executed");
     Ok(())

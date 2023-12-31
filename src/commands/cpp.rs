@@ -1,4 +1,4 @@
-use serenity::model::application::component::ButtonStyle;
+use serenity::all::ButtonStyle;
 use serenity::{
     builder::CreateEmbed,
     framework::standard::{macros::command, Args, CommandError, CommandResult},

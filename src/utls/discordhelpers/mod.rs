@@ -10,13 +10,14 @@ use serenity::{builder::CreateEmbed, http::Http, model::prelude::*};
 use crate::cache::ConfigCache;
 use crate::utls::constants::*;
 use crate::utls::discordhelpers;
-use serenity::client::bridge::gateway::ShardManager;
 use serenity::client::Context;
 use serenity::framework::standard::CommandResult;
 use tokio::sync::MutexGuard;
 
 use crate::commands::compile;
 use std::fmt::Write as _;
+use serenity::all::ShardManager;
+use crate::utls::discordhelpers::embeds::embed_message;
 
 pub fn build_menu_items(
     items: Vec<String>,
@@ -313,20 +314,14 @@ pub fn conform_external_str(input: &str, max_len: usize) -> String {
 }
 
 pub async fn manual_dispatch(http: Arc<Http>, id: u64, emb: CreateEmbed) {
-    if let Err(e) = serenity::model::id::ChannelId(id)
-        .send_message(&http, |m| {
-            m.embed(|e| {
-                *e = emb;
-                e
-            })
-        })
-        .await
+    let channel = ChannelId::new(id);
+    if let Err(e) = channel.send_message(http, embed_message(emb)).await
     {
-        error!("Unable to dispatch manually: {}", e);
+        error!("Unable to manually dispatch message to guild {0}: {1}", id, e);
     }
 }
 
-pub async fn send_global_presence(shard_manager: &MutexGuard<'_, ShardManager>, sum: u64) {
+pub async fn send_global_presence(shard_manager: &MutexGuard<'_, Arc<ShardManager>>, sum: u64) {
     let server_count = {
         if sum < 10000 {
             sum.to_string()

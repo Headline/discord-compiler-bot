@@ -12,7 +12,7 @@ use crate::utls::discordhelpers::embeds;
 
 use crate::managers::compilation::CompilationDetails;
 use serenity::builder::CreateEmbed;
-use serenity::model::application::component::ButtonStyle;
+use serenity::all::ButtonStyle;
 use serenity::model::channel::{Message, ReactionType};
 use serenity::model::user::User;
 

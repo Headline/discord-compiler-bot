@@ -2,16 +2,14 @@ use crate::cache::StatsManagerCache;
 use crate::slashcmds;
 
 use serenity::{
-    builder::CreateApplicationCommand, client::Context, framework::standard::CommandResult,
-    model::application::command::Command, model::application::command::CommandOptionType,
-    model::application::command::CommandType,
-    model::application::interaction::application_command::ApplicationCommandInteraction,
+    client::Context, framework::standard::CommandResult,
     model::guild::Guild,
 };
+use serenity::all::{Command, CommandInteraction, CommandOptionType, CommandType, CreateCommand};
 
 pub struct CommandManager {
     commands_registered: bool,
-    commands: Vec<CreateApplicationCommand>,
+    commands: Vec<CreateCommand>,
 }
 
 impl CommandManager {
@@ -25,7 +23,7 @@ impl CommandManager {
     pub async fn on_command(
         &self,
         ctx: &Context,
-        command: &ApplicationCommandInteraction,
+        command: &CommandInteraction,
     ) -> CommandResult {
         let command_name = command.data.name.to_lowercase();
         // push command executed to api
@@ -40,11 +38,8 @@ impl CommandManager {
         }
 
         match command_name.as_str() {
-            "compile" | "compile [beta]" => slashcmds::compile::compile(ctx, command).await,
-            "assembly" | "assembly [beta]" => slashcmds::asm::asm(ctx, command).await,
             "ping" => slashcmds::ping::ping(ctx, command).await,
             "help" => slashcmds::help::help(ctx, command).await,
-            "cpp" => slashcmds::cpp::cpp(ctx, command).await,
             "invite" => slashcmds::invite::invite(ctx, command).await,
             "format" | "format [beta]" => slashcmds::format::format(ctx, command).await,
             "diff" | "diff [beta]" => {
@@ -96,10 +91,10 @@ impl CommandManager {
         }
     }
 
-    pub fn build_commands() -> Vec<CreateApplicationCommand> {
+    pub fn build_commands() -> Vec<CreateCommand> {
         let mut cmds = Vec::new();
 
-        let mut cmd = CreateApplicationCommand::default();
+        let mut cmd = CreateCommand::default();
         cmd.kind(CommandType::Message).name(format!(
             "Compile{}",
             if cfg!(debug_assertions) {
@@ -110,7 +105,7 @@ impl CommandManager {
         ));
         cmds.push(cmd);
 
-        cmd = CreateApplicationCommand::default();
+        cmd = CreateCommand::default();
         cmd.kind(CommandType::Message).name(format!(
             "Assembly{}",
             if cfg!(debug_assertions) {
@@ -121,7 +116,7 @@ impl CommandManager {
         ));
         cmds.push(cmd);
 
-        cmd = CreateApplicationCommand::default();
+        cmd = CreateCommand::default();
         cmd.kind(CommandType::Message).name(format!(
             "Format{}",
             if cfg!(debug_assertions) {
@@ -132,7 +127,7 @@ impl CommandManager {
         ));
         cmds.push(cmd);
 
-        cmd = CreateApplicationCommand::default();
+        cmd = CreateCommand::default();
         cmd.kind(CommandType::Message).name(format!(
             "Diff{}",
             if cfg!(debug_assertions) {
@@ -143,25 +138,25 @@ impl CommandManager {
         ));
         cmds.push(cmd);
 
-        cmd = CreateApplicationCommand::default();
+        cmd = CreateCommand::default();
         cmd.kind(CommandType::ChatInput)
             .name("help")
             .description("Information on how to use the compiler");
         cmds.push(cmd);
 
-        cmd = CreateApplicationCommand::default();
+        cmd = CreateCommand::default();
         cmd.kind(CommandType::ChatInput)
             .name("invite")
             .description("Grab my invite link to invite me to your server");
         cmds.push(cmd);
 
-        cmd = CreateApplicationCommand::default();
+        cmd = CreateCommand::default();
         cmd.kind(CommandType::ChatInput)
             .name("ping")
             .description("Test my ping to Discord's endpoint");
         cmds.push(cmd);
 
-        cmd = CreateApplicationCommand::default();
+        cmd = CreateCommand::default();
         cmd.kind(CommandType::ChatInput)
             .name("cpp")
             .description("Shorthand C++ compilation using geordi-like syntax")
@@ -173,7 +168,7 @@ impl CommandManager {
             });
         cmds.push(cmd);
 
-        cmd = CreateApplicationCommand::default();
+        cmd = CreateCommand::default();
         cmd.kind(CommandType::ChatInput)
             .name("diff")
             .description("Posts a diff of two message code blocks")

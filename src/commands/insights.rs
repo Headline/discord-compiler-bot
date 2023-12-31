@@ -18,7 +18,7 @@ pub async fn insights(ctx: &Context, msg: &Message, _args: Args) -> CommandResul
         // add delete cache
         let data_read = ctx.data.read().await;
         let mut delete_cache = data_read.get::<MessageCache>().unwrap().lock().await;
-        delete_cache.insert(msg.id.0, MessageCacheEntry::new(sent_msg, msg.clone()));
+        delete_cache.insert(msg.id.get(), MessageCacheEntry::new(sent_msg, msg.clone()));
     }
 
     debug!("Command executed");

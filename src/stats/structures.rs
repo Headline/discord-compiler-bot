@@ -36,7 +36,7 @@ impl CommandRequest {
     pub fn new(command: &str, guild: Option<GuildId>) -> CommandRequest {
         let mut guild_str = String::default();
         if let Some(g) = guild {
-            guild_str = g.0.to_string();
+            guild_str = g.get().to_string();
         }
         CommandRequest {
             key: String::from(""),

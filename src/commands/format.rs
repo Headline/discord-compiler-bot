@@ -7,6 +7,7 @@ use serenity::framework::standard::{
 use serenity::model::prelude::*;
 use serenity::prelude::*;
 use std::io::Write;
+use serenity::all::{CreateAttachment, CreateMessage};
 
 #[command]
 pub async fn format(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
@@ -127,11 +128,12 @@ pub async fn format(ctx: &Context, msg: &Message, mut args: Args) -> CommandResu
         let _ = file.write_all(answer.as_bytes());
         let _ = file.flush();
 
+        let new_msg = CreateMessage::new()
+            .add_file(CreateAttachment::path(path))
+            .content("Powered by godbolt.org");
+
         msg.channel_id
-            .send_message(&ctx.http, |msg| {
-                msg.add_file(path.as_str())
-                    .content("Powered by godbolt.org")
-            })
+            .send_message(&ctx.http, new_msg)
             .await?;
         let _ = std::fs::remove_file(&path);
     } else {

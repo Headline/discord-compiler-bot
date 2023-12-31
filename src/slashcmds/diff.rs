@@ -3,9 +3,7 @@ use std::fmt::Write as _;
 use serenity::framework::standard::CommandError;
 use serenity::{
     framework::standard::CommandResult,
-    model::application::interaction::application_command::ApplicationCommandInteraction,
-    model::application::interaction::application_command::CommandDataOptionValue,
-    model::application::interaction::MessageFlags, model::prelude::*, prelude::*,
+    model::prelude::*, prelude::*,
 };
 
 use similar::ChangeTag;
@@ -15,7 +13,7 @@ use crate::{
     utls::parser::ParserResult,
 };
 
-pub async fn diff(ctx: &Context, msg: &ApplicationCommandInteraction) -> CommandResult {
+pub async fn diff(ctx: &Context, msg: &CommandInteraction) -> CommandResult {
     let message1 = msg
         .data
         .options
@@ -44,7 +42,7 @@ pub async fn diff(ctx: &Context, msg: &ApplicationCommandInteraction) -> Command
     }
 
     if message1_parse.is_none() || message2_parse.is_none() {
-        msg.create_interaction_response(&ctx.http, |resp| {
+        msg.create_response(&ctx.http, |resp| {
             resp.interaction_response_data(|data| {
                 data.embed(|emb| {
                     emb.color(COLOR_FAIL).description(
@@ -72,7 +70,7 @@ pub async fn diff(ctx: &Context, msg: &ApplicationCommandInteraction) -> Command
         .await
         .ok();
     if message1_obj.is_none() || message2_obj.is_none() {
-        msg.create_interaction_response(&ctx.http, |resp| {
+        msg.create_response(&ctx.http, |resp| {
             resp.interaction_response_data(|data| {
                 data.embed(|emb| {
                     emb.color(COLOR_FAIL).description(
@@ -95,7 +93,7 @@ pub async fn diff(ctx: &Context, msg: &ApplicationCommandInteraction) -> Command
 
     let output = run_diff(&content1, &content2);
 
-    msg.create_interaction_response(&ctx.http, |resp| {
+    msg.create_response(&ctx.http, |resp| {
         resp.interaction_response_data(|data| {
             data.embed(|emb| {
                 emb.color(COLOR_OKAY)

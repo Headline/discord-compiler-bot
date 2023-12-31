@@ -2,9 +2,9 @@ use std::time::Duration;
 
 use serenity::{
     framework::standard::CommandResult,
-    model::application::interaction::application_command::ApplicationCommandInteraction,
     prelude::*,
 };
+use serenity::all::CommandInteraction;
 
 use crate::slashcmds::diff::run_diff;
 use crate::{
@@ -14,13 +14,13 @@ use crate::{
     utls::discordhelpers::interactions,
 };
 
-pub async fn diff_msg(ctx: &Context, msg: &ApplicationCommandInteraction) -> CommandResult {
+pub async fn diff_msg(ctx: &Context, msg: &CommandInteraction) -> CommandResult {
     let data = ctx.data.read().await;
     let diff_cache_lock = data.get::<DiffCommandCache>().unwrap();
 
     let is_first = {
         let mut diff_cache = diff_cache_lock.lock().await;
-        if let Some(entry) = diff_cache.get_mut(msg.user.id.as_u64()) {
+        if let Some(entry) = diff_cache.get(msg.user.id.get()) {
             entry.is_expired()
         } else {
             true
@@ -30,25 +30,23 @@ pub async fn diff_msg(ctx: &Context, msg: &ApplicationCommandInteraction) -> Com
     if is_first {
         let (_, new_msg) = msg.data.resolved.messages.iter().next().unwrap();
 
-        msg.create_interaction_response(&ctx.http, |resp| {
-            interactions::create_diff_select_response(resp)
-        })
+        msg.create_response(&ctx.http, interactions::create_diff_select_response())
         .await
         .unwrap();
         {
             let content = get_code_block_or_content(&new_msg.content, &new_msg.author).await?;
             let mut diff_cache = diff_cache_lock.lock().await;
-            diff_cache.insert(msg.user.id.0, DiffCommandEntry::new(&content, msg));
+            diff_cache.insert(msg.user.id.get(), DiffCommandEntry::new(&content, msg));
         }
-        let resp = msg.get_interaction_response(&ctx.http).await?;
+        let resp = msg.get_response(&ctx.http).await?;
         let button_resp = resp
             .await_component_interaction(&ctx.shard)
             .timeout(Duration::from_secs(30))
-            .author_id(msg.user.id.0)
+            .author_id(msg.user.id)
             .await;
         if let Some(interaction) = button_resp {
             interaction.defer(&ctx.http).await?;
-            msg.edit_original_interaction_response(&ctx.http, |edit| {
+            msg.edit_response(&ctx.http, |edit| {
                 edit.set_embeds(Vec::new())
                     .embed(|emb| {
                         emb.color(COLOR_OKAY).description(
@@ -60,10 +58,10 @@ pub async fn diff_msg(ctx: &Context, msg: &ApplicationCommandInteraction) -> Com
             .await?;
 
             let mut diff_cache = diff_cache_lock.lock().await;
-            diff_cache.remove(interaction.user.id.as_u64());
+            diff_cache.remove(&interaction.user.id.get());
         } else {
             // Button expired
-            msg.edit_original_interaction_response(&ctx.http, |edit| {
+            msg.edit_response(&ctx.http, |edit| {
                 edit.set_embeds(Vec::new())
                     .embed(|emb| {
                         emb.color(COLOR_OKAY).description(
@@ -81,7 +79,7 @@ pub async fn diff_msg(ctx: &Context, msg: &ApplicationCommandInteraction) -> Com
 
     let (entry, first_interaction) = {
         let mut diff_cache = diff_cache_lock.lock().await;
-        let entry = diff_cache.remove(msg.user.id.as_u64()).unwrap();
+        let entry = diff_cache.remove(&msg.user.id.get()).unwrap();
         (entry.content, entry.first_interaction)
     };
 
@@ -90,12 +88,10 @@ pub async fn diff_msg(ctx: &Context, msg: &ApplicationCommandInteraction) -> Com
         let output = run_diff(&entry, &content);
 
         first_interaction
-            .edit_original_interaction_response(&ctx.http, interactions::edit_to_dismiss_response)
+            .edit_response(&ctx.http, interactions::edit_to_dismiss_response())
             .await?;
 
-        msg.create_interaction_response(&ctx.http, |resp| {
-            interactions::create_diff_response(resp, &output)
-        })
+        msg.create_response(&ctx.http, interactions::create_diff_response(&output))
         .await?;
     }
     Ok(())

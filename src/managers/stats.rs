@@ -10,7 +10,7 @@ pub struct StatsManager {
     url: String,
     pass: String,
     servers: u64,
-    shards: u64,
+    shards: u32,
     boot_count: Vec<u64>,
     leave_queue: u64,
     join_queue: u64,
@@ -103,7 +103,7 @@ impl StatsManager {
         self.servers
     }
 
-    pub fn shard_count(&self) -> u64 {
+    pub fn shard_count(&self) -> u32 {
         self.shards
     }
 

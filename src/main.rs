@@ -18,6 +18,8 @@ use serenity::http::Http;
 use serenity::prelude::GatewayIntents;
 use std::collections::HashSet;
 use std::{env, error::Error};
+use serenity::all::standard::{BucketBuilder, Configuration};
+use serenity::model::id::ApplicationId;
 
 use crate::apis::dbl::BotsListApi;
 
@@ -56,7 +58,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
         Ok(info) => {
             let mut owners = HashSet::new();
 
-            owners.insert(info.owner.id);
+            owners.insert(info.owner.expect("Expected owner ID to be registered!").id);
 
             if let Some(team) = info.team {
                 for member in &team.members {
@@ -71,7 +73,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
             warn!("Trying environment variable for bot id...");
             let id = env::var("BOT_ID").expect("Unable to find BOT_ID environment variable");
             let bot_id = id.parse::<u64>().expect("Invalid bot id");
-            (HashSet::new(), serenity::model::id::ApplicationId(bot_id))
+            (HashSet::new(), ApplicationId::new(bot_id))
         }
     };
 
@@ -79,7 +81,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
         "Registering owner(s): {}",
         owners
             .iter()
-            .map(|o| format!("{}", o.0))
+            .map(|o| format!("{}", o))
             .collect::<Vec<String>>()
             .join(", ")
     );
@@ -89,37 +91,42 @@ async fn main() -> Result<(), Box<dyn Error>> {
     }
 
     let prefix = env::var("BOT_PREFIX").expect("Expected bot prefix in .env file");
-    let app_id = env::var("APPLICATION_ID").expect("Expected application id in .env file");
-    let framework = StandardFramework::new()
+    let app_id_str = env::var("APPLICATION_ID").expect("Expected application id in .env file");
+    let application_id = ApplicationId::new(app_id_str.parse::<u64>().unwrap());
+
+    let configuration = Configuration::new().owners(owners).prefix(&prefix);
+    let mut framework = StandardFramework::new()
+        .group(&GENERAL_GROUP)
         .before(events::before)
         .after(events::after)
-        .configure(|c| c.owners(owners).prefix(&prefix))
-        .group(&GENERAL_GROUP)
-        .bucket("nospam", |b| b.delay(3).time_span(10).limit(3))
-        .await
         .on_dispatch_error(events::dispatch_error);
+
+    framework.configure(configuration);
+    framework = framework.bucket("nospam", BucketBuilder::new_global().delay(3).time_span(10).limit(3)).await;
+
 
     let intents = GatewayIntents::GUILDS
         | GatewayIntents::MESSAGE_CONTENT
         | GatewayIntents::GUILD_INTEGRATIONS
         | GatewayIntents::GUILD_MESSAGE_REACTIONS
         | GatewayIntents::GUILD_MESSAGES;
+
     let mut client = serenity::Client::builder(token, intents)
         .framework(framework)
         .event_handler(events::Handler)
-        .application_id(app_id.parse::<u64>().unwrap())
+        .application_id(application_id)
         .await?;
 
     cache::fill(
         client.data.clone(),
         &prefix,
-        bot_id.0,
+        bot_id,
         client.shard_manager.clone(),
     )
     .await?;
     if let Ok(plog) = env::var("PANIC_LOG") {
         let default_panic = std::panic::take_hook();
-        let http = client.cache_and_http.http.clone();
+        let http = client.http;
 
         std::panic::set_hook(Box::new(move |info| {
             let http = http.clone();
@@ -137,7 +144,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     let dbl = BotsListApi::new();
     if dbl.should_spawn() {
-        dbl.spawn(client.cache_and_http.http.clone(), client.data.clone());
+        dbl.spawn(client.http.clone(), client.data.clone());
     }
 
     if let Err(why) = client.start_autosharded().await {

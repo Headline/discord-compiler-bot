@@ -1,8 +1,8 @@
 use futures_util::StreamExt;
-use serenity::builder::{CreateComponents, CreateEmbed};
+use serenity::builder::{CreateEmbed};
 use serenity::client::Context;
 use serenity::framework::standard::CommandError;
-use serenity::model::application::component::ButtonStyle;
+use serenity::all::{ButtonStyle, CreateActionRow, CreateButton, CreateMessage, EditMessage};
 use serenity::model::channel::Message;
 use std::time::Duration;
 
@@ -11,7 +11,7 @@ pub struct Menu {
     msg: Message,
     pages: Vec<CreateEmbed>,
     page: usize,
-    components: CreateComponents,
+    components: Vec<CreateActionRow>,
 }
 
 impl Menu {
@@ -26,13 +26,13 @@ impl Menu {
     }
 
     pub async fn run(&mut self) -> Result<(), CommandError> {
+        let msg = CreateMessage::new()
+            .embed(self.pages[self.page].clone())
+            .components(self.components.clone());
         let mut m = self
             .msg
             .channel_id
-            .send_message(&self.ctx.http, |msg| {
-                msg.set_embed(self.pages[self.page].clone())
-                    .set_components(self.components.clone())
-            })
+            .send_message(&self.ctx.http, msg)
             .await?;
 
         let cib = m
@@ -60,31 +60,27 @@ impl Menu {
             self.update_msg(&mut m).await?;
         }
 
-        m.edit(&self.ctx.http, |edit| {
-            edit.components(|cmps| cmps.set_action_rows(Vec::new()))
-        })
-        .await?;
+        let edit = EditMessage::new()
+            .components(Vec::new());
 
+        let _ = m.edit(&self.ctx.http, edit).await;
         Ok(())
     }
 
     async fn update_msg(&self, msg: &mut Message) -> serenity::Result<()> {
-        msg.edit(&self.ctx.http, |m| {
-            m.set_embed(self.pages[self.page].clone())
-        })
-        .await
+        let edit = EditMessage::new()
+            .embed(self.pages[self.page].clone());
+
+        msg.edit(&self.ctx.http, edit).await
     }
 
-    fn build_components() -> CreateComponents {
-        let mut c = CreateComponents::default();
-        c.create_action_row(|row| {
-            row.create_button(|btn| btn.style(ButtonStyle::Primary).label("⬅").custom_id("left"))
-                .create_button(|btn| {
-                    btn.style(ButtonStyle::Primary)
-                        .label("➡")
-                        .custom_id("right")
-                })
-        });
-        c
+    fn build_components() -> Vec<CreateActionRow> {
+        let left = CreateButton::new("left")
+            .label("⬅");
+
+        let right = CreateButton::new("right")
+            .label("➡");
+
+        vec![CreateActionRow::Buttons(vec![left, right])]
     }
 }

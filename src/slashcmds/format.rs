@@ -7,15 +7,13 @@ use godbolt::{Format, Godbolt};
 use serenity::{
     builder::{CreateInteractionResponse, EditInteractionResponse},
     framework::standard::{CommandError, CommandResult},
-    model::application::component::ButtonStyle,
-    model::application::interaction::application_command::ApplicationCommandInteraction,
-    model::application::interaction::InteractionResponseType,
-    model::application::interaction::MessageFlags,
     prelude::*,
 };
-use std::time::Duration;
 
-pub async fn format(ctx: &Context, command: &ApplicationCommandInteraction) -> CommandResult {
+use std::time::Duration;
+use serenity::all::{ButtonStyle, CommandInteraction, CreateActionRow, CreateButton, CreateInteractionResponseMessage, CreateSelectMenu, CreateSelectMenuKind, CreateSelectMenuOption, InteractionResponseFlags};
+
+pub async fn format(ctx: &Context, command: &CommandInteraction) -> CommandResult {
     let mut msg = None;
     let mut parse_result = ParserResult::default();
 
@@ -35,12 +33,10 @@ pub async fn format(ctx: &Context, command: &ApplicationCommandInteraction) -> C
     }
 
     command
-        .create_interaction_response(&ctx.http, |response| {
-            create_formats_interaction(response, &comp_mgr.gbolt.as_ref().unwrap().formats)
-        })
+        .create_response(&ctx.http, create_formats_interaction(&comp_mgr.gbolt.as_ref().unwrap().formats))
         .await?;
     // Handle response from select menu / button interactions
-    let resp = command.get_interaction_response(&ctx.http).await?;
+    let resp = command.get_response(&ctx.http).await?;
     let mut cib = resp
         .await_component_interactions(&ctx.shard)
         .timeout(Duration::from_secs(30));
@@ -84,12 +80,12 @@ pub async fn format(ctx: &Context, command: &ApplicationCommandInteraction) -> C
     let mut style = String::from("WebKit");
     if !styles.is_empty() {
         command
-            .edit_original_interaction_response(&ctx.http, |resp| {
+            .edit_response(&ctx.http, |resp| {
                 create_styles_interaction(resp, styles)
             })
             .await?;
 
-        let resp = command.get_interaction_response(&ctx.http).await?;
+        let resp = command.get_response(&ctx.http).await?;
         cib = resp
             .await_component_interactions(&ctx.shard)
             .timeout(Duration::from_secs(30));
@@ -119,7 +115,7 @@ pub async fn format(ctx: &Context, command: &ApplicationCommandInteraction) -> C
     }
 
     command
-        .edit_original_interaction_response(&ctx.http, |resp| {
+        .edit_response(&ctx.http, |resp| {
             interactions::create_think_interaction(resp)
         })
         .await
@@ -131,7 +127,7 @@ pub async fn format(ctx: &Context, command: &ApplicationCommandInteraction) -> C
     };
 
     command
-        .edit_original_interaction_response(&ctx.http, |resp| {
+        .edit_response(&ctx.http, |resp| {
             resp.set_embeds(Vec::new())
                 .embed(|emb| {
                     emb.color(COLOR_WARN)
@@ -196,41 +192,28 @@ fn create_styles_interaction<'a>(
     })
 }
 
-fn create_formats_interaction<'this, 'a>(
-    response: &'this mut CreateInteractionResponse<'a>,
-    formats: &Vec<Format>,
-) -> &'this mut CreateInteractionResponse<'a> {
-    response
-        .kind(InteractionResponseType::ChannelMessageWithSource)
-        .interaction_response_data(|data| {
-            data.content("Select a formatter to use:")
-                .flags(MessageFlags::EPHEMERAL)
-                .components(|cmps| {
-                    cmps.create_action_row(|row| {
-                        row.create_select_menu(|menu| {
-                            menu.custom_id("formatter").options(|opts| {
-                                for format in formats {
-                                    opts.create_option(|opt| {
-                                        opt.label(&format.name)
-                                            .value(&format.format_type)
-                                            .description(&format.exe);
-                                        if format.format_type == "clangformat" {
-                                            opt.default_selection(true);
-                                        }
-                                        opt
-                                    });
-                                }
-                                opts
-                            })
-                        })
-                    })
-                    .create_action_row(|row| {
-                        row.create_button(|btn| {
-                            btn.custom_id("select")
-                                .label("Select")
-                                .style(ButtonStyle::Primary)
-                        })
-                    })
-                })
-        })
+fn create_formats_interaction(formats: &Vec<Format>) -> CreateInteractionResponse {
+    let mut discord_menu_options = Vec::new();
+
+    for format in formats {
+        discord_menu_options.push(
+            CreateSelectMenuOption::new(&format.name, &format.format_type)
+                .description(&format.exe)
+                .default_selection(format.format_type == "clangformat")
+        )
+    }
+
+    let discord_menu = CreateSelectMenu::new("formatter", CreateSelectMenuKind::String {
+        options: discord_menu_options
+    });
+
+    let select_button = CreateButton::new("select")
+        .label("Select")
+        .style(ButtonStyle::Primary);
+
+    let response = CreateInteractionResponseMessage::new()
+        .flags(InteractionResponseFlags::EPHEMERAL)
+        .components(vec![CreateActionRow::SelectMenu(discord_menu), CreateActionRow::Buttons(vec![select_button])]);
+
+    CreateInteractionResponse::Message(response)
 }

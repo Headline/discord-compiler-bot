@@ -207,7 +207,7 @@ async fn get_url_code(url: &str, author: &User) -> Result<String, CommandError> 
         warn!(
             "Blocked URL request to: {} by {} [{}]",
             host_str,
-            author.id.0,
+            author.id,
             author.tag()
         );
         return Err(CommandError::from("Unknown paste service. Please use pastebin.com, hastebin.com, or GitHub gists.\n\nAlso please be sure to use a 'raw text' link"));

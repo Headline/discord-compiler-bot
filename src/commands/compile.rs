@@ -12,7 +12,7 @@ use tokio::sync::RwLockReadGuard;
 use serenity::builder::CreateEmbed;
 use serenity::client::Context;
 use serenity::framework::standard::CommandError;
-use serenity::model::application::component::ButtonStyle;
+use serenity::all::ButtonStyle;
 use serenity::model::channel::{Message, ReactionType};
 use serenity::model::user::User;
 
@@ -150,7 +150,7 @@ pub async fn handle_request(
     if let Some(log) = config_lock.get("COMPILE_LOG") {
         if let Ok(id) = log.parse::<u64>() {
             let guild = if msg.guild_id.is_some() {
-                msg.guild_id.unwrap().0.to_string()
+                msg.guild_id.unwrap().to_string()
             } else {
                 "<<unknown>>".to_owned()
             };
@@ -159,7 +159,7 @@ pub async fn handle_request(
                 &parse_result.code,
                 &parse_result.target,
                 &msg.author.tag(),
-                msg.author.id.0,
+                msg.author.id,
                 &guild,
             );
             discordhelpers::manual_dispatch(ctx.http.clone(), id, emb).await;
