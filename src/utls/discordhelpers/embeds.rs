@@ -1,8 +1,8 @@
 use std::fmt::Write as _;
 use std::{env, str};
 
+use serenity::all::{CreateActionRow, CreateButton, CreateEmbedFooter, EditMessage};
 use serenity::http::Http;
-use serenity::model::application::component::ButtonStyle;
 use serenity::{
     builder::{CreateEmbed, CreateMessage},
     client::Context,
@@ -12,7 +12,6 @@ use serenity::{
 use crate::apis::insights::InsightsResponse;
 use crate::cache::LinkAPICache;
 use crate::managers::compilation::CompilationDetails;
-use wandbox::*;
 
 use crate::utls::constants::*;
 use crate::utls::discordhelpers;
@@ -38,13 +37,13 @@ pub trait ToEmbed {
 
 impl ToEmbed for wandbox::CompilationResult {
     fn to_embed(self, author: &User, options: &EmbedOptions) -> CreateEmbed {
-        let mut embed = CreateEmbed::default();
+        let mut embed = CreateEmbed::new();
 
         if !self.status.is_empty() {
             if self.status != "0" {
-                embed.color(COLOR_FAIL);
+                embed = embed.color(COLOR_FAIL);
             } else {
-                embed.color(COLOR_OKAY);
+                embed = embed.color(COLOR_OKAY);
             }
         }
 
@@ -53,45 +52,42 @@ impl ToEmbed for wandbox::CompilationResult {
             // by wandbox. We should skin this as successful, so we set status to 0 (success).
             // This is done to ensure that the checkmark is added at the end of the compile
             // command hook.
-            embed.color(COLOR_OKAY);
+            embed = embed.color(COLOR_OKAY);
         }
         if !self.compiler_all.is_empty() {
             let str = discordhelpers::conform_external_str(&self.compiler_all, MAX_ERROR_LEN);
-            embed.field("Compiler Output", format!("```{}\n```", str), false);
+            embed = embed.field("Compiler Output", format!("```{}\n```", str), false);
         }
         if !self.program_all.is_empty() {
             let str = discordhelpers::conform_external_str(&self.program_all, MAX_OUTPUT_LEN);
-            embed.field("Program Output", format!("```\n{}\n```", str), false);
+            embed = embed.field("Program Output", format!("```\n{}\n```", str), false);
         }
         if !self.url.is_empty() {
-            embed.field("URL", &self.url, false);
+            embed = embed.field("URL", &self.url, false);
         }
 
-        embed.footer(|f| {
-            let mut text = author.tag();
+        let mut text = author.name.clone();
+        if !options.compilation_info.language.is_empty() {
+            text = format!("{} | {}", text, options.compilation_info.language);
+        }
+        if !options.compilation_info.compiler.is_empty() {
+            text = format!("{} | {}", text, options.compilation_info.compiler);
+        }
 
-            if !options.compilation_info.language.is_empty() {
-                text = format!("{} | {}", text, options.compilation_info.language);
-            }
-            if !options.compilation_info.compiler.is_empty() {
-                text = format!("{} | {}", text, options.compilation_info.compiler);
-            }
+        text = format!("{} | wandbox.org", text);
 
-            text = format!("{} | wandbox.org", text);
-            f.text(text)
-        });
-        embed
+        let footer = CreateEmbedFooter::new(text);
+        embed.footer(footer)
     }
 }
 
 impl ToEmbed for godbolt::GodboltResponse {
     fn to_embed(self, author: &User, options: &EmbedOptions) -> CreateEmbed {
-        let mut embed = CreateEmbed::default();
-
+        let mut embed = CreateEmbed::new();
         if self.code == 0 {
-            embed.color(COLOR_OKAY);
+            embed = embed.color(COLOR_OKAY);
         } else {
-            embed.color(COLOR_FAIL);
+            embed = embed.color(COLOR_FAIL);
 
             // if it's an assembly request let's just handle the error case here.
             if options.is_assembly {
@@ -102,12 +98,11 @@ impl ToEmbed for godbolt::GodboltResponse {
                 }
 
                 let compliant_str = discordhelpers::conform_external_str(&errs, MAX_ERROR_LEN);
-                embed.field(
+                return embed.field(
                     "Compilation Errors",
                     format!("```\n{}```", compliant_str),
                     false,
                 );
-                return embed;
             }
         };
 
@@ -133,7 +128,7 @@ impl ToEmbed for godbolt::GodboltResponse {
                 let title = format!("Assembly Output Pt. {}", i);
 
                 let piece = str.replace('`', "\u{200B}`");
-                embed.field(&title, format!("```x86asm\n{}\n```", &piece), false);
+                embed = embed.field(&title, format!("```x86asm\n{}\n```", &piece), false);
                 output = true;
                 i += 1;
             }
@@ -145,13 +140,14 @@ impl ToEmbed for godbolt::GodboltResponse {
                 };
 
                 let str = append.replace('`', "\u{200B}`");
-                embed.field(&title, format!("```x86asm\n{}\n```", &str), false);
+                embed = embed.field(title, format!("```x86asm\n{}\n```", &str), false);
                 output = true;
             }
 
             if !output {
-                embed.title("Compilation successful");
-                embed.description("No assembly generated.");
+                embed = embed
+                    .title("Compilation successful")
+                    .description("No assembly generated.");
             }
         } else {
             let mut output = String::default();
@@ -177,18 +173,19 @@ impl ToEmbed for godbolt::GodboltResponse {
             let mut output = false;
             if !stdout.is_empty() {
                 let str = discordhelpers::conform_external_str(stdout, MAX_OUTPUT_LEN);
-                embed.field("Program Output", format!("```\n{}\n```", str), false);
+                embed = embed.field("Program Output", format!("```\n{}\n```", str), false);
                 output = true;
             }
             if !stderr.is_empty() {
                 output = true;
                 let str = discordhelpers::conform_external_str(stderr, MAX_ERROR_LEN);
-                embed.field("Compiler Output", format!("```\n{}\n```", str), false);
+                embed = embed.field("Compiler Output", format!("```\n{}\n```", str), false);
             }
 
             if !output {
-                embed.title("Compilation successful");
-                embed.description("No output.");
+                embed = embed
+                    .title("Compilation successful")
+                    .description("No output.");
             }
 
             // Execution time can be displayed here, but I don't think it's useful enough
@@ -196,7 +193,7 @@ impl ToEmbed for godbolt::GodboltResponse {
             //embed.field("Execution Time", format!("`{}ms`", self.execution_time), true);
         }
 
-        let mut appendstr = author.tag();
+        let mut appendstr = author.name.clone();
         if let Some(time) = self.execution_time {
             appendstr = format!("{} | {}ms", appendstr, time);
         }
@@ -207,8 +204,8 @@ impl ToEmbed for godbolt::GodboltResponse {
             appendstr = format!("{} | {}", appendstr, options.compilation_info.compiler);
         }
 
-        embed.footer(|f| f.text(format!("{} | godbolt.org", appendstr)));
-        embed
+        let footer = CreateEmbedFooter::new(format!("{} | godbolt.org", appendstr));
+        embed.footer(footer)
     }
 }
 
@@ -230,174 +227,116 @@ pub async fn edit_message_embed(
         }
     }
 
-    let _ = old
-        .edit(ctx, |m| {
-            if let Some(shorturl) = url {
-                m.components(|cmp| {
-                    cmp.create_action_row(|row| {
-                        row.create_button(|btn| {
-                            btn.style(ButtonStyle::Link)
-                                .url(shorturl)
-                                .label("View on godbolt.org")
-                        })
-                    })
-                });
-            }
-            m.embed(|e| {
-                e.0 = emb.0;
-                e
-            });
-            m
-        })
-        .await;
-}
+    let mut btns = Vec::new();
 
-#[allow(dead_code)]
-pub fn build_small_compilation_embed(author: &User, res: &mut CompilationResult) -> CreateEmbed {
-    let mut embed = CreateEmbed::default();
-    if res.status != "0" {
-        embed.color(COLOR_FAIL);
-    } else {
-        embed.color(COLOR_OKAY);
+    if let Some(shorturl) = url {
+        btns.push(CreateButton::new_link(shorturl).label("View on godbolt.org"));
     }
 
-    if !res.compiler_all.is_empty() {
-        let str = discordhelpers::conform_external_str(&res.compiler_all, MAX_ERROR_LEN);
-        embed.field("Compiler Output", format!("```{}\n```", str), false);
-    }
-    if !res.program_all.is_empty() {
-        let str = discordhelpers::conform_external_str(&res.program_all, MAX_OUTPUT_LEN);
-        embed.description(format!("```\n{}\n```", str));
-    }
-    embed.footer(|f| {
-        f.text(format!(
-            "Requested by: {} | Powered by wandbox.org",
-            author.tag()
-        ))
-    });
-
-    embed
+    let edit = EditMessage::new()
+        .embed(emb)
+        .components(vec![CreateActionRow::Buttons(btns)]);
+    let _ = old.edit(ctx, edit).await;
 }
 
 pub fn build_insights_response_embed(author: &User, res: InsightsResponse) -> CreateEmbed {
-    let mut embed = CreateEmbed::default();
-
     let error = res.return_code != 0;
-    if !error {
-        embed.color(COLOR_OKAY);
-    } else {
-        embed.color(COLOR_FAIL);
-    }
-
-    embed.description(format!(
-        "```cpp\n{}```",
-        if error { res.stderr } else { res.stdout }
+    let footer = CreateEmbedFooter::new(format!(
+        "Requested by: {} | Powered by cppinsights.io",
+        author.name
     ));
 
-    embed.footer(|f| {
-        f.text(format!(
-            "Requested by: {} | Powered by cppinsights.io",
-            author.tag()
+    CreateEmbed::default()
+        .color(if error { COLOR_FAIL } else { COLOR_OKAY })
+        .description(format!(
+            "```cpp\n{}```",
+            if error { res.stderr } else { res.stdout }
         ))
-    });
-
-    embed
+        .footer(footer)
 }
 
-pub fn embed_message(emb: CreateEmbed) -> CreateMessage<'static> {
-    let mut msg = CreateMessage::default();
-    msg.embed(|e| {
-        e.0 = emb.0;
-        e
-    });
-    msg
+pub fn embed_message(emb: CreateEmbed) -> CreateMessage {
+    CreateMessage::default().embed(emb)
 }
 
 pub async fn dispatch_embed(
-    http: impl AsRef<Http>,
+    http: &Http,
     channel: ChannelId,
     emb: CreateEmbed,
 ) -> serenity::Result<Message> {
     let emb_msg = embed_message(emb);
-    channel
-        .send_message(http, |e| {
-            *e = emb_msg;
-            e
-        })
-        .await
+    channel.send_message(&http, emb_msg).await
 }
 
 pub fn build_dblvote_embed(tag: String) -> CreateEmbed {
-    let mut embed = CreateEmbed::default();
-    embed.color(COLOR_OKAY);
-    embed.description(format!("{} voted for us on top.gg!", tag));
-    embed.thumbnail(ICON_VOTE);
-    embed
+    CreateEmbed::new()
+        .color(COLOR_OKAY)
+        .description(format!("{} voted for us on top.gg!", tag))
+        .thumbnail(ICON_VOTE)
 }
 
 pub fn panic_embed(panic_info: String) -> CreateEmbed {
-    let mut embed = CreateEmbed::default();
-    embed.title("Oopsie");
-    embed.description(format!("```\n{}\n```", panic_info));
-    embed
+    CreateEmbed::new()
+        .title("Oopsie")
+        .description(format!("```\n{}\n```", panic_info))
 }
 
 pub fn build_welcome_embed() -> CreateEmbed {
-    let mut embed = CreateEmbed::default();
-    let prefix = env::var("BOT_PREFIX").expect("Bot prefix is not set!");
-    embed.title("Discord Compiler");
-    embed.color(COLOR_OKAY);
-    embed.thumbnail(COMPILER_ICON);
-    embed.description("Thanks for inviting me to your discord server!");
-    embed.field("Introduction", "I can take code that you give me and execute it, display generated assembly, or format it!", true);
-    embed.field(
-        "Example Request",
-        format!("{}compile python\n```py\nprint('hello world')\n```", prefix),
-        true,
+    let footer = CreateEmbedFooter::new(
+        "powered by godbolt.org & wandbox.org // created by Michael Flaherty (@headline)",
     );
-    embed.field("Learning Time!", "If you like reading the manuals of things, read our [getting started](https://github.com/Headline/discord-compiler-bot/wiki/Getting-Started) wiki or if you are confident type `;help` to view all commands.", false);
-    embed.field("Support", "If you ever run into any issues please stop by our [support server](https://discord.com/invite/nNNEZ6s) and we'll give you a hand.", true);
-    embed.footer(|f| {
-        f.text(
-            "powered by godbolt.org & wandbox.org // created by Michael Flaherty (Headline#9999)",
+    let prefix = env::var("BOT_PREFIX").expect("Bot prefix is not set!");
+
+    CreateEmbed::new()
+        .title("Discord Compiler")
+        .thumbnail(COMPILER_ICON)
+        .color(COLOR_OKAY)
+        .description("Thanks for inviting me to your discord server!")
+        .field("Introduction", "I can take code that you give me and execute it, display generated assembly, or format it!", true)
+        .field(
+            "Example Request",
+            format!("{}compile python\n```py\nprint('hello world')\n```", prefix),
+            true,
         )
-    });
-    embed
+        .field("Learning Time!", format!("If you like reading the manuals of things, read our [getting started](https://github.com/Headline/discord-compiler-bot/wiki/Getting-Started) wiki or if you are confident type `{0}help` to view all commands.", prefix), false)
+        .field("Support", "If you ever run into any issues please stop by our [support server](https://discord.com/invite/nNNEZ6s) and we'll give you a hand.", true)
+        .footer(footer)
 }
 
 pub fn build_invite_embed(invite_link: &str) -> CreateEmbed {
-    let mut embed = CreateEmbed::default();
-    embed.title("Invite Link");
-    embed.color(COLOR_OKAY);
-    embed.thumbnail(ICON_INVITE);
     let description = format!(
         "Click the link below to invite me to your server!\n\n[Invite me!]({})",
         invite_link
     );
-    embed.description(description);
-    embed
+
+    CreateEmbed::new()
+        .title("Invite Link")
+        .color(COLOR_OKAY)
+        .thumbnail(ICON_INVITE)
+        .description(description)
 }
 
 pub fn build_join_embed(guild: &Guild) -> CreateEmbed {
-    let mut embed = CreateEmbed::default();
-    embed.title("Guild joined");
-    embed.color(COLOR_OKAY);
-    embed.field("Name", guild.name.clone(), true);
-    embed.field("Members", guild.member_count, true);
-    embed.field("Channels", guild.channels.len(), true);
+    let mut emb = CreateEmbed::default()
+        .title("Guild joined")
+        .color(COLOR_OKAY)
+        .field("Name", guild.name.clone(), true)
+        .field("Members", guild.member_count.to_string(), true)
+        .field("Channels", guild.channels.len().to_string(), true)
+        .field("Guild ID", guild.id.to_string(), true);
+
     if let Some(icon) = guild.icon_url() {
-        embed.thumbnail(icon);
+        emb = emb.thumbnail(icon);
     }
-    embed.field("Guild ID", guild.id, true);
-    embed
+
+    emb
 }
 
 pub fn build_leave_embed(guild: &GuildId) -> CreateEmbed {
-    let mut embed = CreateEmbed::default();
-    embed.title("Guild left");
-    embed.color(COLOR_FAIL);
-    embed.field("ID", format!("{}", guild.0), true);
-    embed
+    CreateEmbed::new()
+        .title("Guild left")
+        .color(COLOR_FAIL)
+        .field("ID", format!("{}", guild.get()), true)
 }
 
 pub fn build_complog_embed(
@@ -405,45 +344,32 @@ pub fn build_complog_embed(
     input_code: &str,
     lang: &str,
     tag: &str,
-    id: u64,
+    id: UserId,
     guild: &str,
 ) -> CreateEmbed {
-    let mut embed = CreateEmbed::default();
-    if !success {
-        embed.color(COLOR_FAIL);
-    } else {
-        embed.color(COLOR_OKAY);
-    }
-    embed.title("Compilation requested");
-    embed.field("Language", lang, true);
-    embed.field("Author", tag, true);
-    embed.field("Author ID", id, true);
-    embed.field("Guild", guild, true);
+    let embed = CreateEmbed::new()
+        .color(if success { COLOR_OKAY } else { COLOR_FAIL })
+        .title("Compilation requested")
+        .field("Language", lang, true)
+        .field("Author", tag, true)
+        .field("Author ID", id.to_string(), true)
+        .field("Guild", guild, true);
+
     let mut code = String::from(input_code);
     if code.len() > MAX_OUTPUT_LEN {
         code = code.chars().take(MAX_OUTPUT_LEN).collect()
     }
-    embed.field("Code", format!("```{}\n{}\n```", lang, code), false);
 
-    embed
+    embed.field("Code", format!("```{}\n{}\n```", lang, code), false)
 }
 
 pub fn build_fail_embed(author: &User, err: &str) -> CreateEmbed {
-    let mut embed = CreateEmbed::default();
-    embed.color(COLOR_FAIL);
-    embed.title("Critical error:");
-    embed.description(err);
-    embed.thumbnail(ICON_FAIL);
-    embed.footer(|f| f.text(format!("Requested by: {}", author.tag())));
-    embed
-}
+    let footer = CreateEmbedFooter::new(format!("Requested by: {}", author.name));
 
-pub fn build_publish_embed() -> CreateEmbed {
-    let mut embed = CreateEmbed::default();
-    embed.color(COLOR_WARN).description(
-        "This result will not be visible to others until you click the publish button.\n\n \
-                    If you are unhappy with your results please start a new compilation request \
-                    and dismiss this message.",
-    );
-    embed
+    CreateEmbed::new()
+        .color(COLOR_FAIL)
+        .title("Critical error:")
+        .description(err)
+        .thumbnail(ICON_FAIL)
+        .footer(footer)
 }

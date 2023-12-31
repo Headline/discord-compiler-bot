@@ -29,49 +29,42 @@ pub async fn botinfo(ctx: &Context, msg: &Message, _args: Args) -> CommandResult
         botinfo.get("BOT_AVATAR").unwrap().clone()
     };
 
-    let msg = msg
-        .channel_id
-        .send_message(&ctx.http, |m: &mut CreateMessage| {
-            m.embed(|e: &mut CreateEmbed| {
-                e.title("Compiler Bot");
+    let build_info = format!(
+        "Built from commit [{}]({}{}{})",
+        hash_short, github, "/commit/", hash_long
+    );
 
-                let fmt = format!(
-                    "{}\n
+    let body_txt = format!(
+        "{}\n
                 {}
                 [Invitation link]({})
                 [Vote for us!]({})
                 [GitHub Repository]({})
                 [Statistics Tracker]({})
                 {}",
-                    env!("CARGO_PKG_DESCRIPTION"),
-                    "==========================",
-                    invite,
-                    topgg,
-                    github,
-                    stats,
-                    "=========================="
-                );
+        env!("CARGO_PKG_DESCRIPTION"),
+        "==========================",
+        invite,
+        topgg,
+        github,
+        stats,
+        "=========================="
+    );
 
-                e.description(fmt);
-                e.thumbnail(avatar);
-                e.color(COLOR_OKAY);
+    let emb = CreateEmbed::new()
+        .title("Compiler Bot")
+        .description(body_txt)
+        .thumbnail(avatar)
+        .color(COLOR_OKAY)
+        .fields(vec![
+            ("Language", "Rust 2021", false),
+            ("Software Version", env!("CARGO_PKG_VERSION"), false),
+            ("Author", env!("CARGO_PKG_AUTHORS"), false),
+            ("Build Information", build_info.as_str(), false),
+        ]);
 
-                let str = format!(
-                    "Built from commit [{}]({}{}{})",
-                    hash_short, github, "/commit/", hash_long
-                );
-
-                e.fields(vec![
-                    ("Language", "Rust 2021", false),
-                    ("Software Version", env!("CARGO_PKG_VERSION"), false),
-                    ("Author", env!("CARGO_PKG_AUTHORS"), false),
-                    ("Build Information", str.as_str(), false),
-                ]);
-                e
-            });
-            m
-        })
-        .await;
+    let new_msg = CreateMessage::new().embed(emb);
+    let msg = msg.channel_id.send_message(&ctx.http, new_msg).await;
 
     if let Err(why) = msg {
         warn!("Error sending embed: {:?}", why);

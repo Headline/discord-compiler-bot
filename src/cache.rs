@@ -7,7 +7,6 @@ use std::time::SystemTime;
 use tokio::sync::Mutex;
 use tokio::sync::RwLock;
 
-use serenity::client::bridge::gateway::ShardManager;
 use serenity::prelude::{TypeMap, TypeMapKey};
 
 use crate::managers::stats::StatsManager;
@@ -18,7 +17,7 @@ use crate::apis::quick_link::LinkAPI;
 use crate::managers::command::CommandManager;
 use crate::managers::compilation::CompilationManager;
 use lru_cache::LruCache;
-use serenity::model::application::interaction::application_command::ApplicationCommandInteraction;
+use serenity::all::{ApplicationId, CommandInteraction, ShardManager};
 use serenity::model::channel::Message;
 
 /** Caching **/
@@ -56,7 +55,7 @@ impl TypeMapKey for BlocklistCache {
 /// Contains the shard manager - used to send global presence updates
 pub struct ShardManagerCache;
 impl TypeMapKey for ShardManagerCache {
-    type Value = Arc<Mutex<ShardManager>>;
+    type Value = Mutex<Arc<ShardManager>>;
 }
 
 /// Contains the quick link api - used for godbolt button
@@ -101,10 +100,10 @@ impl TypeMapKey for CommandCache {
 pub struct DiffCommandEntry {
     pub expired_timestamp: SystemTime,
     pub content: String,
-    pub first_interaction: ApplicationCommandInteraction,
+    pub first_interaction: CommandInteraction,
 }
 impl DiffCommandEntry {
-    pub fn new(content: &str, msg: &ApplicationCommandInteraction) -> Self {
+    pub fn new(content: &str, msg: &CommandInteraction) -> Self {
         DiffCommandEntry {
             content: content.to_owned(),
             expired_timestamp: SystemTime::now() + std::time::Duration::from_secs(30),
@@ -126,8 +125,8 @@ impl TypeMapKey for DiffCommandCache {
 pub async fn fill(
     data: Arc<RwLock<TypeMap>>,
     prefix: &str,
-    id: u64,
-    shard_manager: Arc<tokio::sync::Mutex<ShardManager>>,
+    id: ApplicationId,
+    shard_manager: Arc<ShardManager>,
 ) -> Result<(), Box<dyn Error>> {
     let mut data = data.write().await;
 
@@ -172,7 +171,7 @@ pub async fn fill(
     data.insert::<ConfigCache>(Arc::new(RwLock::new(map)));
 
     // Shard manager for universal presence
-    data.insert::<ShardManagerCache>(shard_manager);
+    data.insert::<ShardManagerCache>(Mutex::new(shard_manager));
 
     // Message delete cache
     data.insert::<MessageCache>(Arc::new(Mutex::new(LruCache::new(25))));

@@ -206,9 +206,7 @@ async fn get_url_code(url: &str, author: &User) -> Result<String, CommandError> 
     if !URL_ALLOW_LIST.contains(&host_str.as_str()) {
         warn!(
             "Blocked URL request to: {} by {} [{}]",
-            host_str,
-            author.id.0,
-            author.tag()
+            host_str, author.id, author.name
         );
         return Err(CommandError::from("Unknown paste service. Please use pastebin.com, hastebin.com, or GitHub gists.\n\nAlso please be sure to use a 'raw text' link"));
     }
@@ -285,7 +283,7 @@ pub async fn get_message_attachment(
     attachments: &[Attachment],
 ) -> Result<(String, String), CommandError> {
     if !attachments.is_empty() {
-        let attachment = attachments.get(0);
+        let attachment = attachments.first();
         if attachment.is_none() {
             return Ok((String::new(), String::new()));
         }

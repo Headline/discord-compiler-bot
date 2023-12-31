@@ -1,12 +1,11 @@
-use serenity::{
-    framework::standard::CommandResult,
-    model::application::interaction::application_command::ApplicationCommandInteraction,
-    model::application::interaction::InteractionResponseType, prelude::*,
+use serenity::all::{
+    CommandInteraction, CreateInteractionResponse, CreateInteractionResponseMessage,
 };
+use serenity::{framework::standard::CommandResult, prelude::*};
 
 use crate::{cache::ConfigCache, utls::discordhelpers::embeds};
 
-pub async fn invite(ctx: &Context, msg: &ApplicationCommandInteraction) -> CommandResult {
+pub async fn invite(ctx: &Context, msg: &CommandInteraction) -> CommandResult {
     let invite_link = {
         let data = ctx.data.read().await;
         let config = data.get::<ConfigCache>().unwrap();
@@ -16,10 +15,10 @@ pub async fn invite(ctx: &Context, msg: &ApplicationCommandInteraction) -> Comma
 
     let emb = embeds::build_invite_embed(&invite_link);
 
-    msg.create_interaction_response(&ctx.http, |resp| {
-        resp.kind(InteractionResponseType::ChannelMessageWithSource)
-            .interaction_response_data(|data| data.add_embed(emb))
-    })
+    msg.create_response(
+        &ctx.http,
+        CreateInteractionResponse::Message(CreateInteractionResponseMessage::new().add_embed(emb)),
+    )
     .await?;
 
     Ok(())

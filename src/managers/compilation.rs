@@ -18,6 +18,7 @@ pub struct CompilationDetails {
     pub language: String,
     pub compiler: String,
     pub base64: Option<String>,
+    pub success: bool,
 }
 
 //Traits for compiler lookup
@@ -156,7 +157,8 @@ impl CompilationManager {
                 let details = CompilationDetails {
                     language: target.to_string(),
                     compiler: compiler.name,
-                    base64: Some(base64)
+                    base64: Some(base64),
+                    success: response.code == 0
                 };
 
                 let options = EmbedOptions::new(true, details.clone());
@@ -226,6 +228,7 @@ impl CompilationManager {
             compiler: compiler.name.clone(),
             language: compiler.lang.clone(),
             base64: Some(base64),
+            success: response.code == 0,
         };
 
         Ok((details, response))
@@ -304,25 +307,6 @@ impl CompilationManager {
         builder.build(wbox)?;
         let res = builder.dispatch().await?;
         Ok((details, res))
-    }
-
-    pub fn slash_cmd_langs() -> [&'static str; 11] {
-        [
-            "Python",
-            "C++",
-            "Javascript",
-            "C",
-            "Java",
-            "Bash",
-            "Lua",
-            "C#",
-            "Rust",
-            "Php",
-            "Perl",
-        ]
-    }
-    pub fn slash_cmd_langs_asm() -> [&'static str; 7] {
-        ["C++", "C", "Haskell", "Java", "Python", "Rust", "Zig"]
     }
 }
 

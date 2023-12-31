@@ -4,15 +4,15 @@ use serenity::framework::standard::{macros::command, Args, CommandResult};
 
 use crate::cache::{LinkAPICache, MessageCache, MessageCacheEntry};
 use crate::utls::constants::COLOR_OKAY;
-use crate::utls::discordhelpers::{embeds, is_success_embed};
+use crate::utls::discordhelpers::embeds;
 use crate::utls::{discordhelpers, parser};
 
 use tokio::sync::RwLockReadGuard;
 
+use serenity::all::{CreateActionRow, CreateButton, CreateMessage};
 use serenity::builder::CreateEmbed;
 use serenity::client::Context;
 use serenity::framework::standard::CommandError;
-use serenity::model::application::component::ButtonStyle;
 use serenity::model::channel::{Message, ReactionType};
 use serenity::model::user::User;
 
@@ -29,40 +29,28 @@ pub async fn compile(ctx: &Context, msg: &Message, _args: Args) -> CommandResult
         handle_request(ctx.clone(), msg.content.clone(), msg.author.clone(), msg).await?;
 
     // Send our final embed
-    let mut new_msg = embeds::embed_message(embed);
+    let mut new_msg = CreateMessage::new().embed(embed);
     let data = ctx.data.read().await;
     if let Some(link_cache) = data.get::<LinkAPICache>() {
         if let Some(b64) = compilation_details.base64 {
             let long_url = format!("https://godbolt.org/clientstate/{}", b64);
             let link_cache_lock = link_cache.read().await;
             if let Some(url) = link_cache_lock.get_link(long_url).await {
-                new_msg.components(|cmp| {
-                    cmp.create_action_row(|row| {
-                        row.create_button(|btn| {
-                            btn.style(ButtonStyle::Link)
-                                .url(url)
-                                .label("View on godbolt.org")
-                        })
-                    })
-                });
+                let btns = CreateButton::new_link(url).label("View on godbolt.org");
+
+                new_msg = new_msg.components(vec![CreateActionRow::Buttons(vec![btns])]);
             }
         }
     }
 
-    let sent = msg
-        .channel_id
-        .send_message(&ctx.http, |e| {
-            *e = new_msg.clone();
-            e
-        })
-        .await?;
+    let sent = msg.channel_id.send_message(&ctx.http, new_msg).await?;
 
     // Success/fail react
     let compilation_successful = sent.embeds[0].colour.unwrap().0 == COLOR_OKAY;
     discordhelpers::send_completion_react(ctx, &sent, compilation_successful).await?;
 
     let mut delete_cache = data_read.get::<MessageCache>().unwrap().lock().await;
-    delete_cache.insert(msg.id.0, MessageCacheEntry::new(sent, msg.clone()));
+    delete_cache.insert(msg.id.get(), MessageCacheEntry::new(sent, msg.clone()));
     debug!("Command executed");
     Ok(())
 }
@@ -135,8 +123,7 @@ pub async fn handle_request(
     // remove our loading emote
     let _ = discordhelpers::delete_bot_reacts(&ctx, msg, loading_reaction).await;
 
-    let is_success = is_success_embed(&result.1);
-
+    let is_success = &result.0.success;
     {
         // stats manager is used in events.rs, lets keep our locks very short
         let stats = data_read.get::<StatsManagerCache>().unwrap().lock().await;
@@ -150,16 +137,16 @@ pub async fn handle_request(
     if let Some(log) = config_lock.get("COMPILE_LOG") {
         if let Ok(id) = log.parse::<u64>() {
             let guild = if msg.guild_id.is_some() {
-                msg.guild_id.unwrap().0.to_string()
+                msg.guild_id.unwrap().to_string()
             } else {
                 "<<unknown>>".to_owned()
             };
             let emb = embeds::build_complog_embed(
-                is_success,
+                *is_success,
                 &parse_result.code,
                 &parse_result.target,
-                &msg.author.tag(),
-                msg.author.id.0,
+                &msg.author.name,
+                msg.author.id,
                 &guild,
             );
             discordhelpers::manual_dispatch(ctx.http.clone(), id, emb).await;
