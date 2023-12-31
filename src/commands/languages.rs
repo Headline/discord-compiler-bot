@@ -45,7 +45,7 @@ pub async fn languages(ctx: &Context, msg: &Message, _args: Args) -> CommandResu
         15,
         "Supported Languages",
         &avatar,
-        &msg.author.tag(),
+        &msg.author.name,
         "*\\* = supports assembly output*",
     );
     let mut menu = Menu::new(ctx, msg, &pages);

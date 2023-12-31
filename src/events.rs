@@ -1,14 +1,14 @@
+use chrono::{DateTime, Utc};
 use serenity::{
+    all::Interaction,
     async_trait,
     framework::{standard::macros::hook, standard::CommandResult, standard::DispatchError},
     model::{
-        channel::Message, event::MessageUpdateEvent,
-        gateway::Ready, guild::Guild, id::ChannelId, id::GuildId, id::MessageId,
-        prelude::UnavailableGuild,
+        channel::Message, event::MessageUpdateEvent, gateway::Ready, guild::Guild, id::ChannelId,
+        id::GuildId, id::MessageId, prelude::UnavailableGuild,
     },
-    prelude::*, all::Interaction,
+    prelude::*,
 };
-use chrono::{DateTime, Utc};
 
 use crate::{
     cache::*,
@@ -48,7 +48,7 @@ impl ShardsReadyHandler for Handler {
 
 #[async_trait]
 impl EventHandler for Handler {
-    async fn guild_create(&self, ctx: Context, guild: Guild, is_new : Option<bool>) {
+    async fn guild_create(&self, ctx: Context, guild: Guild, _is_new: Option<bool>) {
         let data = ctx.data.read().await;
 
         // in debug, we'll register on a guild-per-guild basis
@@ -112,7 +112,7 @@ impl EventHandler for Handler {
         }
     }
 
-    async fn guild_delete(&self, ctx: Context, incomplete: UnavailableGuild, full : Option<Guild>) {
+    async fn guild_delete(&self, ctx: Context, incomplete: UnavailableGuild, _full: Option<Guild>) {
         let data = ctx.data.read().await;
 
         // post new server to join log
@@ -172,11 +172,19 @@ impl EventHandler for Handler {
         }
     }
 
-    async fn message_update(&self, ctx: Context, old_if_available: Option<Message>, new: Option<Message>, new_data: MessageUpdateEvent) {
+    async fn message_update(
+        &self,
+        ctx: Context,
+        _old_if_available: Option<Message>,
+        _new: Option<Message>,
+        new_data: MessageUpdateEvent,
+    ) {
         let maybe_message = {
             let data = ctx.data.read().await;
             let mut message_cache = data.get::<MessageCache>().unwrap().lock().await;
-            message_cache.get_mut(&new_data.id.get()).map(|msg| msg.clone())
+            message_cache
+                .get_mut(&new_data.id.get())
+                .map(|msg| msg.clone())
         };
 
         if let Some(msg) = maybe_message {
@@ -288,7 +296,7 @@ pub async fn before(ctx: &Context, msg: &Message, _: &str) -> bool {
 
         let _ = embeds::dispatch_embed(&ctx.http, msg.channel_id, emb).await;
         if author_blocked {
-            warn!("Blocked user {} [{}]", msg.author.tag(), msg.author.id.get());
+            warn!("Blocked user {} [{}]", msg.author.name, msg.author.id.get());
         } else {
             warn!("Blocked guild {}", guild_id);
         }

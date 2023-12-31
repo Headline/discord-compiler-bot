@@ -8,11 +8,10 @@ use serenity::{
 use crate::cache::{CompilerCache, ConfigCache, LinkAPICache, MessageCache, MessageCacheEntry};
 use crate::utls::constants::*;
 use crate::utls::discordhelpers;
-use crate::utls::discordhelpers::embeds;
 
 use crate::managers::compilation::CompilationDetails;
+use serenity::all::{CreateActionRow, CreateButton, CreateMessage};
 use serenity::builder::CreateEmbed;
-use serenity::all::ButtonStyle;
 use serenity::model::channel::{Message, ReactionType};
 use serenity::model::user::User;
 
@@ -25,33 +24,21 @@ pub async fn asm(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
         handle_request(ctx.clone(), msg.content.clone(), msg.author.clone(), msg).await?;
 
     // Send our final embed
-    let mut new_msg = embeds::embed_message(embed);
+    let mut new_msg = CreateMessage::new().embed(embed);
     let data = ctx.data.read().await;
     if let Some(link_cache) = data.get::<LinkAPICache>() {
         if let Some(b64) = compilation_details.base64 {
             let long_url = format!("https://godbolt.org/clientstate/{}", b64);
             let link_cache_lock = link_cache.read().await;
             if let Some(url) = link_cache_lock.get_link(long_url).await {
-                new_msg.components(|cmp| {
-                    cmp.create_action_row(|row| {
-                        row.create_button(|btn| {
-                            btn.style(ButtonStyle::Link)
-                                .url(url)
-                                .label("View on godbolt.org")
-                        })
-                    })
-                });
+                let btns = CreateButton::new_link(url).label("View on godbolt.org");
+
+                new_msg = new_msg.components(vec![CreateActionRow::Buttons(vec![btns])]);
             }
         }
     }
 
-    let asm_embed = msg
-        .channel_id
-        .send_message(&ctx.http, |e| {
-            *e = new_msg.clone();
-            e
-        })
-        .await?;
+    let asm_embed = msg.channel_id.send_message(&ctx.http, new_msg).await?;
 
     // Success/fail react
     let compilation_successful = asm_embed.embeds[0].colour.unwrap().0 == COLOR_OKAY;
@@ -60,7 +47,7 @@ pub async fn asm(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
     let data_read = ctx.data.read().await;
     let mut message_cache = data_read.get::<MessageCache>().unwrap().lock().await;
     message_cache.insert(
-        msg.id.0,
+        msg.id.get(),
         MessageCacheEntry::new(asm_embed.clone(), msg.clone()),
     );
     debug!("Command executed");

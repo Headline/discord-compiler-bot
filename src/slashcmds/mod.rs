@@ -1,4 +1,3 @@
-pub mod diff;
 pub mod diff_msg;
 pub mod format;
 pub mod help;

@@ -1,13 +1,13 @@
 use crate::cache::CompilerCache;
 use crate::utls::parser::{get_message_attachment, ParserResult};
 use godbolt::Godbolt;
+use serenity::all::{CreateAttachment, CreateMessage};
 use serenity::framework::standard::{
     macros::command, Args, CommandError, CommandResult, Delimiter,
 };
 use serenity::model::prelude::*;
 use serenity::prelude::*;
 use std::io::Write;
-use serenity::all::{CreateAttachment, CreateMessage};
 
 #[command]
 pub async fn format(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
@@ -127,14 +127,13 @@ pub async fn format(ctx: &Context, msg: &Message, mut args: Args) -> CommandResu
         let mut file = std::fs::File::create(&path)?;
         let _ = file.write_all(answer.as_bytes());
         let _ = file.flush();
+        let attachment = CreateAttachment::path(path.clone()).await?;
 
         let new_msg = CreateMessage::new()
-            .add_file(CreateAttachment::path(path))
+            .add_file(attachment)
             .content("Powered by godbolt.org");
 
-        msg.channel_id
-            .send_message(&ctx.http, new_msg)
-            .await?;
+        msg.channel_id.send_message(&ctx.http, new_msg).await?;
         let _ = std::fs::remove_file(&path);
     } else {
         msg.reply(

@@ -87,7 +87,7 @@ pub async fn compilers(ctx: &Context, msg: &Message, _args: Args) -> CommandResu
         15,
         "Supported Compilers",
         &avatar,
-        &msg.author.tag(),
+        &msg.author.name,
         "",
     );
     let mut menu = Menu::new(ctx, msg, &pages);

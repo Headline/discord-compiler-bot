@@ -15,9 +15,9 @@ use serenity::framework::standard::CommandResult;
 use tokio::sync::MutexGuard;
 
 use crate::commands::compile;
-use std::fmt::Write as _;
-use serenity::all::ShardManager;
 use crate::utls::discordhelpers::embeds::embed_message;
+use serenity::all::{ActivityData, CreateEmbedFooter, ShardManager};
+use std::fmt::Write as _;
 
 pub fn build_menu_items(
     items: Vec<String>,
@@ -37,7 +37,6 @@ pub fn build_menu_items(
         if end > items.len() {
             end = items.len();
         }
-        let mut emb = CreateEmbed::default();
         let mut description = format!("{}\n", desc);
         for (i, item) in items[current_page * items_per_page..end].iter().enumerate() {
             if i > items_per_page {
@@ -56,20 +55,21 @@ pub fn build_menu_items(
             )
             .unwrap();
         }
-        emb.color(COLOR_OKAY);
-        emb.title(title);
-        emb.description(description);
-        emb.footer(|f| {
-            f.text(&format!(
-                "Requested by {} | Page {}/{}",
-                author,
-                current_page + 1,
-                num_pages + 1
-            ))
-        });
-        emb.thumbnail(avatar);
+        let footer = CreateEmbedFooter::new(format!(
+            "Requested by {} | Page {}/{}",
+            author,
+            current_page + 1,
+            num_pages + 1
+        ));
 
-        pages.push(emb);
+        pages.push(
+            CreateEmbed::new()
+                .color(COLOR_OKAY)
+                .title(title)
+                .description(description)
+                .footer(footer)
+                .thumbnail(avatar),
+        );
         current_page += 1;
     }
 
@@ -99,7 +99,7 @@ pub async fn handle_edit(
     };
 
     // try to clear reactions
-    if let Ok(updated_message) = old.channel_id.message(&ctx.http, old.id.0).await {
+    if let Ok(updated_message) = old.channel_id.message(&ctx.http, old.id.get()).await {
         for reaction in &updated_message.reactions {
             if reaction.me {
                 let _ = discordhelpers::delete_bot_reacts(
@@ -177,11 +177,11 @@ pub async fn handle_edit_insights(
     mut old: Message,
     original_msg: Message,
 ) -> CommandResult {
-    let embed =
+    let (details, embed) =
         crate::commands::insights::handle_request(ctx.clone(), content, author, &original_msg)
             .await?;
 
-    let compilation_successful = embed.0.get("color").unwrap() == COLOR_OKAY;
+    let compilation_successful = details.success;
     discordhelpers::send_completion_react(ctx, &old, compilation_successful).await?;
 
     embeds::edit_message_embed(ctx, &mut old, embed, None).await;
@@ -198,7 +198,7 @@ pub async fn handle_edit_cpp(
     let (embed, details) =
         crate::commands::cpp::handle_request(ctx.clone(), content, author, &original_msg).await?;
 
-    let compilation_successful = embed.0.get("color").unwrap() == COLOR_OKAY;
+    let compilation_successful = details.success;
     discordhelpers::send_completion_react(ctx, &old, compilation_successful).await?;
 
     embeds::edit_message_embed(ctx, &mut old, embed, Some(details)).await;
@@ -215,7 +215,7 @@ pub async fn handle_edit_compile(
     let (embed, compilation_details) =
         compile::handle_request(ctx.clone(), content, author, &original_msg).await?;
 
-    let compilation_successful = embed.0.get("color").unwrap() == COLOR_OKAY;
+    let compilation_successful = compilation_details.success;
     discordhelpers::send_completion_react(ctx, &old, compilation_successful).await?;
 
     embeds::edit_message_embed(ctx, &mut old, embed, Some(compilation_details)).await;
@@ -232,19 +232,11 @@ pub async fn handle_edit_asm(
     let (emb, details) =
         crate::commands::asm::handle_request(ctx.clone(), content, author, &original_msg).await?;
 
-    let success = emb.0.get("color").unwrap() == COLOR_OKAY;
+    let success = details.success;
     embeds::edit_message_embed(ctx, &mut old, emb, Some(details)).await;
 
     send_completion_react(ctx, &old, success).await?;
     Ok(())
-}
-
-pub fn is_success_embed(embed: &CreateEmbed) -> bool {
-    if let Some(color) = embed.0.get("color") {
-        color == COLOR_OKAY
-    } else {
-        false
-    }
 }
 
 pub async fn send_completion_react(
@@ -315,9 +307,11 @@ pub fn conform_external_str(input: &str, max_len: usize) -> String {
 
 pub async fn manual_dispatch(http: Arc<Http>, id: u64, emb: CreateEmbed) {
     let channel = ChannelId::new(id);
-    if let Err(e) = channel.send_message(http, embed_message(emb)).await
-    {
-        error!("Unable to manually dispatch message to guild {0}: {1}", id, e);
+    if let Err(e) = channel.send_message(http, embed_message(emb)).await {
+        error!(
+            "Unable to manually dispatch message to guild {0}: {1}",
+            id, e
+        );
     }
 }
 
@@ -335,8 +329,10 @@ pub async fn send_global_presence(shard_manager: &MutexGuard<'_, Arc<ShardManage
 
     let runners = shard_manager.runners.lock().await;
     for (_, v) in runners.iter() {
-        v.runner_tx
-            .set_presence(Some(Activity::playing(&presence_str)), OnlineStatus::Online);
+        v.runner_tx.set_presence(
+            Some(ActivityData::playing(&presence_str)),
+            OnlineStatus::Online,
+        );
     }
 }
 

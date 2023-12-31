@@ -14,12 +14,12 @@ mod utls;
 
 use serenity::framework::{standard::macros::group, StandardFramework};
 
+use serenity::all::standard::{BucketBuilder, Configuration};
 use serenity::http::Http;
+use serenity::model::id::ApplicationId;
 use serenity::prelude::GatewayIntents;
 use std::collections::HashSet;
 use std::{env, error::Error};
-use serenity::all::standard::{BucketBuilder, Configuration};
-use serenity::model::id::ApplicationId;
 
 use crate::apis::dbl::BotsListApi;
 
@@ -102,8 +102,12 @@ async fn main() -> Result<(), Box<dyn Error>> {
         .on_dispatch_error(events::dispatch_error);
 
     framework.configure(configuration);
-    framework = framework.bucket("nospam", BucketBuilder::new_global().delay(3).time_span(10).limit(3)).await;
-
+    framework = framework
+        .bucket(
+            "nospam",
+            BucketBuilder::new_global().delay(3).time_span(10).limit(3),
+        )
+        .await;
 
     let intents = GatewayIntents::GUILDS
         | GatewayIntents::MESSAGE_CONTENT
@@ -126,7 +130,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     .await?;
     if let Ok(plog) = env::var("PANIC_LOG") {
         let default_panic = std::panic::take_hook();
-        let http = client.http;
+        let http = client.http.clone();
 
         std::panic::set_hook(Box::new(move |info| {
             let http = http.clone();

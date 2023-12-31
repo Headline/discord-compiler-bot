@@ -1,15 +1,13 @@
 use std::time::Duration;
 
-use serenity::{
-    framework::standard::CommandResult,
-    prelude::*,
-};
-use serenity::all::CommandInteraction;
+use serenity::all::standard::CommandError;
+use serenity::all::{CommandInteraction, CreateEmbed, EditInteractionResponse, User};
+use serenity::{framework::standard::CommandResult, prelude::*};
+use similar::ChangeTag;
 
-use crate::slashcmds::diff::run_diff;
+use crate::utls::parser::{find_code_block, ParserResult};
 use crate::{
     cache::{DiffCommandCache, DiffCommandEntry},
-    slashcmds::diff::get_code_block_or_content,
     utls::constants::COLOR_OKAY,
     utls::discordhelpers::interactions,
 };
@@ -20,7 +18,7 @@ pub async fn diff_msg(ctx: &Context, msg: &CommandInteraction) -> CommandResult 
 
     let is_first = {
         let mut diff_cache = diff_cache_lock.lock().await;
-        if let Some(entry) = diff_cache.get(msg.user.id.get()) {
+        if let Some(entry) = diff_cache.get_mut(&msg.user.id.get()) {
             entry.is_expired()
         } else {
             true
@@ -31,8 +29,8 @@ pub async fn diff_msg(ctx: &Context, msg: &CommandInteraction) -> CommandResult 
         let (_, new_msg) = msg.data.resolved.messages.iter().next().unwrap();
 
         msg.create_response(&ctx.http, interactions::create_diff_select_response())
-        .await
-        .unwrap();
+            .await
+            .unwrap();
         {
             let content = get_code_block_or_content(&new_msg.content, &new_msg.author).await?;
             let mut diff_cache = diff_cache_lock.lock().await;
@@ -46,31 +44,26 @@ pub async fn diff_msg(ctx: &Context, msg: &CommandInteraction) -> CommandResult 
             .await;
         if let Some(interaction) = button_resp {
             interaction.defer(&ctx.http).await?;
-            msg.edit_response(&ctx.http, |edit| {
-                edit.set_embeds(Vec::new())
-                    .embed(|emb| {
-                        emb.color(COLOR_OKAY).description(
-                            "Interaction cancelled, you may safely dismiss this message",
-                        )
-                    })
-                    .components(|cmps| cmps.set_action_rows(Vec::new()))
-            })
-            .await?;
+
+            let cancel_embed = CreateEmbed::new()
+                .color(COLOR_OKAY)
+                .description("Interaction cancelled, you may safely dismiss this message");
+            let edit = EditInteractionResponse::new()
+                .embed(cancel_embed)
+                .components(Vec::new());
+            msg.edit_response(&ctx.http, edit).await?;
 
             let mut diff_cache = diff_cache_lock.lock().await;
             diff_cache.remove(&interaction.user.id.get());
         } else {
             // Button expired
-            msg.edit_response(&ctx.http, |edit| {
-                edit.set_embeds(Vec::new())
-                    .embed(|emb| {
-                        emb.color(COLOR_OKAY).description(
-                            "Interaction expired, you may safely dismiss this messsage",
-                        )
-                    })
-                    .components(|cmps| cmps.set_action_rows(Vec::new()))
-            })
-            .await?;
+            let expired_embed = CreateEmbed::new()
+                .color(COLOR_OKAY)
+                .description("Interaction expired, you may safely dismiss this message");
+            let edit = EditInteractionResponse::new()
+                .embed(expired_embed)
+                .components(Vec::new());
+            msg.edit_response(&ctx.http, edit).await?;
         }
         return Ok(());
     }
@@ -92,7 +85,34 @@ pub async fn diff_msg(ctx: &Context, msg: &CommandInteraction) -> CommandResult 
             .await?;
 
         msg.create_response(&ctx.http, interactions::create_diff_response(&output))
-        .await?;
+            .await?;
     }
     Ok(())
+}
+
+pub fn run_diff(first: &str, second: &str) -> String {
+    let diff = similar::TextDiff::from_lines(first, second);
+    let mut output = String::new();
+    for change in diff.iter_all_changes() {
+        let sign = match change.tag() {
+            ChangeTag::Delete => "-",
+            ChangeTag::Insert => "+",
+            ChangeTag::Equal => " ",
+        };
+        output.push_str(&format!("{}{}", sign, change));
+    }
+    output
+}
+
+pub async fn get_code_block_or_content(
+    input: &str,
+    author: &User,
+) -> std::result::Result<String, CommandError> {
+    let mut fake_parse = ParserResult::default();
+    if find_code_block(&mut fake_parse, input, author).await? {
+        Ok(fake_parse.code)
+    } else {
+        // assume content is message content itself
+        Ok(input.to_owned())
+    }
 }

@@ -6,12 +6,14 @@ use serenity::prelude::*;
 use crate::apis::insights::InsightsRequest;
 
 use crate::cache::{ConfigCache, InsightsAPICache, MessageCache, MessageCacheEntry};
+use crate::managers::compilation::CompilationDetails;
 use crate::utls::discordhelpers::embeds::build_insights_response_embed;
 use crate::utls::{discordhelpers, parser};
 
 #[command]
 pub async fn insights(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
-    let embed = handle_request(ctx.clone(), msg.content.clone(), msg.author.clone(), msg).await?;
+    let (_details, embed) =
+        handle_request(ctx.clone(), msg.content.clone(), msg.author.clone(), msg).await?;
     if let Ok(sent_msg) =
         discordhelpers::embeds::dispatch_embed(&ctx.http, msg.channel_id, embed).await
     {
@@ -30,7 +32,7 @@ pub async fn handle_request(
     content: String,
     author: User,
     msg: &Message,
-) -> std::result::Result<CreateEmbed, CommandError> {
+) -> std::result::Result<(CompilationDetails, CreateEmbed), CommandError> {
     let data_read = ctx.data.read().await;
     let insights_lock = data_read.get::<InsightsAPICache>().unwrap();
     let botinfo_lock = data_read.get::<ConfigCache>().unwrap();
@@ -76,12 +78,18 @@ pub async fn handle_request(
     };
     discordhelpers::delete_bot_reacts(&ctx, msg, loading_reaction).await?;
 
-    return if let Some(resp_obj) = resp {
+    if let Some(resp_obj) = resp {
         info!("Insights response retval: {}", resp_obj.return_code);
-        Ok(build_insights_response_embed(&author, resp_obj))
+        let details = CompilationDetails {
+            language: "".to_string(),
+            compiler: "".to_string(),
+            base64: None,
+            success: resp_obj.return_code == 0,
+        };
+        Ok((details, build_insights_response_embed(&author, resp_obj)))
     } else {
         Err(CommandError::from(
             "Unable to retrieve insights at this time! Please try again later.",
         ))
-    };
+    }
 }

@@ -28,11 +28,11 @@ pub async fn formats(ctx: &Context, msg: &Message, _args: Args) -> CommandResult
         ));
     }
 
-    let mut emb = CreateEmbed::default();
-    emb.thumbnail(ICON_HELP);
-    emb.color(COLOR_OKAY);
-    emb.title("Formatters:");
-    emb.description(format!("Below is the list of all formatters currently supported, an valid example request can be `{}format rust`, or `{}format clang mozilla`", prefix, prefix));
+    let mut emb = CreateEmbed::new()
+        .thumbnail(ICON_HELP)
+        .color(COLOR_OKAY)
+        .title("Formatters:")
+        .description(format!("Below is the list of all formatters currently supported, an valid example request can be `{}format rust`, or `{}format clang mozilla`", prefix, prefix));
     for format in &compiler_manager.gbolt.as_ref().unwrap().formats {
         let mut output = String::new();
         output.push_str("Styles:\n");
@@ -43,7 +43,7 @@ pub async fn formats(ctx: &Context, msg: &Message, _args: Args) -> CommandResult
             // output.push_str(&format!("    *- {}*\n", style));
             writeln!(output, "    *- {}*", style).unwrap();
         }
-        emb.field(&format.format_type, &output, false);
+        emb = emb.field(&format.format_type, &output, false);
     }
 
     embeds::dispatch_embed(&ctx.http, msg.channel_id, emb).await?;

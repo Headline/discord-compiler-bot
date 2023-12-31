@@ -10,8 +10,13 @@ use serenity::{
     prelude::*,
 };
 
+use serenity::all::{
+    ButtonStyle, CommandInteraction, ComponentInteractionDataKind, CreateActionRow,
+    CreateAllowedMentions, CreateButton, CreateEmbed, CreateInteractionResponseMessage,
+    CreateMessage, CreateSelectMenu, CreateSelectMenuKind, CreateSelectMenuOption,
+    InteractionResponseFlags,
+};
 use std::time::Duration;
-use serenity::all::{ButtonStyle, CommandInteraction, CreateActionRow, CreateButton, CreateInteractionResponseMessage, CreateSelectMenu, CreateSelectMenuKind, CreateSelectMenuOption, InteractionResponseFlags};
 
 pub async fn format(ctx: &Context, command: &CommandInteraction) -> CommandResult {
     let mut msg = None;
@@ -33,26 +38,34 @@ pub async fn format(ctx: &Context, command: &CommandInteraction) -> CommandResul
     }
 
     command
-        .create_response(&ctx.http, create_formats_interaction(&comp_mgr.gbolt.as_ref().unwrap().formats))
+        .create_response(
+            &ctx.http,
+            create_formats_interaction(&comp_mgr.gbolt.as_ref().unwrap().formats),
+        )
         .await?;
     // Handle response from select menu / button interactions
     let resp = command.get_response(&ctx.http).await?;
-    let mut cib = resp
+    let mut cic = resp
         .await_component_interactions(&ctx.shard)
-        .timeout(Duration::from_secs(30));
-    let mut cic = cib.build();
+        .timeout(Duration::from_secs(30))
+        .stream();
+
     let mut formatter = String::from("clangformat");
     let mut selected = false;
     while let Some(interaction) = &cic.next().await {
         match interaction.data.custom_id.as_str() {
             "formatter" => {
-                formatter = interaction.data.values[0].clone();
+                formatter = match &interaction.data.kind {
+                    ComponentInteractionDataKind::StringSelect { values } => values[0].clone(),
+                    _ => panic!("unexpected interaction data kind"),
+                };
+
                 interaction.defer(&ctx.http).await?;
             }
             "select" => {
                 interaction.defer(&ctx.http).await?;
                 selected = true;
-                cic.stop();
+                drop(cic);
                 break;
             }
             _ => {
@@ -80,26 +93,27 @@ pub async fn format(ctx: &Context, command: &CommandInteraction) -> CommandResul
     let mut style = String::from("WebKit");
     if !styles.is_empty() {
         command
-            .edit_response(&ctx.http, |resp| {
-                create_styles_interaction(resp, styles)
-            })
+            .edit_response(&ctx.http, create_styles_interaction(styles))
             .await?;
 
         let resp = command.get_response(&ctx.http).await?;
-        cib = resp
+        cic = resp
             .await_component_interactions(&ctx.shard)
-            .timeout(Duration::from_secs(30));
-        cic = cib.build();
+            .timeout(Duration::from_secs(30))
+            .stream();
         selected = false;
         while let Some(interaction) = &cic.next().await {
             match interaction.data.custom_id.as_str() {
                 "style" => {
-                    style = interaction.data.values[0].clone();
+                    style = match &interaction.data.kind {
+                        ComponentInteractionDataKind::StringSelect { values } => values[0].clone(),
+                        _ => panic!("unexpected interaction data kind"),
+                    };
                     interaction.defer(&ctx.http).await?;
                 }
                 "select" => {
                     selected = true;
-                    cic.stop();
+                    drop(cic);
                     break;
                 }
                 _ => {
@@ -115,9 +129,7 @@ pub async fn format(ctx: &Context, command: &CommandInteraction) -> CommandResul
     }
 
     command
-        .edit_response(&ctx.http, |resp| {
-            interactions::create_think_interaction(resp)
-        })
+        .edit_response(&ctx.http, interactions::create_think_interaction())
         .await
         .unwrap();
 
@@ -126,70 +138,52 @@ pub async fn format(ctx: &Context, command: &CommandInteraction) -> CommandResul
         Err(e) => return Err(CommandError::from(format!("{}", e))),
     };
 
-    command
-        .edit_response(&ctx.http, |resp| {
-            resp.set_embeds(Vec::new())
-                .embed(|emb| {
-                    emb.color(COLOR_WARN)
-                        .description("Interaction completed, you may safely dismiss this message.")
-                })
-                .components(|components| components.set_action_rows(Vec::new()))
-        })
-        .await
-        .unwrap();
+    let complete_embed = CreateEmbed::new()
+        .color(COLOR_WARN)
+        .description("Interaction completed, you may safely dismiss this message");
+
+    let edit = EditInteractionResponse::new().embed(complete_embed);
+    command.edit_response(&ctx.http, edit).await.unwrap();
 
     // dispatch final response
+    let mentions = CreateAllowedMentions::new().replied_user(false);
+    let new_msg = CreateMessage::new()
+        .allowed_mentions(mentions)
+        .reference_message(msg.unwrap())
+        .content(format!(
+            "```{}\n{}\n```Requested by: {}",
+            if parse_result.target.is_empty() {
+                ""
+            } else {
+                &parse_result.target
+            },
+            result.answer,
+            command.user.name
+        ));
     msg.unwrap()
         .channel_id
-        .send_message(&ctx.http, |new_msg| {
-            new_msg
-                .allowed_mentions(|mentions| mentions.replied_user(false))
-                .reference_message(msg.unwrap())
-                .content(format!(
-                    "```{}\n{}\n```Requested by: {}",
-                    if parse_result.target.is_empty() {
-                        ""
-                    } else {
-                        &parse_result.target
-                    },
-                    result.answer,
-                    command.user.tag()
-                ))
-        })
+        .send_message(&ctx.http, new_msg)
         .await?;
-
     Ok(())
 }
 
-fn create_styles_interaction<'a>(
-    response: &'a mut EditInteractionResponse,
-    styles: &Vec<String>,
-) -> &'a mut EditInteractionResponse {
-    response.content("Select a style:").components(|cmps| {
-        cmps.create_action_row(|row| {
-            row.create_select_menu(|menu| {
-                menu.custom_id("style").options(|opts| {
-                    for style in styles {
-                        opts.create_option(|opt| {
-                            opt.label(style).value(style);
-                            if style == "WebKit" {
-                                opt.default_selection(true);
-                            }
-                            opt
-                        });
-                    }
-                    opts
-                })
-            })
-        })
-        .create_action_row(|row| {
-            row.create_button(|btn| {
-                btn.custom_id("select")
-                    .label("Select")
-                    .style(ButtonStyle::Primary)
-            })
-        })
-    })
+fn create_styles_interaction(styles: &Vec<String>) -> EditInteractionResponse {
+    let mut opts = Vec::new();
+    for style in styles {
+        opts.push(CreateSelectMenuOption::new(style, style).default_selection(style == "WebKit"));
+    }
+
+    let menu = CreateSelectMenu::new("style", CreateSelectMenuKind::String { options: opts });
+    let submit_button = CreateButton::new("select")
+        .label("Select")
+        .style(ButtonStyle::Primary);
+
+    EditInteractionResponse::new()
+        .content("Select a style:")
+        .components(vec![
+            CreateActionRow::SelectMenu(menu),
+            CreateActionRow::Buttons(vec![submit_button]),
+        ])
 }
 
 fn create_formats_interaction(formats: &Vec<Format>) -> CreateInteractionResponse {
@@ -199,13 +193,16 @@ fn create_formats_interaction(formats: &Vec<Format>) -> CreateInteractionRespons
         discord_menu_options.push(
             CreateSelectMenuOption::new(&format.name, &format.format_type)
                 .description(&format.exe)
-                .default_selection(format.format_type == "clangformat")
+                .default_selection(format.format_type == "clangformat"),
         )
     }
 
-    let discord_menu = CreateSelectMenu::new("formatter", CreateSelectMenuKind::String {
-        options: discord_menu_options
-    });
+    let discord_menu = CreateSelectMenu::new(
+        "formatter",
+        CreateSelectMenuKind::String {
+            options: discord_menu_options,
+        },
+    );
 
     let select_button = CreateButton::new("select")
         .label("Select")
@@ -213,7 +210,10 @@ fn create_formats_interaction(formats: &Vec<Format>) -> CreateInteractionRespons
 
     let response = CreateInteractionResponseMessage::new()
         .flags(InteractionResponseFlags::EPHEMERAL)
-        .components(vec![CreateActionRow::SelectMenu(discord_menu), CreateActionRow::Buttons(vec![select_button])]);
+        .components(vec![
+            CreateActionRow::SelectMenu(discord_menu),
+            CreateActionRow::Buttons(vec![select_button]),
+        ]);
 
     CreateInteractionResponse::Message(response)
 }
