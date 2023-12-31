@@ -86,18 +86,6 @@ impl CommandManager {
 
         cmds.push(
             CreateCommand::new(format!(
-                "Format{}",
-                if cfg!(debug_assertions) {
-                    " [BETA]"
-                } else {
-                    ""
-                }
-            ))
-            .kind(CommandType::Message),
-        );
-
-        cmds.push(
-            CreateCommand::new(format!(
                 "Diff{}",
                 if cfg!(debug_assertions) {
                     " [BETA]"
