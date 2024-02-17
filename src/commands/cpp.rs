@@ -96,9 +96,9 @@ pub async fn handle_request(
     let fake_parse = ParserResult {
         url: "".to_string(),
         stdin: "".to_string(),
-        target: "g101".to_string(),
+        target: "gsnapshot".to_string(),
         code: out,
-        options: vec![String::from("-O2"), String::from("-std=gnu++2a")],
+        options: vec![String::from("-O3"), String::from("-std=gnu++26")],
         args: vec![],
     };
 
