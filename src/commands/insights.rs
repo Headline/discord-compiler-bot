@@ -79,7 +79,7 @@ pub async fn handle_request(
     discordhelpers::delete_bot_reacts(&ctx, msg, loading_reaction).await?;
 
     if let Some(resp_obj) = resp {
-        info!("Insights response retval: {}", resp_obj.return_code);
+        debug!("Insights response retval: {}", resp_obj.return_code);
         let details = CompilationDetails {
             language: "".to_string(),
             compiler: "".to_string(),

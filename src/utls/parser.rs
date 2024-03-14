@@ -263,7 +263,7 @@ pub async fn find_code_block(
             let include_stmt = statement.as_str();
             let url = cap.name("url").unwrap().as_str();
             if let Ok(code) = get_url_code(url, author).await {
-                println!("Replacing {} with {}", include_stmt, &code);
+                debug!("Replacing {} with {}", include_stmt, &code);
                 result.code = result.code.replace(include_stmt, &code);
             }
         }
