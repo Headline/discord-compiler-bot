@@ -55,12 +55,12 @@ impl ToEmbed for wandbox::CompilationResult {
             embed = embed.color(COLOR_OKAY);
         }
         if !self.compiler_all.is_empty() {
-            let str = discordhelpers::conform_external_str(&self.compiler_all, MAX_ERROR_LEN);
-            embed = embed.field("Compiler Output", format!("```{}\n```", str), false);
+            let str = discordhelpers::conform_external_str(&self.compiler_all, MAX_ERROR_LEN, false);
+            embed = embed.field("Compiler Output", format!("```ansi{}\n```", str), false);
         }
         if !self.program_all.is_empty() {
-            let str = discordhelpers::conform_external_str(&self.program_all, MAX_OUTPUT_LEN);
-            embed = embed.field("Program Output", format!("```\n{}\n```", str), false);
+            let str = discordhelpers::conform_external_str(&self.program_all, MAX_OUTPUT_LEN, false);
+            embed = embed.field("Program Output", format!("```ansi\n{}\n```", str), false);
         }
         if !self.url.is_empty() {
             embed = embed.field("URL", &self.url, false);
@@ -97,10 +97,10 @@ impl ToEmbed for godbolt::GodboltResponse {
                     errs.push_str(&line);
                 }
 
-                let compliant_str = discordhelpers::conform_external_str(&errs, MAX_ERROR_LEN);
+                let compliant_str = discordhelpers::conform_external_str(&errs, MAX_ERROR_LEN, false);
                 return embed.field(
                     "Compilation Errors",
-                    format!("```\n{}```", compliant_str),
+                    format!("```ansi\n{}```", compliant_str),
                     false,
                 );
             }
@@ -172,14 +172,14 @@ impl ToEmbed for godbolt::GodboltResponse {
             let stderr = errs.trim();
             let mut output = false;
             if !stdout.is_empty() {
-                let str = discordhelpers::conform_external_str(stdout, MAX_OUTPUT_LEN);
-                embed = embed.field("Program Output", format!("```\n{}\n```", str), false);
+                let str = discordhelpers::conform_external_str(stdout, MAX_OUTPUT_LEN, false);
+                embed = embed.field("Program Output", format!("```ansi\n{}\n```", str), false);
                 output = true;
             }
             if !stderr.is_empty() {
                 output = true;
-                let str = discordhelpers::conform_external_str(stderr, MAX_ERROR_LEN);
-                embed = embed.field("Compiler Output", format!("```\n{}\n```", str), false);
+                let str = discordhelpers::conform_external_str(stderr, MAX_ERROR_LEN, false);
+                embed = embed.field("Compiler Output", format!("```ansi\n{}\n```", str), false);
             }
 
             if !output {
