@@ -285,7 +285,7 @@ pub async fn send_completion_react(
 //
 // Here we also limit the text to 1000 chars, this prevents discord from
 // rejecting our embeds for being to long if someone decides to spam.
-pub fn conform_external_str(input: &str, max_len: usize, strip_ansi : bool) -> String {
+pub fn conform_external_str(input: &str, max_len: usize, strip_ansi: bool) -> String {
     let mut str = {
         if strip_ansi {
             let strip_result = strip_ansi_escapes::strip(input);
