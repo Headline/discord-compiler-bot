@@ -27,7 +27,7 @@ jobs:
           toolchain: stable
           target: ${{ matrix.target }}
 
-      - uses: actions/cache@v2
+      - uses: actions/cache@v4
         with:
           path: |
             ~/.cargo/registry
