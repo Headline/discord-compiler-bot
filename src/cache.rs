@@ -184,27 +184,29 @@ pub async fn fill(
     if let Ok(token) = env::var("DBL_TOKEN") {
         let client = dbl::Client::new(token)?;
         data.insert::<DblCache>(Arc::new(RwLock::new(client)));
+        info!("Registered dbl api");
     }
 
-    // DBL
+    // Quick link service
     if let Ok(redirect_base) = env::var("QUICK_LINK_URL") {
         if let Ok(request_base) = env::var("QUICK_LINK_POST") {
-            info!("Registered quick link api");
             let link_man = LinkAPI::new(&request_base, &redirect_base);
             data.insert::<LinkAPICache>(Arc::new(RwLock::new(link_man)));
+            info!("Registered quick link api");
         }
     }
-
-    // Cpp insights
-    let insights = InsightsAPI::new();
-    data.insert::<InsightsAPICache>(Arc::new(Mutex::new(insights)));
 
     // Stats tracking
     let stats = StatsManager::new();
     if stats.should_track() {
         info!("Statistics tracking enabled");
     }
+
     data.insert::<StatsManagerCache>(Arc::new(Mutex::new(stats)));
+
+    // Cpp insights
+    let insights = InsightsAPI::new();
+    data.insert::<InsightsAPICache>(Arc::new(Mutex::new(insights)));
 
     // Blocklist
     let blocklist = Blocklist::new();
