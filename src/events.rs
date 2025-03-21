@@ -187,17 +187,33 @@ impl EventHandler for Handler {
                 .map(|msg| msg.clone())
         };
 
-        if let Some(msg) = maybe_message {
+        if let Some(mut msg) = maybe_message {
             if let Some(new_msg) = new_data.content {
                 if let Some(author) = new_data.author {
-                    discordhelpers::handle_edit(
+                    if let Err(e) = discordhelpers::handle_edit(
                         &ctx,
                         new_msg,
-                        author,
+                        author.clone(),
                         msg.our_msg.clone(),
                         msg.original_msg.clone(),
                     )
-                    .await;
+                    .await
+                    {
+                        let emb = embeds::build_fail_embed(
+                            &author,
+                            &format!("An internal error occurred doing your request:\n{}", e),
+                        );
+                        if let Err(e) = embeds::edit_message_embed(
+                            &ctx,
+                            &mut msg.our_msg,
+                            &mut emb.clone(),
+                            None,
+                        )
+                        .await
+                        {
+                            error!("Could not edit sent message! Original error: {}", e);
+                        }
+                    }
                 }
             }
         }

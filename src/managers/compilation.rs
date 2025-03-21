@@ -306,6 +306,7 @@ impl CompilationManager {
 
         builder.build(wbox)?;
         let res = builder.dispatch().await?;
+        details.success = res.status.eq("0");
         Ok((details, res))
     }
 }

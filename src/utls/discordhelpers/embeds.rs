@@ -1,6 +1,9 @@
 use std::fmt::Write as _;
 use std::{env, str};
 
+use crate::apis::insights::InsightsResponse;
+use crate::cache::LinkAPICache;
+use crate::managers::compilation::CompilationDetails;
 use serenity::all::{CreateActionRow, CreateButton, CreateEmbedFooter, EditMessage};
 use serenity::http::Http;
 use serenity::{
@@ -8,10 +11,6 @@ use serenity::{
     client::Context,
     model::prelude::*,
 };
-
-use crate::apis::insights::InsightsResponse;
-use crate::cache::LinkAPICache;
-use crate::managers::compilation::CompilationDetails;
 
 use crate::utls::constants::*;
 use crate::utls::discordhelpers;
@@ -49,19 +48,16 @@ impl ToEmbed for wandbox::CompilationResult {
 
         if !self.signal.is_empty() {
             // If we received 'Signal', then the application successfully ran, but was timed out
-            // by wandbox. We should skin this as successful, so we set status to 0 (success).
-            // This is done to ensure that the checkmark is added at the end of the compile
-            // command hook.
+            // by wandbox. We should skin this as successful as it causes confusion as to who
+            // actually failed (ourselves vs wandbox)
             embed = embed.color(COLOR_OKAY);
         }
         if !self.compiler_all.is_empty() {
-            let str =
-                discordhelpers::conform_external_str(&self.compiler_all, MAX_ERROR_LEN, true);
+            let str = discordhelpers::conform_external_str(&self.compiler_all, MAX_ERROR_LEN, true);
             embed = embed.field("Compiler Output", format!("```{}\n```", str), false);
         }
         if !self.program_all.is_empty() {
-            let str =
-                discordhelpers::conform_external_str(&self.program_all, MAX_OUTPUT_LEN, true);
+            let str = discordhelpers::conform_external_str(&self.program_all, MAX_OUTPUT_LEN, true);
             embed = embed.field("Program Output", format!("```\n{}\n```", str), false);
         }
         if !self.url.is_empty() {
@@ -186,14 +182,8 @@ impl ToEmbed for godbolt::GodboltResponse {
             }
 
             if !output {
-                embed = embed
-                    .title("Compilation successful")
-                    .description("No output.");
+                embed = embed.title("Compilation successful");
             }
-
-            // Execution time can be displayed here, but I don't think it's useful enough
-            // to show...
-            //embed.field("Execution Time", format!("`{}ms`", self.execution_time), true);
         }
 
         let mut appendstr = author.name.clone();
@@ -215,9 +205,9 @@ impl ToEmbed for godbolt::GodboltResponse {
 pub async fn edit_message_embed(
     ctx: &Context,
     old: &mut Message,
-    emb: CreateEmbed,
+    emb: &mut CreateEmbed,
     compilation_details: Option<CompilationDetails>,
-) {
+) -> serenity::Result<()> {
     let mut url = None;
     if let Some(details) = compilation_details {
         let data = ctx.data.read().await;
@@ -225,7 +215,7 @@ pub async fn edit_message_embed(
             if let Some(b64) = details.base64 {
                 let long_url = format!("https://godbolt.org/clientstate/{}", b64);
                 let link_cache_lock = link_cache.read().await;
-                url = link_cache_lock.get_link(long_url).await
+                url = link_cache_lock.get_link(long_url).await;
             }
         }
     }
@@ -236,10 +226,18 @@ pub async fn edit_message_embed(
         btns.push(CreateButton::new_link(shorturl).label("View on godbolt.org"));
     }
 
-    let edit = EditMessage::new()
-        .embed(emb)
-        .components(vec![CreateActionRow::Buttons(btns)]);
-    let _ = old.edit(ctx, edit).await;
+    let edit = {
+        if btns.is_empty() {
+            EditMessage::default().embed(emb.clone())
+        } else {
+            EditMessage::default()
+                .components(vec![CreateActionRow::Buttons(btns)])
+                .embed(emb.clone())
+        }
+    };
+
+    old.edit(ctx, edit).await?;
+    Ok(())
 }
 
 pub fn build_insights_response_embed(author: &User, res: InsightsResponse) -> CreateEmbed {

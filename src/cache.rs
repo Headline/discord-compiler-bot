@@ -20,7 +20,7 @@ use lru_cache::LruCache;
 use serenity::all::{ApplicationId, CommandInteraction, ShardManager};
 use serenity::model::channel::Message;
 
-/** Caching **/
+/* Caching */
 
 /// Contains bot configuration information provided mostly from environment variables
 pub struct ConfigCache;
