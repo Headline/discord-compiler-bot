@@ -3,7 +3,6 @@ use std::fmt::Write as _;
 use serenity::framework::standard::{macros::command, Args, CommandResult};
 
 use crate::cache::{LinkAPICache, MessageCache, MessageCacheEntry};
-use crate::utls::constants::COLOR_OKAY;
 use crate::utls::discordhelpers::embeds;
 use crate::utls::{discordhelpers, parser};
 
@@ -46,8 +45,7 @@ pub async fn compile(ctx: &Context, msg: &Message, _args: Args) -> CommandResult
     let sent = msg.channel_id.send_message(&ctx.http, new_msg).await?;
 
     // Success/fail react
-    let compilation_successful = sent.embeds[0].colour.unwrap().0 == COLOR_OKAY;
-    discordhelpers::send_completion_react(ctx, &sent, compilation_successful).await?;
+    discordhelpers::send_completion_react(ctx, &sent, compilation_details.success).await?;
 
     let mut delete_cache = data_read.get::<MessageCache>().unwrap().lock().await;
     delete_cache.insert(msg.id.get(), MessageCacheEntry::new(sent, msg.clone()));
@@ -123,7 +121,7 @@ pub async fn handle_request(
     // remove our loading emote
     let _ = discordhelpers::delete_bot_reacts(&ctx, msg, loading_reaction).await;
 
-    let is_success = &result.0.success;
+    let is_success = result.0.success;
     {
         // stats manager is used in events.rs, lets keep our locks very short
         let stats = data_read.get::<StatsManagerCache>().unwrap().lock().await;
@@ -142,7 +140,7 @@ pub async fn handle_request(
                 "<<unknown>>".to_owned()
             };
             let emb = embeds::build_complog_embed(
-                *is_success,
+                is_success,
                 &parse_result.code,
                 &parse_result.target,
                 &msg.author.name,

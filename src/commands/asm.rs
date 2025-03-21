@@ -6,7 +6,6 @@ use serenity::{
 };
 
 use crate::cache::{CompilerCache, ConfigCache, LinkAPICache, MessageCache, MessageCacheEntry};
-use crate::utls::constants::*;
 use crate::utls::discordhelpers;
 
 use crate::managers::compilation::CompilationDetails;
@@ -41,8 +40,7 @@ pub async fn asm(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
     let asm_embed = msg.channel_id.send_message(&ctx.http, new_msg).await?;
 
     // Success/fail react
-    let compilation_successful = asm_embed.embeds[0].colour.unwrap().0 == COLOR_OKAY;
-    discordhelpers::send_completion_react(ctx, &asm_embed, compilation_successful).await?;
+    discordhelpers::send_completion_react(ctx, &asm_embed, compilation_details.success).await?;
 
     let data_read = ctx.data.read().await;
     let mut message_cache = data_read.get::<MessageCache>().unwrap().lock().await;

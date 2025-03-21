@@ -91,7 +91,7 @@ pub async fn handle_edit(
     author: User,
     mut old: Message,
     original_message: Message,
-) {
+) -> serenity::Result<()> {
     let prefix = {
         let data = ctx.data.read().await;
         let info = data.get::<ConfigCache>().unwrap().read().await;
@@ -122,8 +122,8 @@ pub async fn handle_edit(
         )
         .await
         {
-            let err = embeds::build_fail_embed(&author, &e.to_string());
-            embeds::edit_message_embed(ctx, &mut old, err, None).await;
+            let mut err = embeds::build_fail_embed(&author, &e.to_string());
+            embeds::edit_message_embed(ctx, &mut old, &mut err, None).await?;
         }
     } else if content.starts_with(&format!("{}compile", prefix)) {
         if let Err(e) = handle_edit_compile(
@@ -135,8 +135,8 @@ pub async fn handle_edit(
         )
         .await
         {
-            let err = embeds::build_fail_embed(&author, &e.to_string());
-            embeds::edit_message_embed(ctx, &mut old, err, None).await;
+            let mut err = embeds::build_fail_embed(&author, &e.to_string());
+            embeds::edit_message_embed(ctx, &mut old, &mut err, None).await?;
         }
     } else if content.starts_with(&format!("{}cpp", prefix)) {
         if let Err(e) = handle_edit_cpp(
@@ -148,8 +148,8 @@ pub async fn handle_edit(
         )
         .await
         {
-            let err = embeds::build_fail_embed(&author, &e.to_string());
-            embeds::edit_message_embed(ctx, &mut old, err, None).await;
+            let mut err = embeds::build_fail_embed(&author, &e.to_string());
+            embeds::edit_message_embed(ctx, &mut old, &mut err, None).await?;
         }
     } else if content.starts_with(&format!("{}insights", prefix)) {
         if let Err(e) = handle_edit_insights(
@@ -161,13 +161,15 @@ pub async fn handle_edit(
         )
         .await
         {
-            let err = embeds::build_fail_embed(&author, &e.to_string());
-            embeds::edit_message_embed(ctx, &mut old, err, None).await;
+            let mut err = embeds::build_fail_embed(&author, &e.to_string());
+            embeds::edit_message_embed(ctx, &mut old, &mut err, None).await?;
         }
     } else {
-        let err = embeds::build_fail_embed(&author, "Invalid command for edit functionality!");
-        embeds::edit_message_embed(ctx, &mut old, err, None).await;
+        let mut err = embeds::build_fail_embed(&author, "Invalid command for edit functionality!");
+        embeds::edit_message_embed(ctx, &mut old, &mut err, None).await?;
     }
+
+    Ok(())
 }
 
 pub async fn handle_edit_insights(
@@ -177,14 +179,13 @@ pub async fn handle_edit_insights(
     mut old: Message,
     original_msg: Message,
 ) -> CommandResult {
-    let (details, embed) =
+    let (details, mut embed) =
         crate::commands::insights::handle_request(ctx.clone(), content, author, &original_msg)
             .await?;
 
-    let compilation_successful = details.success;
-    discordhelpers::send_completion_react(ctx, &old, compilation_successful).await?;
+    discordhelpers::send_completion_react(ctx, &old, details.success).await?;
 
-    embeds::edit_message_embed(ctx, &mut old, embed, None).await;
+    embeds::edit_message_embed(ctx, &mut old, &mut embed, None).await?;
     Ok(())
 }
 
@@ -195,13 +196,12 @@ pub async fn handle_edit_cpp(
     mut old: Message,
     original_msg: Message,
 ) -> CommandResult {
-    let (embed, details) =
+    let (mut embed, details) =
         crate::commands::cpp::handle_request(ctx.clone(), content, author, &original_msg).await?;
 
-    let compilation_successful = details.success;
-    discordhelpers::send_completion_react(ctx, &old, compilation_successful).await?;
+    discordhelpers::send_completion_react(ctx, &old, details.success).await?;
 
-    embeds::edit_message_embed(ctx, &mut old, embed, Some(details)).await;
+    embeds::edit_message_embed(ctx, &mut old, &mut embed, Some(details)).await?;
     Ok(())
 }
 
@@ -212,13 +212,13 @@ pub async fn handle_edit_compile(
     mut old: Message,
     original_msg: Message,
 ) -> CommandResult {
-    let (embed, compilation_details) =
+    let (mut embed, compilation_details) =
         compile::handle_request(ctx.clone(), content, author, &original_msg).await?;
 
     let compilation_successful = compilation_details.success;
     discordhelpers::send_completion_react(ctx, &old, compilation_successful).await?;
 
-    embeds::edit_message_embed(ctx, &mut old, embed, Some(compilation_details)).await;
+    embeds::edit_message_embed(ctx, &mut old, &mut embed, Some(compilation_details)).await?;
     Ok(())
 }
 
@@ -229,13 +229,11 @@ pub async fn handle_edit_asm(
     mut old: Message,
     original_msg: Message,
 ) -> CommandResult {
-    let (emb, details) =
+    let (mut emb, details) =
         crate::commands::asm::handle_request(ctx.clone(), content, author, &original_msg).await?;
 
-    let success = details.success;
-    embeds::edit_message_embed(ctx, &mut old, emb, Some(details)).await;
-
-    send_completion_react(ctx, &old, success).await?;
+    send_completion_react(ctx, &old, details.success).await?;
+    embeds::edit_message_embed(ctx, &mut old, &mut emb, Some(details)).await?;
     Ok(())
 }
 
