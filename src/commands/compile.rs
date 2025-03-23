@@ -8,12 +8,8 @@ use crate::utls::{discordhelpers, parser};
 
 use tokio::sync::RwLockReadGuard;
 
-use serenity::all::{CreateActionRow, CreateButton, CreateMessage};
-use serenity::builder::CreateEmbed;
-use serenity::client::Context;
+use serenity::all::{Context, CreateEmbed, CreateMessage, Message, ReactionType, User};
 use serenity::framework::standard::CommandError;
-use serenity::model::channel::{Message, ReactionType};
-use serenity::model::user::User;
 
 use crate::cache::{CompilerCache, ConfigCache, StatsManagerCache};
 use crate::managers::compilation::{CompilationDetails, CompilationManager};
@@ -21,8 +17,6 @@ use crate::managers::compilation::{CompilationDetails, CompilationManager};
 #[command]
 #[bucket = "nospam"]
 pub async fn compile(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
-    let data_read = ctx.data.read().await;
-
     // Handle wandbox request logic
     let (embed, compilation_details) =
         handle_request(ctx.clone(), msg.content.clone(), msg.author.clone(), msg).await?;
@@ -30,16 +24,13 @@ pub async fn compile(ctx: &Context, msg: &Message, _args: Args) -> CommandResult
     // Send our final embed
     let mut new_msg = CreateMessage::new().embed(embed);
     let data = ctx.data.read().await;
-    if let Some(link_cache) = data.get::<LinkAPICache>() {
-        if let Some(b64) = compilation_details.base64 {
-            let long_url = format!("https://godbolt.org/clientstate/{}", b64);
-            let link_cache_lock = link_cache.read().await;
-            if let Some(url) = link_cache_lock.get_link(long_url).await {
-                let btns = CreateButton::new_link(url).label("View on godbolt.org");
-
-                new_msg = new_msg.components(vec![CreateActionRow::Buttons(vec![btns])]);
-            }
-        }
+    if let Some(b64) = compilation_details.base64 {
+        new_msg = discordhelpers::embeds::add_godbolt_link(
+            data.get::<LinkAPICache>().unwrap(),
+            b64,
+            new_msg,
+        )
+        .await
     }
 
     let sent = msg.channel_id.send_message(&ctx.http, new_msg).await?;
@@ -47,7 +38,7 @@ pub async fn compile(ctx: &Context, msg: &Message, _args: Args) -> CommandResult
     // Success/fail react
     discordhelpers::send_completion_react(ctx, &sent, compilation_details.success).await?;
 
-    let mut delete_cache = data_read.get::<MessageCache>().unwrap().lock().await;
+    let mut delete_cache = data.get::<MessageCache>().unwrap().lock().await;
     delete_cache.insert(msg.id.get(), MessageCacheEntry::new(sent, msg.clone()));
     debug!("Command executed");
     Ok(())

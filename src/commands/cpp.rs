@@ -1,6 +1,5 @@
-use serenity::all::{CreateActionRow, CreateButton, CreateMessage};
+use serenity::all::{CreateEmbed, CreateMessage};
 use serenity::{
-    builder::CreateEmbed,
     framework::standard::{macros::command, Args, CommandError, CommandResult},
     model::prelude::*,
     prelude::*,
@@ -27,24 +26,20 @@ pub async fn cpp(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
     // Send our final embed
     let mut new_msg = CreateMessage::new().embed(emb);
     let data = ctx.data.read().await;
-    if let Some(link_cache) = data.get::<LinkAPICache>() {
-        if let Some(b64) = compilation_details.base64 {
-            let long_url = format!("https://godbolt.org/clientstate/{}", b64);
-            let link_cache_lock = link_cache.read().await;
-            if let Some(url) = link_cache_lock.get_link(long_url).await {
-                let btns = CreateButton::new_link(url).label("View on godbolt.org");
-
-                new_msg = new_msg.components(vec![CreateActionRow::Buttons(vec![btns])]);
-            }
-        }
+    if let Some(b64) = compilation_details.base64 {
+        new_msg = discordhelpers::embeds::add_godbolt_link(
+            data.get::<LinkAPICache>().unwrap(),
+            b64,
+            new_msg,
+        )
+        .await
     }
 
     // Dispatch our request
     let compilation_embed = msg.channel_id.send_message(&ctx.http, new_msg).await?;
 
     // add delete cache
-    let data_read = ctx.data.read().await;
-    let mut delete_cache = data_read.get::<MessageCache>().unwrap().lock().await;
+    let mut delete_cache = data.get::<MessageCache>().unwrap().lock().await;
     delete_cache.insert(
         msg.id.get(),
         MessageCacheEntry::new(compilation_embed, msg.clone()),

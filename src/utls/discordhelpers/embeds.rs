@@ -1,9 +1,9 @@
-use std::fmt::Write as _;
-use std::{env, str};
-
 use crate::apis::insights::InsightsResponse;
+use crate::apis::quick_link::LinkAPI;
 use crate::cache::LinkAPICache;
 use crate::managers::compilation::CompilationDetails;
+use crate::utls::constants::*;
+use crate::utls::discordhelpers;
 use serenity::all::{CreateActionRow, CreateButton, CreateEmbedFooter, EditMessage};
 use serenity::http::Http;
 use serenity::{
@@ -11,9 +11,10 @@ use serenity::{
     client::Context,
     model::prelude::*,
 };
-
-use crate::utls::constants::*;
-use crate::utls::discordhelpers;
+use std::fmt::Write as _;
+use std::sync::Arc;
+use std::{env, str};
+use tokio::sync::RwLock;
 
 #[derive(Default)]
 pub struct EmbedOptions {
@@ -208,33 +209,14 @@ pub async fn edit_message_embed(
     emb: &mut CreateEmbed,
     compilation_details: Option<CompilationDetails>,
 ) -> serenity::Result<()> {
-    let mut url = None;
+    let mut edit = EditMessage::default().embed(emb.clone());
+
+    let data = ctx.data.read().await;
     if let Some(details) = compilation_details {
-        let data = ctx.data.read().await;
-        if let Some(link_cache) = data.get::<LinkAPICache>() {
-            if let Some(b64) = details.base64 {
-                let long_url = format!("https://godbolt.org/clientstate/{}", b64);
-                let link_cache_lock = link_cache.read().await;
-                url = link_cache_lock.get_link(long_url).await;
-            }
+        if let Some(b64) = details.base64 {
+            edit = add_godbolt_link(data.get::<LinkAPICache>().unwrap(), b64, edit).await;
         }
     }
-
-    let mut btns = Vec::new();
-
-    if let Some(shorturl) = url {
-        btns.push(CreateButton::new_link(shorturl).label("View on godbolt.org"));
-    }
-
-    let edit = {
-        if btns.is_empty() {
-            EditMessage::default().embed(emb.clone())
-        } else {
-            EditMessage::default()
-                .components(vec![CreateActionRow::Buttons(btns)])
-                .embed(emb.clone())
-        }
-    };
 
     old.edit(ctx, edit).await?;
     Ok(())
@@ -373,4 +355,35 @@ pub fn build_fail_embed(author: &User, err: &str) -> CreateEmbed {
         .description(err)
         .thumbnail(ICON_FAIL)
         .footer(footer)
+}
+
+pub trait Buttonable {
+    fn components_custom(self, components: Vec<CreateActionRow>) -> Self;
+}
+
+impl Buttonable for CreateMessage {
+    fn components_custom(self, components: Vec<CreateActionRow>) -> Self {
+        self.components(components)
+    }
+}
+
+impl Buttonable for EditMessage {
+    fn components_custom(self, components: Vec<CreateActionRow>) -> Self {
+        self.components(components)
+    }
+}
+
+pub async fn add_godbolt_link<T: Buttonable>(
+    data: &Arc<RwLock<LinkAPI>>,
+    b64: String,
+    new_msg: T,
+) -> T {
+    let long_url = format!("https://godbolt.org/clientstate/{}", b64);
+    let link_cache_lock = data.read().await;
+    if let Some(url) = link_cache_lock.get_link(long_url).await {
+        return new_msg.components_custom(vec![CreateActionRow::Buttons(vec![
+            CreateButton::new_link(url).label("View on godbolt.org"),
+        ])]);
+    }
+    new_msg
 }
