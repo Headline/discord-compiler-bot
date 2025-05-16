@@ -144,19 +144,6 @@ pub async fn get_components(
             result.stdin = result.code;
             result.code = code;
         }
-
-        // If we find a code block from our executor's message, and it's also a reply
-        // let's assume we found the stdin and what they're replying to is the code.
-        // Anything else probably doesn't make sense.
-        if let Some(replied_msg) = reply {
-            let mut fake_result = ParserResult::default();
-            if find_code_block(&mut fake_result, &replied_msg.content, author).await? {
-                // we found a code block - lets assume the reply's codeblock is our actual code
-                result.stdin = result.code;
-                result.code = fake_result.code;
-                result.target = fake_result.target
-            }
-        }
     } else if !result.url.is_empty() {
         let code = get_url_code(&result.url, author).await?;
         result.code = code;
