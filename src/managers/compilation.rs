@@ -5,6 +5,7 @@ use serenity::framework::standard::CommandError;
 use serenity::model::user::User;
 
 use crate::boilerplate::generator::boilerplate_factory;
+use crate::utls::parser::shortname_to_qualified;
 use godbolt::{CompilationFilters, CompilerOptions, Godbolt, RequestOptions};
 use wandbox::{CompilationBuilder, Wandbox};
 
@@ -69,6 +70,7 @@ impl CompilationManager {
         if let Err(e) = &gbolt {
             error!("Unable to load compiler explorer: {}", e);
         }
+
         Ok(CompilationManager {
             wbox: wbox.ok(),
             gbolt: gbolt.ok(),
@@ -308,6 +310,66 @@ impl CompilationManager {
         let res = builder.dispatch().await?;
         details.success = res.status.eq("0");
         Ok((details, res))
+    }
+
+    pub fn get_compiler_list(
+        &self,
+        language: String,
+        filter_opt: Option<String>,
+    ) -> Result<Vec<String>, CommandError> {
+        let mut compiler_list = Vec::new();
+        let lower_lang = language.to_lowercase();
+        let language = shortname_to_qualified(&lower_lang);
+        match self.resolve_target(language) {
+            RequestHandler::CompilerExplorer => {
+                for cache_entry in &self.gbolt.as_ref().unwrap().cache {
+                    if cache_entry.language.id == language {
+                        for compiler in &cache_entry.compilers {
+                            compiler_list
+                                .push(format!("{} -> **{}**", &compiler.name, &compiler.id));
+                        }
+                    }
+                }
+            }
+            RequestHandler::WandBox => {
+                match self
+                    .wbox
+                    .as_ref()
+                    .unwrap()
+                    .get_compilers(shortname_to_qualified(language))
+                {
+                    Some(s) => {
+                        for compiler in s {
+                            compiler_list.push(compiler.name);
+                        }
+                    }
+                    None => {
+                        return Err(CommandError::from(format!(
+                            "Unable to find compilers for target '{}'.",
+                            language
+                        )));
+                    }
+                };
+            }
+            RequestHandler::None => {
+                return Err(CommandError::from(format!(
+                    "Unable to find compilers for target '{}'.",
+                    language
+                )));
+            }
+        }
+
+        if let Some(filter) = &filter_opt {
+            if let Some(ratings) = similar_string::get_similarity_ratings(filter, &compiler_list) {
+                let mut combined: Vec<(f64, String)> =
+                    ratings.into_iter().zip(compiler_list).collect();
+                combined.sort_by(|a, b| b.0.partial_cmp(&a.0).unwrap());
+                let (_floats, strings): (Vec<f64>, Vec<String>) = combined.into_iter().unzip();
+                return Ok(strings);
+            }
+        }
+
+        Ok(compiler_list)
     }
 }
 
