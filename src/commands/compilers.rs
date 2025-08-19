@@ -18,9 +18,10 @@ pub async fn compilers(ctx: &Context, msg: &Message, mut _args: Args) -> Command
         }
     };
 
-    let mut filter_opt: Option<String> = Option::None;
-    if let Ok(parsed_filter) = _args.single::<String>() {
-        filter_opt = Some(parsed_filter);
+    let mut filter_opt: Option<&str> = Option::None;
+    let rest = _args.rest();
+    if !rest.is_empty() {
+        filter_opt = Some(rest);
     };
 
     let data_read = ctx.data.read().await;

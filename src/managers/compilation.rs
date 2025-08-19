@@ -315,9 +315,11 @@ impl CompilationManager {
     pub fn get_compiler_list(
         &self,
         language: String,
-        filter_opt: Option<String>,
+        filter_opt: Option<&str>,
     ) -> Result<Vec<String>, CommandError> {
         let mut compiler_list = Vec::new();
+        let mut similarity_list = Vec::new();
+
         let lower_lang = language.to_lowercase();
         let language = shortname_to_qualified(&lower_lang);
         match self.resolve_target(language) {
@@ -325,6 +327,27 @@ impl CompilationManager {
                 for cache_entry in &self.gbolt.as_ref().unwrap().cache {
                     if cache_entry.language.id == language {
                         for compiler in &cache_entry.compilers {
+                            if let Some(filter) = &filter_opt {
+                                let parts = filter.split_whitespace();
+
+                                let mut contains_part = false;
+                                for part in parts {
+                                    if compiler.id.contains(part) || compiler.name.contains(part) {
+                                        contains_part = true;
+                                        break;
+                                    }
+                                }
+                                if !contains_part {
+                                    continue;
+                                }
+
+                                let id_sim =
+                                    similar_string::compare_similarity(filter, &compiler.id);
+                                let name_sim =
+                                    similar_string::compare_similarity(filter, &compiler.name);
+
+                                similarity_list.push(f64::max(id_sim, name_sim));
+                            }
                             compiler_list
                                 .push(format!("{} -> **{}**", &compiler.name, &compiler.id));
                         }
@@ -340,6 +363,24 @@ impl CompilationManager {
                 {
                     Some(s) => {
                         for compiler in s {
+                            if let Some(filter) = &filter_opt {
+                                let parts = filter.split_whitespace();
+
+                                let mut contains_part = false;
+                                for part in parts {
+                                    if compiler.name.contains(part) {
+                                        contains_part = true;
+                                        break;
+                                    }
+                                }
+                                if !contains_part {
+                                    continue;
+                                }
+
+                                let name_sim =
+                                    similar_string::compare_similarity(filter, &compiler.name);
+                                similarity_list.push(name_sim);
+                            }
                             compiler_list.push(compiler.name);
                         }
                     }
@@ -359,14 +400,12 @@ impl CompilationManager {
             }
         }
 
-        if let Some(filter) = &filter_opt {
-            if let Some(ratings) = similar_string::get_similarity_ratings(filter, &compiler_list) {
-                let mut combined: Vec<(f64, String)> =
-                    ratings.into_iter().zip(compiler_list).collect();
-                combined.sort_by(|a, b| b.0.partial_cmp(&a.0).unwrap());
-                let (_floats, strings): (Vec<f64>, Vec<String>) = combined.into_iter().unzip();
-                return Ok(strings);
-            }
+        if filter_opt.is_some() {
+            let mut combined: Vec<(f64, String)> =
+                similarity_list.into_iter().zip(compiler_list).collect();
+            combined.sort_by(|a, b| b.0.partial_cmp(&a.0).unwrap());
+            let (_floats, strings): (Vec<f64>, Vec<String>) = combined.into_iter().unzip();
+            return Ok(strings);
         }
 
         Ok(compiler_list)
