@@ -9,6 +9,7 @@ mod events;
 mod managers;
 mod slashcmds;
 mod stats;
+#[cfg(test)]
 mod tests;
 mod utls;
 
