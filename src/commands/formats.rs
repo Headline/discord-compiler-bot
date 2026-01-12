@@ -22,18 +22,16 @@ pub async fn formats(ctx: &Context, msg: &Message, _args: Args) -> CommandResult
     };
 
     let compiler_manager = data.get::<CompilerCache>().unwrap().read().await;
-    if compiler_manager.gbolt.is_none() {
-        return Err(CommandError::from(
-            "Compiler Explorer service is currently down, please try again later.",
-        ));
-    }
+    let godbolt = compiler_manager.godbolt().ok_or_else(|| {
+        CommandError::from("Compiler Explorer service is currently down, please try again later.")
+    })?;
 
     let mut emb = CreateEmbed::new()
         .thumbnail(ICON_HELP)
         .color(COLOR_OKAY)
         .title("Formatters:")
         .description(format!("Below is the list of all formatters currently supported, an valid example request can be `{}format rust`, or `{}format clang mozilla`", prefix, prefix));
-    for format in &compiler_manager.gbolt.as_ref().unwrap().formats {
+    for format in &godbolt.formats {
         let mut output = String::new();
         output.push_str("Styles:\n");
         if format.styles.is_empty() {

@@ -31,7 +31,7 @@ pub async fn compilers(ctx: &Context, msg: &Message, mut _args: Args) -> Command
             .expect("Expected CompilerCache.")
             .clone();
         let cache = compiler_cache_lock.read().await;
-        cache.get_compiler_list(user_lang, filter_opt)?
+        cache.get_compiler_list(&user_lang, filter_opt)?
     };
 
     let avatar = {

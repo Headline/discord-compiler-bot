@@ -35,16 +35,12 @@ pub async fn format(ctx: &Context, msg: &Message, mut args: Args) -> CommandResu
 
     let data = ctx.data.read().await;
     let comp_mgr = data.get::<CompilerCache>().unwrap().read().await;
-    if comp_mgr.gbolt.is_none() {
-        return Err(CommandError::from(
-            "Compiler Explorer service is currently down, please try again later.",
-        ));
-    }
-
-    let gbolt = comp_mgr.gbolt.as_ref().unwrap();
+    let godbolt = comp_mgr.godbolt().ok_or_else(|| {
+        CommandError::from("Compiler Explorer service is currently down, please try again later.")
+    })?;
 
     // validate user input
-    for format in &gbolt.formats {
+    for format in &godbolt.formats {
         if format
             .format_type
             .to_ascii_lowercase()

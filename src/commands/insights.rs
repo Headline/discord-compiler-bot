@@ -81,9 +81,9 @@ pub async fn handle_request(
     if let Some(resp_obj) = resp {
         debug!("Insights response retval: {}", resp_obj.return_code);
         let details = CompilationDetails {
-            language: "".to_string(),
-            compiler: "".to_string(),
-            base64: None,
+            language: String::new(),
+            compiler: String::new(),
+            godbolt_base64: None,
             success: resp_obj.return_code == 0,
         };
         Ok((details, build_insights_response_embed(&author, resp_obj)))

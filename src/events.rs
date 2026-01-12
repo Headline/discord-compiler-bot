@@ -27,18 +27,12 @@ impl ShardsReadyHandler for Handler {
     async fn all_shards_ready(&self, ctx: &Context) {
         let data = ctx.data.read().await;
 
-        // Collect stats data while holding lock, then release before async operations
-        let (server_count, stats_to_send, stats_handle) = {
+        let server_count = {
             let mut stats = data.get::<StatsManagerCache>().unwrap().lock().await;
             let guild_count = stats.get_boot_vec_sum();
-            let to_send = stats.post_servers(guild_count);
-            (stats.server_count(), to_send, stats.handle())
+            stats.post_servers(guild_count);
+            stats.server_count()
         };
-
-        // Send stats update outside of lock
-        if let Some(count) = stats_to_send {
-            stats_handle.send_servers(count).await;
-        }
 
         // lock the shard manager to update our presences
         let shard_manager = data.get::<ShardManagerCache>().unwrap().lock().await;
@@ -82,17 +76,12 @@ impl EventHandler for Handler {
                 }
             }
 
-            // publish/queue new server to stats - collect data with lock, send after
-            let (server_count, shard_count, stats_to_send, stats_handle) = {
+            // Update server count
+            let (server_count, shard_count) = {
                 let mut stats = data.get::<StatsManagerCache>().unwrap().lock().await;
-                let to_send = stats.new_server();
-                (stats.server_count(), stats.shard_count(), to_send, stats.handle())
+                stats.new_server();
+                (stats.server_count(), stats.shard_count())
             };
-
-            // Send stats update outside of lock
-            if let Some(count) = stats_to_send {
-                stats_handle.send_servers(count).await;
-            }
 
             // ensure we're actually loaded in before we start posting our server counts
             if server_count > 0 {
@@ -141,17 +130,12 @@ impl EventHandler for Handler {
             }
         }
 
-        // publish/queue new server to stats - collect data with lock, send after
-        let (server_count, shard_count, stats_to_send, stats_handle) = {
+        // Update server count
+        let (server_count, shard_count) = {
             let mut stats = data.get::<StatsManagerCache>().unwrap().lock().await;
-            let to_send = stats.leave_server();
-            (stats.server_count(), stats.shard_count(), to_send, stats.handle())
+            stats.leave_server();
+            (stats.server_count(), stats.shard_count())
         };
-
-        // Send stats update outside of lock
-        if let Some(count) = stats_to_send {
-            stats_handle.send_servers(count).await;
-        }
 
         // ensure we're actually loaded in before we start posting our server counts
         if server_count > 0 {
@@ -307,39 +291,13 @@ impl EventHandler for Handler {
 
 #[hook]
 pub async fn before(ctx: &Context, msg: &Message, _: &str) -> bool {
-    // we'll go with 0 if we couldn't grab guild id
-    let mut guild_id = 0;
-    if let Some(id) = msg.guild_id {
-        guild_id = id.get();
-    }
+    let guild_id = msg.guild_id.map(|id| id.get()).unwrap_or(0);
 
     let data = ctx.data.read().await;
-
-    // Get stats handle and check tracking, release lock before sending
-    let stats_handle = {
-        let stats = data.get::<StatsManagerCache>().unwrap().lock().await;
-        if stats.should_track() {
-            Some(stats.handle())
-        } else {
-            None
-        }
-    };
-
-    // Send request tick outside of lock
-    if let Some(handle) = stats_handle {
-        handle.send_request_tick().await;
-    }
-
-    // Check blocklist in separate lock scope
-    let (author_blocked, guild_blocked) = {
-        let blocklist = data.get::<BlocklistCache>().unwrap().read().await;
-        (
-            blocklist.contains(msg.author.id.get()),
-            blocklist.contains(guild_id),
-        )
-    };
-
-    // check user against our blocklist
+    let blocklist = data.get::<BlocklistCache>().unwrap().read().await;
+    let author_blocked = blocklist.contains(msg.author.id.get());
+    let guild_blocked = blocklist.contains(guild_id);
+    drop(blocklist);
 
     if author_blocked || guild_blocked {
         let emb = embeds::build_fail_embed(
@@ -365,32 +323,17 @@ pub async fn before(ctx: &Context, msg: &Message, _: &str) -> bool {
 pub async fn after(
     ctx: &Context,
     msg: &Message,
-    command_name: &str,
+    _command_name: &str,
     command_result: CommandResult,
 ) {
-    let data = ctx.data.read().await;
-
     if let Err(e) = command_result {
         let emb = embeds::build_fail_embed(&msg.author, &format!("{}", e));
         let sent_fail = embeds::dispatch_embed(&ctx.http, msg.channel_id, emb).await;
         if let Ok(sent) = sent_fail {
+            let data = ctx.data.read().await;
             let mut message_cache = data.get::<MessageCache>().unwrap().lock().await;
             message_cache.insert(msg.id.get(), MessageCacheEntry::new(sent, msg.clone()));
         }
-    }
-
-    // push command executed to api - get handle while holding lock, send after
-    let stats_data = {
-        let stats = data.get::<StatsManagerCache>().unwrap().lock().await;
-        if stats.should_track() {
-            Some((stats.handle(), msg.guild_id))
-        } else {
-            None
-        }
-    };
-
-    if let Some((handle, guild_id)) = stats_data {
-        handle.send_command_executed(command_name, guild_id).await;
     }
 }
 

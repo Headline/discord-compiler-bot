@@ -199,11 +199,8 @@ pub async fn fill(
     let insights = InsightsAPI::new();
     data.insert::<InsightsAPICache>(Arc::new(Mutex::new(insights)));
 
-    // Stats tracking
+    // Stats tracking (server/shard counts)
     let stats = StatsManager::new();
-    if stats.should_track() {
-        info!("Statistics tracking enabled");
-    }
     data.insert::<StatsManagerCache>(Arc::new(Mutex::new(stats)));
 
     // Blocklist

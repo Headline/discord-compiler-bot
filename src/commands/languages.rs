@@ -13,13 +13,13 @@ pub async fn languages(ctx: &Context, msg: &Message, _args: Args) -> CommandResu
     let compiler_manager = compiler_cache.read().await;
 
     let mut items = Vec::new();
-    if let Some(gbolt) = compiler_manager.gbolt.as_ref() {
-        for cache_entry in &gbolt.cache {
+    if let Some(godbolt) = compiler_manager.godbolt() {
+        for cache_entry in &godbolt.cache {
             items.push(format!("{}*", cache_entry.language.id));
         }
     }
-    if let Some(wbox) = &compiler_manager.wbox {
-        let langs = wbox.get_languages();
+    if let Some(wandbox) = compiler_manager.wandbox() {
+        let langs = wandbox.get_languages();
         for lang in langs {
             if !items.contains(&lang.name) && !items.contains(&format!("{}*", &lang.name)) {
                 items.push(lang.name);

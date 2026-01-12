@@ -4,7 +4,7 @@ use serenity::framework::standard::CommandError;
 use serenity::model::channel::{Attachment, Message};
 use serenity::model::user::User;
 
-use crate::managers::compilation::{CompilationManager, RequestHandler};
+use crate::managers::compilation::CompilationManager;
 use std::path::Path;
 use std::sync::Arc;
 use tokio::sync::RwLock;
@@ -75,7 +75,7 @@ pub async fn get_components(
         if let Some(param) = args.first() {
             let lower_param = param.trim().to_lowercase();
             let language = shortname_to_qualified(&lower_param);
-            if !matches!(lang_lookup.resolve_target(language), RequestHandler::None) {
+            if lang_lookup.is_target_supported(language) {
                 args.remove(0);
                 result.target = language.to_owned();
             }
