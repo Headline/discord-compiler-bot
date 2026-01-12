@@ -122,12 +122,19 @@ pub async fn handle_request(
     let _ = discordhelpers::delete_bot_reacts(&ctx, msg, loading_reaction).await;
 
     let is_success = result.0.success;
-    {
-        // stats manager is used in events.rs, lets keep our locks very short
+
+    // Get stats handle while holding lock, send after releasing
+    let stats_data = {
         let stats = data_read.get::<StatsManagerCache>().unwrap().lock().await;
         if stats.should_track() {
-            stats.compilation(&result.0.language, !is_success).await;
+            Some((stats.handle(), result.0.language.clone(), !is_success))
+        } else {
+            None
         }
+    };
+
+    if let Some((handle, language, fail)) = stats_data {
+        handle.send_compilation(&language, fail).await;
     }
 
     let config = data_read.get::<ConfigCache>().unwrap();
