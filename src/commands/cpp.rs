@@ -1,121 +1,129 @@
 use serenity::all::{CreateActionRow, CreateButton, CreateMessage};
-use serenity::{
-    builder::CreateEmbed,
-    framework::standard::{macros::command, Args, CommandError, CommandResult},
-    model::prelude::*,
-    prelude::*,
-};
+use serenity::builder::CreateEmbed;
+use serenity::client::Context;
+use serenity::framework::standard::CommandError;
+use serenity::framework::standard::{macros::command, Args, CommandResult};
+use serenity::model::channel::{Message, ReactionType};
+use serenity::model::user::User;
 
-use crate::cache::LinkAPICache;
+use crate::cache::{CompilerCache, ConfigCache, LinkAPICache, MessageCache, MessageCacheEntry};
+use crate::cppeval::eval::CppEval;
 use crate::managers::compilation::CompilationDetails;
-use crate::utls::discordhelpers::embeds::EmbedOptions;
-use crate::{
-    cache::{CompilerCache, ConfigCache, MessageCache, MessageCacheEntry},
-    cppeval::eval::CppEval,
-    utls::discordhelpers,
-    utls::discordhelpers::embeds::ToEmbed,
-    utls::parser::ParserResult,
-};
+use crate::utls::discordhelpers;
+use crate::utls::discordhelpers::embeds::{EmbedOptions, ToEmbed};
+use crate::utls::parser::ParserResult;
 
 #[command]
 #[aliases("c++")]
 #[bucket = "nospam"]
 pub async fn cpp(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
-    let (emb, compilation_details) =
-        handle_request(ctx.clone(), msg.content.clone(), msg.author.clone(), msg).await?;
+    let result = handle_request(ctx, &msg.content, &msg.author, msg).await?;
 
-    // Send our final embed
-    let mut new_msg = CreateMessage::new().embed(emb);
     let data = ctx.data.read().await;
-    if let Some(link_cache) = data.get::<LinkAPICache>() {
-        if let Some(b64) = compilation_details.base64 {
+
+    // Build message with optional godbolt link button
+    let mut new_msg = CreateMessage::new().embed(result.embed);
+    if let Some(b64) = &result.details.godbolt_base64 {
+        if let Some(link_cache) = data.get::<LinkAPICache>() {
             let long_url = format!("https://godbolt.org/clientstate/{}", b64);
             let link_cache_lock = link_cache.read().await;
-            if let Some(url) = link_cache_lock.get_link(long_url).await {
-                let btns = CreateButton::new_link(url).label("View on godbolt.org");
-
-                new_msg = new_msg.components(vec![CreateActionRow::Buttons(vec![btns])]);
+            if let Some(short_url) = link_cache_lock.get_link(long_url).await {
+                let btn = CreateButton::new_link(short_url).label("View on godbolt.org");
+                new_msg = new_msg.components(vec![CreateActionRow::Buttons(vec![btn])]);
             }
         }
     }
 
-    // Dispatch our request
-    let compilation_embed = msg.channel_id.send_message(&ctx.http, new_msg).await?;
+    let sent = msg.channel_id.send_message(&ctx.http, new_msg).await?;
 
-    // add delete cache
-    let data_read = ctx.data.read().await;
-    let mut delete_cache = data_read.get::<MessageCache>().unwrap().lock().await;
-    delete_cache.insert(
-        msg.id.get(),
-        MessageCacheEntry::new(compilation_embed, msg.clone()),
-    );
+    // Cache for edit tracking
+    let mut message_cache = data.get::<MessageCache>().unwrap().lock().await;
+    message_cache.insert(msg.id.get(), MessageCacheEntry::new(sent, msg.clone()));
 
     Ok(())
 }
 
+/// Result of handle_request containing everything needed to display and track a compilation
+pub struct HandleRequestResult {
+    pub embed: CreateEmbed,
+    pub details: CompilationDetails,
+}
+
+/// Parse C++ expression, wrap it for evaluation, compile, and return result.
 pub async fn handle_request(
-    ctx: Context,
-    content: String,
-    author: User,
+    ctx: &Context,
+    content: &str,
+    author: &User,
     msg: &Message,
-) -> std::result::Result<(CreateEmbed, CompilationDetails), CommandError> {
-    let loading_reaction = {
-        let data_read = ctx.data.read().await;
-        let botinfo_lock = data_read.get::<ConfigCache>().unwrap();
-        let botinfo = botinfo_lock.read().await;
-        if let Some(loading_id) = botinfo.get("LOADING_EMOJI_ID") {
-            let loading_name = botinfo
-                .get("LOADING_EMOJI_NAME")
-                .expect("Unable to find loading emoji name")
-                .clone();
-            discordhelpers::build_reaction(loading_id.parse::<u64>()?, &loading_name)
-        } else {
-            ReactionType::Unicode(String::from("⏳"))
-        }
-    };
+) -> Result<HandleRequestResult, CommandError> {
+    let data = ctx.data.read().await;
 
-    let start = content.find(' ');
-    if start.is_none() {
-        return Err(CommandError::from("Invalid usage. View `;help cpp`"));
-    }
+    // Get loading reaction
+    let loading_reaction = get_loading_reaction(&data).await?;
 
-    let mut eval = CppEval::new(content.split_at(start.unwrap()).1);
-    let out = eval.evaluate()?;
+    // Parse the C++ expression
+    let start = content
+        .find(' ')
+        .ok_or_else(|| CommandError::from("Invalid usage. View `;help cpp`"))?;
+    let expression = content.split_at(start).1;
 
-    // send out loading emote
+    // Evaluate and wrap the expression
+    let mut eval = CppEval::new(expression);
+    let wrapped_code = eval.evaluate()?;
+
+    // Show loading indicator
     if msg
         .react(&ctx.http, loading_reaction.clone())
         .await
         .is_err()
     {
         return Err(CommandError::from(
-            "Unable to react to message, am I missing permissions to react or use external emoji?",
+            "Unable to react to message. Am I missing permissions to react or use external emoji?",
         ));
     }
 
-    let fake_parse = ParserResult {
-        url: "".to_string(),
-        stdin: "".to_string(),
+    // Build a fake parse result for the compilation
+    let parse_result = ParserResult {
+        url: String::new(),
+        stdin: String::new(),
         target: "gsnapshot".to_string(),
-        code: out,
+        code: wrapped_code,
         options: vec![String::from("-O3"), String::from("-std=gnu++26")],
         args: vec![],
     };
 
-    let data_read = ctx.data.read().await;
-    let compiler_lock = data_read.get::<CompilerCache>().unwrap().read().await;
-    let result = match compiler_lock.compiler_explorer(&fake_parse).await {
-        Ok(r) => r,
-        Err(e) => {
-            // we failed, lets remove the loading react so it doesn't seem like we're still processing
-            discordhelpers::delete_bot_reacts(&ctx, msg, loading_reaction.clone()).await?;
+    // Compile using Godbolt (raw response needed for custom embed building)
+    let compilation_manager = data.get::<CompilerCache>().unwrap().read().await;
+    let result = compilation_manager.compile_godbolt_raw(&parse_result).await;
 
-            return Err(CommandError::from(format!("{}", e)));
-        }
-    };
+    // Remove loading indicator
+    discordhelpers::delete_bot_reacts(ctx, msg, loading_reaction.clone()).await?;
 
-    // remove our loading emote
-    discordhelpers::delete_bot_reacts(&ctx, msg, loading_reaction).await?;
-    let options = EmbedOptions::new(false, result.0.clone());
-    Ok((result.1.to_embed(&author, &options), result.0))
+    let (details, response) = result?;
+
+    // Build embed from response
+    let embed_options = EmbedOptions::new(false, details.clone());
+    let embed = response.to_embed(author, &embed_options);
+
+    Ok(HandleRequestResult { embed, details })
+}
+
+/// Get the configured loading reaction or default hourglass
+async fn get_loading_reaction(
+    data: &tokio::sync::RwLockReadGuard<'_, serenity::prelude::TypeMap>,
+) -> Result<ReactionType, CommandError> {
+    let config = data.get::<ConfigCache>().unwrap().read().await;
+
+    if let Some(loading_id) = config.get("LOADING_EMOJI_ID") {
+        let loading_name = config
+            .get("LOADING_EMOJI_NAME")
+            .expect("LOADING_EMOJI_NAME must be set if LOADING_EMOJI_ID is set")
+            .clone();
+        Ok(discordhelpers::build_reaction(
+            loading_id.parse::<u64>()?,
+            &loading_name,
+        ))
+    } else {
+        Ok(ReactionType::Unicode(String::from("⏳")))
+    }
 }

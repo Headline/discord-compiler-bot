@@ -26,16 +26,19 @@ trait ShardsReadyHandler {
 impl ShardsReadyHandler for Handler {
     async fn all_shards_ready(&self, ctx: &Context) {
         let data = ctx.data.read().await;
+
         let server_count = {
             let mut stats = data.get::<StatsManagerCache>().unwrap().lock().await;
             let guild_count = stats.get_boot_vec_sum();
-            stats.post_servers(guild_count).await;
+            stats.post_servers(guild_count);
             stats.server_count()
         };
 
         // lock the shard manager to update our presences
         let shard_manager = data.get::<ShardManagerCache>().unwrap().lock().await;
         discordhelpers::send_global_presence(&shard_manager, server_count).await;
+        drop(shard_manager);
+
         info!("Ready in {} guilds", server_count);
 
         // register commands globally in release
@@ -73,10 +76,10 @@ impl EventHandler for Handler {
                 }
             }
 
-            // publish/queue new server to stats
+            // Update server count
             let (server_count, shard_count) = {
                 let mut stats = data.get::<StatsManagerCache>().unwrap().lock().await;
-                stats.new_server().await;
+                stats.new_server();
                 (stats.server_count(), stats.shard_count())
             };
 
@@ -87,8 +90,9 @@ impl EventHandler for Handler {
                     shard_count: Some(shard_count as u64),
                 };
 
+                // Clone dbl client to use outside lock scope
                 if let Some(dbl_cache) = data.get::<DblCache>() {
-                    let dbl = dbl_cache.read().await;
+                    let dbl = dbl_cache.read().await.clone();
                     if let Err(e) = dbl.update_stats(id, new_stats).await {
                         warn!("Failed to post stats to dbl: {}", e);
                     }
@@ -97,6 +101,7 @@ impl EventHandler for Handler {
                 // update guild count in presence
                 let shard_manager = data.get::<ShardManagerCache>().unwrap().lock().await;
                 discordhelpers::send_global_presence(&shard_manager, server_count).await;
+                drop(shard_manager);
             }
 
             info!("Joining {}", guild.name);
@@ -125,10 +130,10 @@ impl EventHandler for Handler {
             }
         }
 
-        // publish/queue new server to stats
+        // Update server count
         let (server_count, shard_count) = {
             let mut stats = data.get::<StatsManagerCache>().unwrap().lock().await;
-            stats.leave_server().await;
+            stats.leave_server();
             (stats.server_count(), stats.shard_count())
         };
 
@@ -139,8 +144,9 @@ impl EventHandler for Handler {
                 shard_count: Some(shard_count as u64),
             };
 
+            // Clone dbl client to use outside lock
             if let Some(dbl_cache) = data.get::<DblCache>() {
-                let dbl = dbl_cache.read().await;
+                let dbl = dbl_cache.read().await.clone();
                 if let Err(e) = dbl.update_stats(id, new_stats).await {
                     warn!("Failed to post stats to dbl: {}", e);
                 }
@@ -149,6 +155,7 @@ impl EventHandler for Handler {
             // update guild count in presence
             let shard_manager = data.get::<ShardManagerCache>().unwrap().lock().await;
             discordhelpers::send_global_presence(&shard_manager, server_count).await;
+            drop(shard_manager);
         }
 
         info!("Leaving {}", &incomplete.id);
@@ -223,8 +230,10 @@ impl EventHandler for Handler {
         info!("[Shard {}] Ready", ctx.shard_id);
         let total_shards_to_spawn = ready.shard.unwrap().total;
 
-        let shard_count = {
-            let data = ctx.data.read().await;
+        let data = ctx.data.read().await;
+
+        // Acquire stats lock separately to avoid holding it while acquiring other locks
+        let (shard_count, is_first_shard) = {
             let mut stats = data.get::<StatsManagerCache>().unwrap().lock().await;
             // occasionally we can have a ready event fire well after execution
             // this check prevents us from double calling all_shards_ready
@@ -235,14 +244,15 @@ impl EventHandler for Handler {
 
             let guild_count = ready.guilds.len() as u64;
             stats.add_shard(guild_count);
-
-            // insert avatar at first opportunity
-            if stats.shard_count() == 1 {
-                let mut info = data.get::<ConfigCache>().unwrap().write().await;
-                info.insert("BOT_AVATAR", ready.user.avatar_url().unwrap());
-            }
-            stats.shard_count()
+            let is_first = stats.shard_count() == 1;
+            (stats.shard_count(), is_first)
         };
+
+        // insert avatar at first opportunity - now outside stats lock
+        if is_first_shard {
+            let mut info = data.get::<ConfigCache>().unwrap().write().await;
+            info.insert("BOT_AVATAR", ready.user.avatar_url().unwrap());
+        }
 
         // special case here if single sharded - our presence must update in this case
         // other wise it will blank out
@@ -281,26 +291,13 @@ impl EventHandler for Handler {
 
 #[hook]
 pub async fn before(ctx: &Context, msg: &Message, _: &str) -> bool {
-    // we'll go with 0 if we couldn't grab guild id
-    let mut guild_id = 0;
-    if let Some(id) = msg.guild_id {
-        guild_id = id.get();
-    }
+    let guild_id = msg.guild_id.map(|id| id.get()).unwrap_or(0);
 
-    let (author_blocked, guild_blocked) = {
-        let data = ctx.data.read().await;
-        let stats = data.get::<StatsManagerCache>().unwrap().lock().await;
-        if stats.should_track() {
-            stats.post_request().await;
-        }
-        let blocklist = data.get::<BlocklistCache>().unwrap().read().await;
-        (
-            blocklist.contains(msg.author.id.get()),
-            blocklist.contains(guild_id),
-        )
-    };
-
-    // check user against our blocklist
+    let data = ctx.data.read().await;
+    let blocklist = data.get::<BlocklistCache>().unwrap().read().await;
+    let author_blocked = blocklist.contains(msg.author.id.get());
+    let guild_blocked = blocklist.contains(guild_id);
+    drop(blocklist);
 
     if author_blocked || guild_blocked {
         let emb = embeds::build_fail_embed(
@@ -326,24 +323,17 @@ pub async fn before(ctx: &Context, msg: &Message, _: &str) -> bool {
 pub async fn after(
     ctx: &Context,
     msg: &Message,
-    command_name: &str,
+    _command_name: &str,
     command_result: CommandResult,
 ) {
-    let data = ctx.data.read().await;
-
     if let Err(e) = command_result {
         let emb = embeds::build_fail_embed(&msg.author, &format!("{}", e));
         let sent_fail = embeds::dispatch_embed(&ctx.http, msg.channel_id, emb).await;
         if let Ok(sent) = sent_fail {
+            let data = ctx.data.read().await;
             let mut message_cache = data.get::<MessageCache>().unwrap().lock().await;
             message_cache.insert(msg.id.get(), MessageCacheEntry::new(sent, msg.clone()));
         }
-    }
-
-    // push command executed to api
-    let stats = data.get::<StatsManagerCache>().unwrap().lock().await;
-    if stats.should_track() {
-        stats.command_executed(command_name, msg.guild_id).await;
     }
 }
 

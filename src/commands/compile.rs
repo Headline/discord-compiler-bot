@@ -1,155 +1,177 @@
 use std::fmt::Write as _;
 
-use serenity::framework::standard::{macros::command, Args, CommandResult};
-
-use crate::cache::{LinkAPICache, MessageCache, MessageCacheEntry};
-use crate::utls::discordhelpers::embeds;
-use crate::utls::{discordhelpers, parser};
-
-use tokio::sync::RwLockReadGuard;
-
 use serenity::all::{CreateActionRow, CreateButton, CreateMessage};
 use serenity::builder::CreateEmbed;
 use serenity::client::Context;
 use serenity::framework::standard::CommandError;
+use serenity::framework::standard::{macros::command, Args, CommandResult};
 use serenity::model::channel::{Message, ReactionType};
 use serenity::model::user::User;
 
-use crate::cache::{CompilerCache, ConfigCache, StatsManagerCache};
-use crate::managers::compilation::{CompilationDetails, CompilationManager};
+use crate::cache::{CompilerCache, ConfigCache, LinkAPICache, MessageCache, MessageCacheEntry};
+use crate::managers::compilation::{CompilationDetails, CompilationResult};
+use crate::utls::discordhelpers::embeds;
+use crate::utls::{discordhelpers, parser};
 
 #[command]
 #[bucket = "nospam"]
 pub async fn compile(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
-    let data_read = ctx.data.read().await;
+    let result = handle_request(ctx, &msg.content, &msg.author, msg).await?;
 
-    // Handle wandbox request logic
-    let (embed, compilation_details) =
-        handle_request(ctx.clone(), msg.content.clone(), msg.author.clone(), msg).await?;
-
-    // Send our final embed
-    let mut new_msg = CreateMessage::new().embed(embed);
     let data = ctx.data.read().await;
-    if let Some(link_cache) = data.get::<LinkAPICache>() {
-        if let Some(b64) = compilation_details.base64 {
+
+    // Build message with optional godbolt link button
+    let mut new_msg = CreateMessage::new().embed(result.embed);
+    if let Some(b64) = &result.details.godbolt_base64 {
+        if let Some(link_cache) = data.get::<LinkAPICache>() {
             let long_url = format!("https://godbolt.org/clientstate/{}", b64);
             let link_cache_lock = link_cache.read().await;
-            if let Some(url) = link_cache_lock.get_link(long_url).await {
-                let btns = CreateButton::new_link(url).label("View on godbolt.org");
-
-                new_msg = new_msg.components(vec![CreateActionRow::Buttons(vec![btns])]);
+            if let Some(short_url) = link_cache_lock.get_link(long_url).await {
+                let btn = CreateButton::new_link(short_url).label("View on godbolt.org");
+                new_msg = new_msg.components(vec![CreateActionRow::Buttons(vec![btn])]);
             }
         }
     }
 
     let sent = msg.channel_id.send_message(&ctx.http, new_msg).await?;
 
-    // Success/fail react
-    discordhelpers::send_completion_react(ctx, &sent, compilation_details.success).await?;
+    // React with success/fail indicator
+    discordhelpers::send_completion_react(ctx, &sent, result.details.success).await?;
 
-    let mut delete_cache = data_read.get::<MessageCache>().unwrap().lock().await;
-    delete_cache.insert(msg.id.get(), MessageCacheEntry::new(sent, msg.clone()));
+    // Cache for edit tracking
+    let mut message_cache = data.get::<MessageCache>().unwrap().lock().await;
+    message_cache.insert(msg.id.get(), MessageCacheEntry::new(sent, msg.clone()));
+
     debug!("Command executed");
     Ok(())
 }
 
+/// Result of handle_request containing everything needed to display and track a compilation
+pub struct HandleRequestResult {
+    pub embed: CreateEmbed,
+    pub details: CompilationDetails,
+}
+
+/// Parse message, compile code, and return result ready for display.
 pub async fn handle_request(
-    ctx: Context,
-    mut content: String,
-    author: User,
+    ctx: &Context,
+    content: &str,
+    author: &User,
     msg: &Message,
-) -> Result<(CreateEmbed, CompilationDetails), CommandError> {
-    let data_read = ctx.data.read().await;
-    let loading_reaction = {
-        let botinfo_lock = data_read.get::<ConfigCache>().unwrap();
-        let botinfo = botinfo_lock.read().await;
-        if let Some(loading_id) = botinfo.get("LOADING_EMOJI_ID") {
-            let loading_name = botinfo
-                .get("LOADING_EMOJI_NAME")
-                .expect("Unable to find loading emoji name")
-                .clone();
-            discordhelpers::build_reaction(loading_id.parse::<u64>()?, &loading_name)
-        } else {
-            ReactionType::Unicode(String::from("⏳"))
-        }
-    };
+) -> Result<HandleRequestResult, CommandError> {
+    // Extract needed data and release lock immediately
+    let (loading_reaction, compilation_manager) = {
+        let data = ctx.data.read().await;
+        let reaction = get_loading_reaction(&data).await?;
+        let comp_mgr = data.get::<CompilerCache>().unwrap().clone();
+        (reaction, comp_mgr)
+    }; // TypeMap lock released here
 
-    // Try to load in an attachment
-    let (code, ext) = parser::get_message_attachment(&msg.attachments).await?;
-    if !code.is_empty() {
-        writeln!(&mut content, "\n```{}\n{}\n```\n", ext, code).unwrap();
-    }
+    // Handle file attachments (may do HTTP request)
+    let content = append_attachment_code(content, &msg.attachments).await?;
 
-    // parse user input
-    let compilation_manager = data_read.get::<CompilerCache>().unwrap();
+    // Parse the compilation request
     let parse_result = parser::get_components(
         &content,
-        &author,
-        Some(compilation_manager),
+        author,
+        Some(&compilation_manager),
         &msg.referenced_message,
         false,
     )
     .await?;
 
-    // send out loading emote
+    // Show loading indicator
     if msg
         .react(&ctx.http, loading_reaction.clone())
         .await
         .is_err()
     {
         return Err(CommandError::from(
-            "Unable to react to message, am I missing permissions to react or use external emoji?",
+            "Unable to react to message. Am I missing permissions to react or use external emoji?",
         ));
     }
 
-    // dispatch our req
-    let compilation_manager_lock: RwLockReadGuard<CompilationManager> =
-        compilation_manager.read().await;
-    let compilation_result = compilation_manager_lock
-        .compile(&parse_result, &author)
-        .await;
-    let result = match compilation_result {
-        Ok(r) => r,
-        Err(e) => {
-            // we failed, lets remove the loading react so it doesn't seem like we're still processing
-            discordhelpers::delete_bot_reacts(&ctx, msg, loading_reaction.clone()).await?;
-
-            return Err(CommandError::from(format!("{}", e)));
-        }
+    // Compile the code - this is the slow part, no locks held
+    let result = {
+        let compilation_manager_lock = compilation_manager.read().await;
+        compilation_manager_lock
+            .compile(&parse_result, author)
+            .await
     };
 
-    // remove our loading emote
-    let _ = discordhelpers::delete_bot_reacts(&ctx, msg, loading_reaction).await;
+    // Remove loading indicator
+    let _ = discordhelpers::delete_bot_reacts(ctx, msg, loading_reaction).await;
 
-    let is_success = result.0.success;
-    {
-        // stats manager is used in events.rs, lets keep our locks very short
-        let stats = data_read.get::<StatsManagerCache>().unwrap().lock().await;
-        if stats.should_track() {
-            stats.compilation(&result.0.language, !is_success).await;
-        }
+    // Handle compilation errors
+    let CompilationResult { details, embed } = result?;
+
+    // Log compilation if configured
+    log_compilation(ctx, msg, &parse_result, details.success).await;
+
+    Ok(HandleRequestResult { embed, details })
+}
+
+/// Get the configured loading reaction or default hourglass
+async fn get_loading_reaction(
+    data: &tokio::sync::RwLockReadGuard<'_, serenity::prelude::TypeMap>,
+) -> Result<ReactionType, CommandError> {
+    let config = data.get::<ConfigCache>().unwrap().read().await;
+
+    if let Some(loading_id) = config.get("LOADING_EMOJI_ID") {
+        let loading_name = config
+            .get("LOADING_EMOJI_NAME")
+            .expect("LOADING_EMOJI_NAME must be set if LOADING_EMOJI_ID is set")
+            .clone();
+        Ok(discordhelpers::build_reaction(
+            loading_id.parse::<u64>()?,
+            &loading_name,
+        ))
+    } else {
+        Ok(ReactionType::Unicode(String::from("⏳")))
+    }
+}
+
+/// Append code from message attachments to content
+async fn append_attachment_code(
+    content: &str,
+    attachments: &[serenity::model::channel::Attachment],
+) -> Result<String, CommandError> {
+    let (code, ext) = parser::get_message_attachment(attachments).await?;
+    if code.is_empty() {
+        return Ok(content.to_string());
     }
 
-    let config = data_read.get::<ConfigCache>().unwrap();
-    let config_lock = config.read().await;
-    if let Some(log) = config_lock.get("COMPILE_LOG") {
-        if let Ok(id) = log.parse::<u64>() {
-            let guild = if msg.guild_id.is_some() {
-                msg.guild_id.unwrap().to_string()
-            } else {
-                "<<unknown>>".to_owned()
-            };
-            let emb = embeds::build_complog_embed(
-                is_success,
+    let mut result = content.to_string();
+    writeln!(&mut result, "\n```{}\n{}\n```\n", ext, code).unwrap();
+    Ok(result)
+}
+
+/// Log compilation to the configured channel if enabled
+async fn log_compilation(
+    ctx: &Context,
+    msg: &Message,
+    parse_result: &parser::ParserResult,
+    success: bool,
+) {
+    let data = ctx.data.read().await;
+    let config = data.get::<ConfigCache>().unwrap().read().await;
+
+    if let Some(log_channel) = config.get("COMPILE_LOG") {
+        if let Ok(channel_id) = log_channel.parse::<u64>() {
+            let guild = msg
+                .guild_id
+                .map(|g| g.to_string())
+                .unwrap_or_else(|| "<<DM>>".to_string());
+
+            let embed = embeds::build_complog_embed(
+                success,
                 &parse_result.code,
                 &parse_result.target,
                 &msg.author.name,
                 msg.author.id,
                 &guild,
             );
-            discordhelpers::manual_dispatch(ctx.http.clone(), id, emb).await;
+            discordhelpers::manual_dispatch(ctx.http.clone(), channel_id, embed).await;
         }
     }
-
-    Ok((result.1, result.0))
 }

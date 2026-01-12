@@ -1,4 +1,3 @@
-use crate::cache::StatsManagerCache;
 use crate::slashcmds;
 
 use serenity::all::{Command, CommandInteraction, CommandType, CreateCommand};
@@ -19,16 +18,6 @@ impl CommandManager {
 
     pub async fn on_command(&self, ctx: &Context, command: &CommandInteraction) -> CommandResult {
         let command_name = command.data.name.to_lowercase();
-        // push command executed to api
-        {
-            let data = ctx.data.read().await;
-            let stats = data.get::<StatsManagerCache>().unwrap().lock().await;
-            if stats.should_track() {
-                stats
-                    .command_executed(&command_name, command.guild_id)
-                    .await;
-            }
-        }
 
         match command_name.as_str() {
             "ping" => slashcmds::ping::ping(ctx, command).await,

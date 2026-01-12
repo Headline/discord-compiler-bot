@@ -196,12 +196,13 @@ pub async fn handle_edit_cpp(
     mut old: Message,
     original_msg: Message,
 ) -> CommandResult {
-    let (mut embed, details) =
-        crate::commands::cpp::handle_request(ctx.clone(), content, author, &original_msg).await?;
+    let result =
+        crate::commands::cpp::handle_request(ctx, &content, &author, &original_msg).await?;
 
-    discordhelpers::send_completion_react(ctx, &old, details.success).await?;
+    discordhelpers::send_completion_react(ctx, &old, result.details.success).await?;
 
-    embeds::edit_message_embed(ctx, &mut old, &mut embed, Some(details)).await?;
+    let mut embed = result.embed;
+    embeds::edit_message_embed(ctx, &mut old, &mut embed, Some(result.details)).await?;
     Ok(())
 }
 
@@ -212,13 +213,12 @@ pub async fn handle_edit_compile(
     mut old: Message,
     original_msg: Message,
 ) -> CommandResult {
-    let (mut embed, compilation_details) =
-        compile::handle_request(ctx.clone(), content, author, &original_msg).await?;
+    let result = compile::handle_request(ctx, &content, &author, &original_msg).await?;
 
-    let compilation_successful = compilation_details.success;
-    discordhelpers::send_completion_react(ctx, &old, compilation_successful).await?;
+    discordhelpers::send_completion_react(ctx, &old, result.details.success).await?;
 
-    embeds::edit_message_embed(ctx, &mut old, &mut embed, Some(compilation_details)).await?;
+    let mut embed = result.embed;
+    embeds::edit_message_embed(ctx, &mut old, &mut embed, Some(result.details)).await?;
     Ok(())
 }
 
@@ -229,11 +229,13 @@ pub async fn handle_edit_asm(
     mut old: Message,
     original_msg: Message,
 ) -> CommandResult {
-    let (mut emb, details) =
-        crate::commands::asm::handle_request(ctx.clone(), content, author, &original_msg).await?;
+    let result =
+        crate::commands::asm::handle_request(ctx, &content, &author, &original_msg).await?;
 
-    send_completion_react(ctx, &old, details.success).await?;
-    embeds::edit_message_embed(ctx, &mut old, &mut emb, Some(details)).await?;
+    send_completion_react(ctx, &old, result.details.success).await?;
+
+    let mut embed = result.embed;
+    embeds::edit_message_embed(ctx, &mut old, &mut embed, Some(result.details)).await?;
     Ok(())
 }
 

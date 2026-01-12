@@ -31,17 +31,12 @@ pub async fn format(ctx: &Context, command: &CommandInteraction) -> CommandResul
 
     let data = ctx.data.read().await;
     let comp_mgr = data.get::<CompilerCache>().unwrap().read().await;
-    if comp_mgr.gbolt.is_none() {
-        return Err(CommandError::from(
-            "Compiler Explorer service is currently down, please try again later.",
-        ));
-    }
+    let godbolt = comp_mgr.godbolt().ok_or_else(|| {
+        CommandError::from("Compiler Explorer service is currently down, please try again later.")
+    })?;
 
     command
-        .create_response(
-            &ctx.http,
-            create_formats_interaction(&comp_mgr.gbolt.as_ref().unwrap().formats),
-        )
+        .create_response(&ctx.http, create_formats_interaction(&godbolt.formats))
         .await?;
     // Handle response from select menu / button interactions
     let resp = command.get_response(&ctx.http).await?;
@@ -79,10 +74,7 @@ pub async fn format(ctx: &Context, command: &CommandInteraction) -> CommandResul
         return Ok(());
     }
 
-    let styles = &comp_mgr
-        .gbolt
-        .as_ref()
-        .unwrap()
+    let styles = &godbolt
         .formats
         .iter()
         .find(|p| p.format_type == formatter)

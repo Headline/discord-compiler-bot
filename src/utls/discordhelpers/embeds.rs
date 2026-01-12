@@ -212,7 +212,7 @@ pub async fn edit_message_embed(
     if let Some(details) = compilation_details {
         let data = ctx.data.read().await;
         if let Some(link_cache) = data.get::<LinkAPICache>() {
-            if let Some(b64) = details.base64 {
+            if let Some(b64) = details.godbolt_base64 {
                 let long_url = format!("https://godbolt.org/clientstate/{}", b64);
                 let link_cache_lock = link_cache.read().await;
                 url = link_cache_lock.get_link(long_url).await;
