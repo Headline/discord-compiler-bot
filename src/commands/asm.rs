@@ -58,20 +58,22 @@ pub async fn handle_request(
     author: &User,
     msg: &Message,
 ) -> Result<HandleRequestResult, CommandError> {
-    let data = ctx.data.read().await;
+    // Extract needed data and release lock immediately
+    let (loading_reaction, compilation_manager) = {
+        let data = ctx.data.read().await;
+        let reaction = get_loading_reaction(&data).await?;
+        let comp_mgr = data.get::<CompilerCache>().unwrap().clone();
+        (reaction, comp_mgr)
+    }; // TypeMap lock released here
 
-    // Get loading reaction
-    let loading_reaction = get_loading_reaction(&data).await?;
-
-    // Handle file attachments
+    // Handle file attachments (may do HTTP request)
     let content = append_attachment_code(content, &msg.attachments).await?;
 
     // Parse the compilation request
-    let compilation_manager = data.get::<CompilerCache>().unwrap();
     let parse_result = parser::get_components(
         &content,
         author,
-        Some(compilation_manager),
+        Some(&compilation_manager),
         &msg.referenced_message,
         false,
     )
@@ -88,11 +90,13 @@ pub async fn handle_request(
         ));
     }
 
-    // Compile to assembly
-    let compilation_manager_lock = compilation_manager.read().await;
-    let result = compilation_manager_lock
-        .assembly(&parse_result, author)
-        .await;
+    // Compile to assembly - this is the slow part, no locks held
+    let result = {
+        let compilation_manager_lock = compilation_manager.read().await;
+        compilation_manager_lock
+            .assembly(&parse_result, author)
+            .await
+    };
 
     // Remove loading indicator
     discordhelpers::delete_bot_reacts(ctx, msg, loading_reaction).await?;
