@@ -105,7 +105,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     framework = framework
         .bucket(
             "nospam",
-            BucketBuilder::new_global().delay(3).time_span(10).limit(3),
+            BucketBuilder::new_user().delay(3).time_span(10).limit(3),
         )
         .await;
 

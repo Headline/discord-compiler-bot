@@ -56,10 +56,12 @@ pub async fn handle_request(
     author: &User,
     msg: &Message,
 ) -> Result<HandleRequestResult, CommandError> {
-    let data = ctx.data.read().await;
-
-    // Get loading reaction
-    let loading_reaction = get_loading_reaction(&data).await?;
+    let (loading_reaction, compilation_manager) = {
+        let data = ctx.data.read().await;
+        let reaction = get_loading_reaction(&data).await?;
+        let comp_mgr = data.get::<CompilerCache>().unwrap().clone();
+        (reaction, comp_mgr)
+    };
 
     // Parse the C++ expression
     let start = content
@@ -92,12 +94,15 @@ pub async fn handle_request(
         args: vec![],
     };
 
-    // Compile using Godbolt (raw response needed for custom embed building)
-    let compilation_manager = data.get::<CompilerCache>().unwrap().read().await;
-    let result = compilation_manager.compile_godbolt_raw(&parse_result).await;
+    let result = {
+        let compilation_manager_lock = compilation_manager.read().await;
+        compilation_manager_lock
+            .compile_godbolt_raw(&parse_result)
+            .await
+    };
 
     // Remove loading indicator
-    discordhelpers::delete_bot_reacts(ctx, msg, loading_reaction.clone()).await?;
+    let _ = discordhelpers::delete_bot_reacts(ctx, msg, loading_reaction).await;
 
     let (details, response) = result?;
 
