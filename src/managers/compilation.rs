@@ -157,7 +157,12 @@ impl CompilationManager {
         })?;
 
         // Prepare code with boilerplate if needed
-        let code = prepare_code(&compiler.lang, &request.code);
+
+        let code = if !asm_mode {
+            boilerplate_generation(&compiler.lang, &request.code)
+        } else {
+            request.code.to_owned()
+        };
 
         // Build request options
         let options = if asm_mode {
@@ -201,7 +206,7 @@ impl CompilationManager {
         let (language, compiler_name) = self.resolve_wandbox_target(wandbox, &request.target)?;
 
         // Prepare code with boilerplate if needed
-        let code = prepare_code(&language, &request.code);
+        let code = boilerplate_generation(&language, &request.code);
 
         // Build and send compilation request
         let mut builder = CompilationBuilder::new();
@@ -244,7 +249,7 @@ impl CompilationManager {
             CommandError::from(format!("Unable to find compiler for target '{}'.", target))
         })?;
 
-        let code = prepare_code(&compiler.lang, &request.code);
+        let code = boilerplate_generation(&compiler.lang, &request.code);
         let options = build_execute_options(request);
         let godbolt_base64 = Godbolt::get_base64(&compiler, &code, options.clone()).ok();
         let response = Godbolt::send_request(&compiler, &code, options, USER_AGENT).await?;
@@ -419,7 +424,7 @@ fn normalize_target(target: &str) -> &str {
 }
 
 /// Prepare code by adding boilerplate and fixing common issues
-fn prepare_code(language: &str, code: &str) -> String {
+fn boilerplate_generation(language: &str, code: &str) -> String {
     let generator = boilerplate_factory(language, code);
     let code = if generator.needs_boilerplate() {
         generator.generate()
