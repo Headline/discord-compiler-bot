@@ -228,7 +228,9 @@ pub async fn edit_message_embed(
 
     let edit = {
         if btns.is_empty() {
-            EditMessage::default().embed(emb.clone())
+            EditMessage::default()
+                .embed(emb.clone())
+                .components(Vec::new())
         } else {
             EditMessage::default()
                 .components(vec![CreateActionRow::Buttons(btns)])
