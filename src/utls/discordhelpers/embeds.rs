@@ -18,13 +18,19 @@ use crate::utls::discordhelpers;
 #[derive(Default)]
 pub struct EmbedOptions {
     pub is_assembly: bool,
+    pub preprocessor: bool,
     pub compilation_info: CompilationDetails,
 }
 
 impl EmbedOptions {
-    pub fn new(is_assembly: bool, compilation_info: CompilationDetails) -> Self {
+    pub fn new(
+        is_assembly: bool,
+        preprocessor: bool,
+        compilation_info: CompilationDetails,
+    ) -> Self {
         EmbedOptions {
             is_assembly,
+            preprocessor,
             compilation_info,
         }
     }
@@ -106,42 +112,37 @@ impl ToEmbed for godbolt::GodboltResponse {
         };
 
         if options.is_assembly {
-            let mut pieces: Vec<String> = Vec::new();
-            let mut append: String = String::new();
-            if let Some(vec) = &self.asm {
-                for asm in vec {
-                    if let Some(text) = &asm.text {
-                        if append.len() + text.len() > 1000 {
-                            pieces.push(append.clone());
-                            append.clear()
-                        }
-                        // append.push_str(&format!("{}\n", text));
-                        writeln!(append, "{}", text).unwrap();
-                    }
+            // When the request asked for preprocessor output (with filtered headers),
+            // show that cleaner source instead of the raw assembly. Fall back to the
+            // assembly if no preprocessor output was produced (e.g. non-C/C++ targets).
+            let pp_output = if options.preprocessor {
+                self.pp_output
+                    .as_ref()
+                    .map(|pp| pp.output.trim())
+                    .filter(|out| !out.is_empty())
+            } else {
+                None
+            };
+
+            let (pieces, remainder, base_title, fence) = match pp_output {
+                Some(pp) => {
+                    let (pieces, remainder) = chunk_output(pp.lines());
+                    (pieces, remainder, "Preprocessor Output", "cpp")
                 }
-            }
+                None => {
+                    let (pieces, remainder) = chunk_output(
+                        self.asm
+                            .iter()
+                            .flatten()
+                            .filter_map(|asm| asm.text.as_deref()),
+                    );
+                    (pieces, remainder, "Assembly Output", "x86asm")
+                }
+            };
 
-            let mut output = false;
-            let mut i = 1;
-            for str in pieces {
-                let title = format!("Assembly Output Pt. {}", i);
-
-                let piece = str.replace('`', "\u{200B}`");
-                embed = embed.field(&title, format!("```x86asm\n{}\n```", &piece), false);
-                output = true;
-                i += 1;
-            }
-            if !append.is_empty() {
-                let title = if i > 1 {
-                    format!("Assembly Output Pt. {}", i)
-                } else {
-                    String::from("Assembly Output")
-                };
-
-                let str = append.replace('`', "\u{200B}`");
-                embed = embed.field(title, format!("```x86asm\n{}\n```", &str), false);
-                output = true;
-            }
+            let (new_embed, output) =
+                append_output_fields(embed, pieces, remainder, base_title, fence);
+            embed = new_embed;
 
             if !output {
                 embed = embed
@@ -200,6 +201,53 @@ impl ToEmbed for godbolt::GodboltResponse {
         let footer = CreateEmbedFooter::new(format!("{} | godbolt.org", appendstr));
         embed.footer(footer)
     }
+}
+
+/// Split lines into <=1000-char chunks at line boundaries, returning the
+/// completed chunks plus the trailing remainder. This keeps each embed field
+/// within Discord's size limits when output spans multiple fields.
+fn chunk_output<'a>(lines: impl Iterator<Item = &'a str>) -> (Vec<String>, String) {
+    let mut pieces: Vec<String> = Vec::new();
+    let mut append = String::new();
+    for line in lines {
+        if append.len() + line.len() > 1000 {
+            pieces.push(std::mem::take(&mut append));
+        }
+        writeln!(append, "{}", line).unwrap();
+    }
+    (pieces, append)
+}
+
+/// Render chunked output as one or more code-fence embed fields, using the
+/// "<title> Pt. N" scheme when the output spans multiple chunks. Returns the
+/// updated embed and whether any field was added.
+fn append_output_fields(
+    mut embed: CreateEmbed,
+    pieces: Vec<String>,
+    remainder: String,
+    base_title: &str,
+    fence: &str,
+) -> (CreateEmbed, bool) {
+    let mut output = false;
+    let mut i = 1;
+    for piece in pieces {
+        let title = format!("{} Pt. {}", base_title, i);
+        let body = piece.replace('`', "\u{200B}`");
+        embed = embed.field(&title, format!("```{}\n{}\n```", fence, body), false);
+        output = true;
+        i += 1;
+    }
+    if !remainder.is_empty() {
+        let title = if i > 1 {
+            format!("{} Pt. {}", base_title, i)
+        } else {
+            base_title.to_string()
+        };
+        let body = remainder.replace('`', "\u{200B}`");
+        embed = embed.field(title, format!("```{}\n{}\n```", fence, body), false);
+        output = true;
+    }
+    (embed, output)
 }
 
 pub async fn edit_message_embed(

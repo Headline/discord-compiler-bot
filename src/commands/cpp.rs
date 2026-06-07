@@ -107,7 +107,7 @@ pub async fn handle_request(
     let (details, response) = result?;
 
     // Build embed from response
-    let embed_options = EmbedOptions::new(false, details.clone());
+    let embed_options = EmbedOptions::new(false, false, details.clone());
     let embed = response.to_embed(author, &embed_options);
 
     Ok(HandleRequestResult { embed, details })
