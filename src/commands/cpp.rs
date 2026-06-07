@@ -36,6 +36,9 @@ pub async fn cpp(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
 
     let sent = msg.channel_id.send_message(&ctx.http, new_msg).await?;
 
+    // React with success/fail indicator
+    discordhelpers::send_completion_react(ctx, &sent, result.details.success).await?;
+
     // Cache for edit tracking
     let mut message_cache = data.get::<MessageCache>().unwrap().lock().await;
     message_cache.insert(msg.id.get(), MessageCacheEntry::new(sent, msg.clone()));
@@ -107,7 +110,7 @@ pub async fn handle_request(
     let (details, response) = result?;
 
     // Build embed from response
-    let embed_options = EmbedOptions::new(false, details.clone());
+    let embed_options = EmbedOptions::new(false, false, details.clone());
     let embed = response.to_embed(author, &embed_options);
 
     Ok(HandleRequestResult { embed, details })

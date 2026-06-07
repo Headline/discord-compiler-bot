@@ -8,7 +8,7 @@ use crate::boilerplate::generator::boilerplate_factory;
 use crate::utls::constants::{JAVA_PUBLIC_CLASS_REGEX, USER_AGENT};
 use crate::utls::discordhelpers::embeds::{EmbedOptions, ToEmbed};
 use crate::utls::parser::{shortname_to_qualified, ParserResult};
-use godbolt::{CompilationFilters, CompilerOptions, Godbolt, RequestOptions};
+use godbolt::{CompilationFilters, CompilerOptions, Godbolt, ProducePp, RequestOptions};
 use wandbox::{CompilationBuilder, Wandbox};
 
 /// Information about a compilation that callers may need
@@ -170,6 +170,7 @@ impl CompilationManager {
         } else {
             build_execute_options(request)
         };
+        let preprocessor = options.compiler_options.produce_pp.is_some();
 
         // Get shareable link
         let godbolt_base64 = Godbolt::get_base64(&compiler, &code, options.clone()).ok();
@@ -184,7 +185,7 @@ impl CompilationManager {
             success: response.code == 0,
         };
 
-        let embed_options = EmbedOptions::new(asm_mode, details.clone());
+        let embed_options = EmbedOptions::new(asm_mode, preprocessor, details.clone());
         let embed = response.to_embed(author, &embed_options);
 
         Ok(CompilationResult { details, embed })
@@ -226,7 +227,7 @@ impl CompilationManager {
             success: response.status == "0",
         };
 
-        let embed_options = EmbedOptions::new(false, details.clone());
+        let embed_options = EmbedOptions::new(false, false, details.clone());
         let embed = response.to_embed(author, &embed_options);
 
         Ok(CompilationResult { details, embed })
@@ -459,6 +460,7 @@ fn build_execute_options(request: &ParserResult) -> RequestOptions {
         compiler_options: CompilerOptions {
             skip_asm: true,
             executor_request: true,
+            produce_pp: None,
         },
         execute_parameters: godbolt::ExecuteParameters {
             args: request.args.clone(),
@@ -480,11 +482,24 @@ fn build_execute_options(request: &ParserResult) -> RequestOptions {
 
 /// Build request options for assembly output
 fn build_asm_options(request: &ParserResult) -> RequestOptions {
+    // Only request preprocessor output when the user explicitly asks for it via
+    // `-E`. When present, we show the cleaner (header-filtered, formatted)
+    // preprocessor source instead of the assembly.
+    let produce_pp = request
+        .options
+        .iter()
+        .any(|opt| opt == "-E")
+        .then_some(ProducePp {
+            filter_headers: true,
+            clang_format: true,
+        });
+
     RequestOptions {
         user_arguments: request.options.join(" "),
         compiler_options: CompilerOptions {
             skip_asm: false,
             executor_request: false,
+            produce_pp,
         },
         execute_parameters: Default::default(),
         filters: CompilationFilters {
