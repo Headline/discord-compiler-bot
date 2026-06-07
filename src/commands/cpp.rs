@@ -36,6 +36,9 @@ pub async fn cpp(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
 
     let sent = msg.channel_id.send_message(&ctx.http, new_msg).await?;
 
+    // React with success/fail indicator
+    discordhelpers::send_completion_react(ctx, &sent, result.details.success).await?;
+
     // Cache for edit tracking
     let mut message_cache = data.get::<MessageCache>().unwrap().lock().await;
     message_cache.insert(msg.id.get(), MessageCacheEntry::new(sent, msg.clone()));
