@@ -4,12 +4,13 @@ use serenity::builder::CreateEmbed;
 use serenity::framework::standard::CommandError;
 use serenity::model::user::User;
 
+use crate::apis::godbolt::GodboltService;
+use crate::apis::wandbox::WandboxService;
 use crate::boilerplate::generator::boilerplate_factory;
-use crate::utls::constants::{JAVA_PUBLIC_CLASS_REGEX, USER_AGENT};
+use crate::utls::constants::JAVA_PUBLIC_CLASS_REGEX;
 use crate::utls::discordhelpers::embeds::{EmbedOptions, ToEmbed};
 use crate::utls::parser::{shortname_to_qualified, ParserResult};
-use godbolt::{CompilationFilters, CompilerOptions, Godbolt, ProducePp, RequestOptions};
-use wandbox::{CompilationBuilder, Wandbox};
+use godbolt::{CompilationFilters, CompilerOptions, PpOptions, RequestOptions};
 
 /// Information about a compilation that callers may need
 #[derive(Default, Clone)]
@@ -43,8 +44,8 @@ enum Backend {
 /// 2. If Compiler Explorer supports the target, use it
 /// 3. Fall back to WandBox
 pub struct CompilationManager {
-    wandbox: Option<Wandbox>,
-    godbolt: Option<Godbolt>,
+    wandbox: Option<WandboxService>,
+    godbolt: Option<GodboltService>,
 }
 
 impl CompilationManager {
@@ -54,12 +55,12 @@ impl CompilationManager {
     }
 
     /// Get reference to Godbolt instance, if available
-    pub fn godbolt(&self) -> Option<&Godbolt> {
+    pub fn godbolt(&self) -> Option<&GodboltService> {
         self.godbolt.as_ref()
     }
 
     /// Get reference to WandBox instance, if available
-    pub fn wandbox(&self) -> Option<&Wandbox> {
+    pub fn wandbox(&self) -> Option<&WandboxService> {
         self.wandbox.as_ref()
     }
 }
@@ -73,7 +74,7 @@ impl CompilationManager {
         let mut broken_languages = std::collections::HashSet::new();
         broken_languages.insert(String::from("cpp"));
 
-        let wandbox = match Wandbox::new(Some(broken_compilers), Some(broken_languages)).await {
+        let wandbox = match WandboxService::new(broken_compilers, broken_languages).await {
             Ok(wb) => Some(wb),
             Err(e) => {
                 error!("Unable to load WandBox: {}", e);
@@ -81,7 +82,7 @@ impl CompilationManager {
             }
         };
 
-        let godbolt = match Godbolt::new().await {
+        let godbolt = match GodboltService::new().await {
             Ok(gb) => Some(gb),
             Err(e) => {
                 error!("Unable to load Compiler Explorer: {}", e);
@@ -173,10 +174,10 @@ impl CompilationManager {
         let preprocessor = options.compiler_options.produce_pp.is_some();
 
         // Get shareable link
-        let godbolt_base64 = Godbolt::get_base64(&compiler, &code, options.clone()).ok();
+        let godbolt_base64 = GodboltService::get_base64(&compiler, &code, &options).ok();
 
         // Send compilation request
-        let response = Godbolt::send_request(&compiler, &code, options, USER_AGENT).await?;
+        let response = godbolt.compile(&compiler, &code, options).await?;
 
         let details = CompilationDetails {
             language: compiler.lang.clone(),
@@ -210,21 +211,22 @@ impl CompilationManager {
         let code = boilerplate_generation(&language, &request.code);
 
         // Build and send compilation request
-        let mut builder = CompilationBuilder::new();
-        builder.code(&code);
-        builder.target(&request.target);
-        builder.stdin(&request.stdin);
-        builder.save(false);
-        builder.options(request.options.clone());
-        builder.build(wandbox)?;
+        let compilation_request = wandbox::CompilationRequest {
+            compiler: compiler_name.clone(),
+            code: code.trim().to_string(),
+            stdin: request.stdin.trim().to_string(),
+            compiler_option_raw: request.options.join("\n"),
+            save: false,
+            ..Default::default()
+        };
 
-        let response = builder.dispatch().await?;
+        let response = wandbox.compile(&compilation_request).await?;
 
         let details = CompilationDetails {
             language,
             compiler: compiler_name,
             godbolt_base64: None,
-            success: response.status == "0",
+            success: response.status == Some(0),
         };
 
         let embed_options = EmbedOptions::new(false, false, details.clone());
@@ -238,7 +240,7 @@ impl CompilationManager {
     pub async fn compile_godbolt_raw(
         &self,
         request: &ParserResult,
-    ) -> Result<(CompilationDetails, godbolt::GodboltResponse), CommandError> {
+    ) -> Result<(CompilationDetails, godbolt::CompilationResult), CommandError> {
         let godbolt = self.godbolt.as_ref().ok_or_else(|| {
             CommandError::from(
                 "Compiler Explorer is unavailable. This may be due to an outage. Please try again later.",
@@ -252,8 +254,8 @@ impl CompilationManager {
 
         let code = boilerplate_generation(&compiler.lang, &request.code);
         let options = build_execute_options(request);
-        let godbolt_base64 = Godbolt::get_base64(&compiler, &code, options.clone()).ok();
-        let response = Godbolt::send_request(&compiler, &code, options, USER_AGENT).await?;
+        let godbolt_base64 = GodboltService::get_base64(&compiler, &code, &options).ok();
+        let response = godbolt.compile(&compiler, &code, options).await?;
 
         let details = CompilationDetails {
             language: compiler.lang.clone(),
@@ -293,7 +295,7 @@ impl CompilationManager {
     /// Resolve a WandBox target to (language, compiler_name).
     fn resolve_wandbox_target(
         &self,
-        wandbox: &Wandbox,
+        wandbox: &WandboxService,
         target: &str,
     ) -> Result<(String, String), CommandError> {
         for lang in wandbox.get_languages() {
@@ -460,23 +462,23 @@ fn build_execute_options(request: &ParserResult) -> RequestOptions {
         compiler_options: CompilerOptions {
             skip_asm: true,
             executor_request: true,
-            produce_pp: None,
+            ..Default::default()
         },
         execute_parameters: godbolt::ExecuteParameters {
             args: request.args.clone(),
             stdin: request.stdin.clone(),
         },
         filters: CompilationFilters {
-            binary: None,
             comment_only: Some(true),
             demangle: Some(true),
             directives: Some(true),
             execute: Some(true),
             intel: Some(true),
             labels: Some(true),
-            library_code: None,
             trim: Some(true),
+            ..Default::default()
         },
+        ..Default::default()
     }
 }
 
@@ -489,7 +491,7 @@ fn build_asm_options(request: &ParserResult) -> RequestOptions {
         .options
         .iter()
         .any(|opt| opt == "-E")
-        .then_some(ProducePp {
+        .then_some(PpOptions {
             filter_headers: true,
             clang_format: true,
         });
@@ -500,19 +502,20 @@ fn build_asm_options(request: &ParserResult) -> RequestOptions {
             skip_asm: false,
             executor_request: false,
             produce_pp,
+            ..Default::default()
         },
         execute_parameters: Default::default(),
         filters: CompilationFilters {
-            binary: None,
             comment_only: Some(true),
             demangle: Some(true),
             directives: Some(true),
             execute: Some(false),
             intel: Some(true),
             labels: Some(true),
-            library_code: None,
             trim: Some(true),
+            ..Default::default()
         },
+        ..Default::default()
     }
 }
 

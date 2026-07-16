@@ -47,9 +47,7 @@ default-features = false
 features = ["unstable_discord_api", "collector", "gateway", "builder", "standard_framework", "http", "model", "client", "framework", "utils", "rustls_backend"]
 
 [dependencies.wandbox]
-version = "0.1"
+version = "0.2"
 
 [dependencies.godbolt]
-git = "https://github.com/Headline/godbolt-rs"
-branch = "master"
-#path = '../godbolt-rs'
+version = "0.2"

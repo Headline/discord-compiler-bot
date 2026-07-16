@@ -1,6 +1,5 @@
 use crate::cache::CompilerCache;
 use crate::utls::parser::{get_message_attachment, ParserResult};
-use godbolt::Godbolt;
 use serenity::all::{CreateAttachment, CreateMessage};
 use serenity::framework::standard::{
     macros::command, Args, CommandError, CommandResult, Delimiter,
@@ -97,7 +96,7 @@ pub async fn format(ctx: &Context, msg: &Message, mut args: Args) -> CommandResu
 
     let answer;
     {
-        let result = Godbolt::format_code(&fmt, &style, &code, false, 4).await;
+        let result = godbolt.format_code(&fmt, &style, &code, false, 4).await;
         match result {
             Ok(res) => {
                 if res.exit != 0 {

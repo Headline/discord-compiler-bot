@@ -3,7 +3,7 @@ use crate::{
     utls::parser, utls::parser::ParserResult,
 };
 use futures_util::StreamExt;
-use godbolt::{Format, Godbolt};
+use godbolt::Format;
 use serenity::{
     builder::{CreateInteractionResponse, EditInteractionResponse},
     framework::standard::{CommandError, CommandResult},
@@ -125,7 +125,10 @@ pub async fn format(ctx: &Context, command: &CommandInteraction) -> CommandResul
         .await
         .unwrap();
 
-    let result = match Godbolt::format_code(&formatter, &style, &parse_result.code, true, 4).await {
+    let result = match godbolt
+        .format_code(&formatter, &style, &parse_result.code, true, 4)
+        .await
+    {
         Ok(r) => r,
         Err(e) => return Err(CommandError::from(format!("{}", e))),
     };

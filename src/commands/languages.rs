@@ -22,7 +22,7 @@ pub async fn languages(ctx: &Context, msg: &Message, _args: Args) -> CommandResu
         let langs = wandbox.get_languages();
         for lang in langs {
             if !items.contains(&lang.name) && !items.contains(&format!("{}*", &lang.name)) {
-                items.push(lang.name);
+                items.push(lang.name.clone());
             }
         }
     }
