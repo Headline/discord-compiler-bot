@@ -44,8 +44,8 @@ impl ToEmbed for wandbox::CompilationResult {
     fn to_embed(self, author: &User, options: &EmbedOptions) -> CreateEmbed {
         let mut embed = CreateEmbed::new();
 
-        if !self.status.is_empty() {
-            if self.status != "0" {
+        if let Some(status) = self.status {
+            if status != 0 {
                 embed = embed.color(COLOR_FAIL);
             } else {
                 embed = embed.color(COLOR_OKAY);
@@ -58,16 +58,18 @@ impl ToEmbed for wandbox::CompilationResult {
             // actually failed (ourselves vs wandbox)
             embed = embed.color(COLOR_OKAY);
         }
-        if !self.compiler_all.is_empty() {
-            let str = discordhelpers::conform_external_str(&self.compiler_all, MAX_ERROR_LEN, true);
+        if !self.compiler_message.is_empty() {
+            let str =
+                discordhelpers::conform_external_str(&self.compiler_message, MAX_ERROR_LEN, true);
             embed = embed.field("Compiler Output", format!("```{}\n```", str), false);
         }
-        if !self.program_all.is_empty() {
-            let str = discordhelpers::conform_external_str(&self.program_all, MAX_OUTPUT_LEN, true);
+        if !self.program_message.is_empty() {
+            let str =
+                discordhelpers::conform_external_str(&self.program_message, MAX_OUTPUT_LEN, true);
             embed = embed.field("Program Output", format!("```\n{}\n```", str), false);
         }
-        if !self.url.is_empty() {
-            embed = embed.field("URL", &self.url, false);
+        if let Some(url) = self.url.as_deref().filter(|url| !url.is_empty()) {
+            embed = embed.field("URL", url, false);
         }
 
         let mut text = author.name.clone();
@@ -85,7 +87,7 @@ impl ToEmbed for wandbox::CompilationResult {
     }
 }
 
-impl ToEmbed for godbolt::GodboltResponse {
+impl ToEmbed for godbolt::CompilationResult {
     fn to_embed(self, author: &User, options: &EmbedOptions) -> CreateEmbed {
         let mut embed = CreateEmbed::new();
         if self.code == 0 {
@@ -156,11 +158,9 @@ impl ToEmbed for godbolt::GodboltResponse {
             }
 
             let mut errs = String::default();
-            if let Some(build_result) = self.build_result {
-                if let Some(errors) = build_result.stderr {
-                    for line in errors {
-                        writeln!(errs, "{}", line.text).unwrap();
-                    }
+            if let Some(build_result) = &self.build_result {
+                for line in &build_result.stderr {
+                    writeln!(errs, "{}", line.text).unwrap();
                 }
             }
 
@@ -188,7 +188,7 @@ impl ToEmbed for godbolt::GodboltResponse {
         }
 
         let mut appendstr = author.name.clone();
-        if let Some(time) = self.execution_time {
+        if let Some(time) = self.exec_time {
             appendstr = format!("{} | {}ms", appendstr, time);
         }
         if !options.compilation_info.language.is_empty() {

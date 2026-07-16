@@ -4,12 +4,13 @@ use serenity::builder::CreateEmbed;
 use serenity::framework::standard::CommandError;
 use serenity::model::user::User;
 
+use crate::apis::godbolt::GodboltService;
+use crate::apis::wandbox::WandboxService;
 use crate::boilerplate::generator::boilerplate_factory;
-use crate::utls::constants::{JAVA_PUBLIC_CLASS_REGEX, USER_AGENT};
+use crate::utls::constants::JAVA_PUBLIC_CLASS_REGEX;
 use crate::utls::discordhelpers::embeds::{EmbedOptions, ToEmbed};
 use crate::utls::parser::{shortname_to_qualified, ParserResult};
-use godbolt::{CompilationFilters, CompilerOptions, Godbolt, ProducePp, RequestOptions};
-use wandbox::{CompilationBuilder, Wandbox};
+use godbolt::{CompilationFilters, CompilerOptions, LibrarySelection, PpOptions, RequestOptions};
 
 /// Information about a compilation that callers may need
 #[derive(Default, Clone)]
@@ -43,8 +44,8 @@ enum Backend {
 /// 2. If Compiler Explorer supports the target, use it
 /// 3. Fall back to WandBox
 pub struct CompilationManager {
-    wandbox: Option<Wandbox>,
-    godbolt: Option<Godbolt>,
+    wandbox: Option<WandboxService>,
+    godbolt: Option<GodboltService>,
 }
 
 impl CompilationManager {
@@ -54,12 +55,12 @@ impl CompilationManager {
     }
 
     /// Get reference to Godbolt instance, if available
-    pub fn godbolt(&self) -> Option<&Godbolt> {
+    pub fn godbolt(&self) -> Option<&GodboltService> {
         self.godbolt.as_ref()
     }
 
     /// Get reference to WandBox instance, if available
-    pub fn wandbox(&self) -> Option<&Wandbox> {
+    pub fn wandbox(&self) -> Option<&WandboxService> {
         self.wandbox.as_ref()
     }
 }
@@ -73,7 +74,7 @@ impl CompilationManager {
         let mut broken_languages = std::collections::HashSet::new();
         broken_languages.insert(String::from("cpp"));
 
-        let wandbox = match Wandbox::new(Some(broken_compilers), Some(broken_languages)).await {
+        let wandbox = match WandboxService::new(broken_compilers, broken_languages).await {
             Ok(wb) => Some(wb),
             Err(e) => {
                 error!("Unable to load WandBox: {}", e);
@@ -81,7 +82,7 @@ impl CompilationManager {
             }
         };
 
-        let godbolt = match Godbolt::new().await {
+        let godbolt = match GodboltService::new().await {
             Ok(gb) => Some(gb),
             Err(e) => {
                 error!("Unable to load Compiler Explorer: {}", e);
@@ -156,6 +157,11 @@ impl CompilationManager {
             }
         })?;
 
+        // Split any `-lib` requests out of the compiler options
+        let mut request = request.clone();
+        let library_specs = take_library_specs(&mut request.options)?;
+        let request = &request;
+
         // Prepare code with boilerplate if needed
 
         let code = if !asm_mode {
@@ -165,18 +171,19 @@ impl CompilationManager {
         };
 
         // Build request options
-        let options = if asm_mode {
+        let mut options = if asm_mode {
             build_asm_options(request)
         } else {
             build_execute_options(request)
         };
+        options.libraries = resolve_libraries(godbolt, &compiler.lang, &library_specs).await?;
         let preprocessor = options.compiler_options.produce_pp.is_some();
 
         // Get shareable link
-        let godbolt_base64 = Godbolt::get_base64(&compiler, &code, options.clone()).ok();
+        let godbolt_base64 = GodboltService::get_base64(&compiler, &code, &options).ok();
 
         // Send compilation request
-        let response = Godbolt::send_request(&compiler, &code, options, USER_AGENT).await?;
+        let response = godbolt.compile(&compiler, &code, options).await?;
 
         let details = CompilationDetails {
             language: compiler.lang.clone(),
@@ -210,21 +217,23 @@ impl CompilationManager {
         let code = boilerplate_generation(&language, &request.code);
 
         // Build and send compilation request
-        let mut builder = CompilationBuilder::new();
-        builder.code(&code);
-        builder.target(&request.target);
-        builder.stdin(&request.stdin);
-        builder.save(false);
-        builder.options(request.options.clone());
-        builder.build(wandbox)?;
+        let compilation_request = wandbox::CompilationRequest {
+            compiler: compiler_name.clone(),
+            code: code.trim().to_string(),
+            stdin: request.stdin.trim().to_string(),
+            compiler_option_raw: request.options.join("\n"),
+            runtime_option_raw: request.args.join("\n"),
+            save: false,
+            ..Default::default()
+        };
 
-        let response = builder.dispatch().await?;
+        let response = wandbox.compile(&compilation_request).await?;
 
         let details = CompilationDetails {
             language,
             compiler: compiler_name,
             godbolt_base64: None,
-            success: response.status == "0",
+            success: response.status == Some(0),
         };
 
         let embed_options = EmbedOptions::new(false, false, details.clone());
@@ -238,7 +247,7 @@ impl CompilationManager {
     pub async fn compile_godbolt_raw(
         &self,
         request: &ParserResult,
-    ) -> Result<(CompilationDetails, godbolt::GodboltResponse), CommandError> {
+    ) -> Result<(CompilationDetails, godbolt::CompilationResult), CommandError> {
         let godbolt = self.godbolt.as_ref().ok_or_else(|| {
             CommandError::from(
                 "Compiler Explorer is unavailable. This may be due to an outage. Please try again later.",
@@ -250,10 +259,16 @@ impl CompilationManager {
             CommandError::from(format!("Unable to find compiler for target '{}'.", target))
         })?;
 
+        // Split any `-lib` requests out of the compiler options
+        let mut request = request.clone();
+        let library_specs = take_library_specs(&mut request.options)?;
+        let request = &request;
+
         let code = boilerplate_generation(&compiler.lang, &request.code);
-        let options = build_execute_options(request);
-        let godbolt_base64 = Godbolt::get_base64(&compiler, &code, options.clone()).ok();
-        let response = Godbolt::send_request(&compiler, &code, options, USER_AGENT).await?;
+        let mut options = build_execute_options(request);
+        options.libraries = resolve_libraries(godbolt, &compiler.lang, &library_specs).await?;
+        let godbolt_base64 = GodboltService::get_base64(&compiler, &code, &options).ok();
+        let response = godbolt.compile(&compiler, &code, options).await?;
 
         let details = CompilationDetails {
             language: compiler.lang.clone(),
@@ -293,7 +308,7 @@ impl CompilationManager {
     /// Resolve a WandBox target to (language, compiler_name).
     fn resolve_wandbox_target(
         &self,
-        wandbox: &Wandbox,
+        wandbox: &WandboxService,
         target: &str,
     ) -> Result<(String, String), CommandError> {
         for lang in wandbox.get_languages() {
@@ -338,6 +353,69 @@ impl CompilationManager {
                 language
             ))),
         }
+    }
+
+    /// Get list of available Compiler Explorer libraries for a language.
+    pub async fn get_library_list(
+        &self,
+        language: &str,
+        filter: Option<&str>,
+    ) -> Result<Vec<String>, CommandError> {
+        let lower_lang = language.to_lowercase();
+        let language = shortname_to_qualified(&lower_lang);
+
+        let godbolt = self.godbolt.as_ref().ok_or_else(|| {
+            CommandError::from(
+                "Compiler Explorer is unavailable. This may be due to an outage. Please try again later.",
+            )
+        })?;
+
+        if !godbolt
+            .cache
+            .iter()
+            .any(|entry| entry.language.id == language)
+        {
+            return Err(CommandError::from(format!(
+                "Unable to find language '{}'. Libraries are only available for Compiler Explorer targets.",
+                language
+            )));
+        }
+
+        let libraries = godbolt.libraries_for(language).await.map_err(|e| {
+            CommandError::from(format!(
+                "Unable to fetch libraries for '{}': {}",
+                language, e
+            ))
+        })?;
+
+        let mut results: Vec<(f64, String)> = Vec::new();
+
+        for library in libraries {
+            let versions = match (library.versions.first(), library.versions.last()) {
+                (Some(first), Some(last)) if library.versions.len() > 1 => {
+                    format!("{} … {}", first.version, last.version)
+                }
+                (Some(only), _) => only.version.clone(),
+                _ => String::from("none"),
+            };
+            let display = format!("{} -> **{}** ({})", library.name, library.id, versions);
+
+            if let Some(filter_str) = filter {
+                if !matches_filter(&library.id, &library.name, filter_str) {
+                    continue;
+                }
+                let similarity = compute_similarity(&library.id, &library.name, filter_str);
+                results.push((similarity, display));
+            } else {
+                results.push((0.0, display));
+            }
+        }
+
+        if filter.is_some() {
+            results.sort_by(|a, b| b.0.partial_cmp(&a.0).unwrap());
+        }
+
+        Ok(results.into_iter().map(|(_, s)| s).collect())
     }
 
     fn list_godbolt_compilers(
@@ -453,6 +531,116 @@ fn fix_common_problems(language: &str, code: String) -> String {
     }
 }
 
+/// Remove `-lib <library>:<version>` flags from the compiler options,
+/// returning the extracted library specs
+fn take_library_specs(options: &mut Vec<String>) -> Result<Vec<String>, CommandError> {
+    let mut specs = Vec::new();
+    let mut remaining = Vec::new();
+
+    let mut iter = std::mem::take(options).into_iter();
+    while let Some(opt) = iter.next() {
+        if opt == "-lib" {
+            let spec = iter.next().ok_or_else(|| {
+                CommandError::from("The `-lib` flag requires a library, e.g. `-lib fmt:trunk`")
+            })?;
+            specs.push(spec);
+        } else {
+            remaining.push(opt);
+        }
+    }
+
+    *options = remaining;
+    Ok(specs)
+}
+
+/// Resolve `-lib` specs (`<library>:<version>`) against Compiler Explorer's
+/// library list for the given language
+async fn resolve_libraries(
+    godbolt: &GodboltService,
+    language_id: &str,
+    specs: &[String],
+) -> Result<Vec<LibrarySelection>, CommandError> {
+    if specs.is_empty() {
+        return Ok(Vec::new());
+    }
+
+    let libraries = godbolt.libraries_for(language_id).await.map_err(|e| {
+        CommandError::from(format!(
+            "Unable to fetch libraries for '{}': {}",
+            language_id, e
+        ))
+    })?;
+
+    let mut selections = Vec::new();
+    for spec in specs {
+        let (name, version_str) = spec.split_once(':').unwrap_or((spec.as_str(), ""));
+
+        let library = libraries
+            .iter()
+            .find(|lib| lib.id.eq_ignore_ascii_case(name))
+            .ok_or_else(|| {
+                CommandError::from(format!(
+                    "Unknown library '{}' for language '{}'. See `;libraries {}` to browse.\n\nAvailable libraries: {}",
+                    name,
+                    language_id,
+                    language_id,
+                    summarize_names(libraries.iter().map(|lib| lib.id.as_str()))
+                ))
+            })?;
+
+        let version = library
+            .versions
+            .iter()
+            .find(|ver| {
+                ver.id.eq_ignore_ascii_case(version_str)
+                    || ver.version.eq_ignore_ascii_case(version_str)
+                    || ver
+                        .alias
+                        .iter()
+                        .any(|alias| alias.eq_ignore_ascii_case(version_str))
+            })
+            .ok_or_else(|| {
+                let versions =
+                    summarize_names(library.versions.iter().map(|ver| ver.version.as_str()));
+                if version_str.is_empty() {
+                    CommandError::from(format!(
+                        "Library '{}' requires a version, e.g. `-lib {}:<version>`.\n\nAvailable versions: {}",
+                        library.id, library.id, versions
+                    ))
+                } else {
+                    CommandError::from(format!(
+                        "Unknown version '{}' for library '{}'.\n\nAvailable versions: {}",
+                        version_str, library.id, versions
+                    ))
+                }
+            })?;
+
+        selections.push(LibrarySelection {
+            id: library.id.clone(),
+            version: version.id.clone(),
+        });
+    }
+
+    Ok(selections)
+}
+
+/// Join names with commas, truncating once the list grows too long for an
+/// error message
+fn summarize_names<'a>(names: impl Iterator<Item = &'a str>) -> String {
+    let mut summary = String::new();
+    for name in names {
+        if !summary.is_empty() {
+            summary.push_str(", ");
+        }
+        if summary.len() + name.len() > 800 {
+            summary.push('…');
+            break;
+        }
+        summary.push_str(name);
+    }
+    summary
+}
+
 /// Build request options for code execution
 fn build_execute_options(request: &ParserResult) -> RequestOptions {
     RequestOptions {
@@ -460,23 +648,23 @@ fn build_execute_options(request: &ParserResult) -> RequestOptions {
         compiler_options: CompilerOptions {
             skip_asm: true,
             executor_request: true,
-            produce_pp: None,
+            ..Default::default()
         },
         execute_parameters: godbolt::ExecuteParameters {
             args: request.args.clone(),
             stdin: request.stdin.clone(),
         },
         filters: CompilationFilters {
-            binary: None,
             comment_only: Some(true),
             demangle: Some(true),
             directives: Some(true),
             execute: Some(true),
             intel: Some(true),
             labels: Some(true),
-            library_code: None,
             trim: Some(true),
+            ..Default::default()
         },
+        ..Default::default()
     }
 }
 
@@ -489,7 +677,7 @@ fn build_asm_options(request: &ParserResult) -> RequestOptions {
         .options
         .iter()
         .any(|opt| opt == "-E")
-        .then_some(ProducePp {
+        .then_some(PpOptions {
             filter_headers: true,
             clang_format: true,
         });
@@ -500,19 +688,56 @@ fn build_asm_options(request: &ParserResult) -> RequestOptions {
             skip_asm: false,
             executor_request: false,
             produce_pp,
+            ..Default::default()
         },
         execute_parameters: Default::default(),
         filters: CompilationFilters {
-            binary: None,
             comment_only: Some(true),
             demangle: Some(true),
             directives: Some(true),
             execute: Some(false),
             intel: Some(true),
             labels: Some(true),
-            library_code: None,
             trim: Some(true),
+            ..Default::default()
         },
+        ..Default::default()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::take_library_specs;
+
+    #[test]
+    fn takes_library_specs_out_of_options() {
+        let mut options = vec![
+            String::from("-O2"),
+            String::from("-lib"),
+            String::from("fmt:trunk"),
+            String::from("-Wall"),
+            String::from("-lib"),
+            String::from("ctre:dev"),
+        ];
+
+        let specs = take_library_specs(&mut options).unwrap();
+        assert_eq!(specs, vec!["fmt:trunk", "ctre:dev"]);
+        assert_eq!(options, vec!["-O2", "-Wall"]);
+    }
+
+    #[test]
+    fn leaves_options_without_libraries_alone() {
+        let mut options = vec![String::from("-O2"), String::from("-Wall")];
+
+        let specs = take_library_specs(&mut options).unwrap();
+        assert!(specs.is_empty());
+        assert_eq!(options, vec!["-O2", "-Wall"]);
+    }
+
+    #[test]
+    fn rejects_dangling_lib_flag() {
+        let mut options = vec![String::from("-O2"), String::from("-lib")];
+        assert!(take_library_specs(&mut options).is_err());
     }
 }
 

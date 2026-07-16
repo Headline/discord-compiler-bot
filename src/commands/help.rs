@@ -32,20 +32,31 @@ pub async fn help(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
                 "Grabs the bot's invite link\n\n"
             }
             "compile" => {
-                emb = emb.title("Compile command").field(
-                    "Example",
-                    format!(
-                        "{}compile c++\n\
-                          \\`\\`\\`\n\
-                          #include <iostream>\n\n\
-                          int main() {{ \n\
-                          \tstd::cout << \"Hello, world\";\n\
-                          }}\n\
-                          \\`\\`\\`\n",
-                        prefix
-                    ),
-                    false,
-                );
+                emb = emb
+                    .title("Compile command")
+                    .field(
+                        "Example",
+                        format!(
+                            "{}compile c++\n\
+                              \\`\\`\\`\n\
+                              #include <iostream>\n\n\
+                              int main() {{ \n\
+                              \tstd::cout << \"Hello, world\";\n\
+                              }}\n\
+                              \\`\\`\\`\n",
+                            prefix
+                        ),
+                        false,
+                    )
+                    .field(
+                        "Libraries",
+                        format!(
+                            "Compiler Explorer targets may compile against libraries with \
+                             `-lib <library>:<version>`, i.e. `{}compile c++ -lib fmt:trunk`",
+                            prefix
+                        ),
+                        false,
+                    );
                 "Sends a compilation request\n\n"
             }
             "compilers" => {
@@ -82,6 +93,15 @@ pub async fn help(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
                 "Allows you to quickly compile and execute c++ snippets using geordi-like syntax.\nSee section 2.1 of http://eel.is/geordi/#syntax"
             }
 
+            "libraries" => {
+                emb = emb.title("Libraries command").field(
+                    "Example",
+                    format!("{}libraries c++\n{}libraries c++ json", prefix, prefix),
+                    false,
+                );
+                "Lists the Compiler Explorer libraries for a given language, with an optional \
+                 search filter. Compile against one with `-lib <library>:<version>`\n\n"
+            }
             "languages" => {
                 emb = emb.title("Languages command").field(
                     "Example",
@@ -106,6 +126,15 @@ pub async fn help(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
                     false,
                 );
                 "Sends an assembly request, displaying the assembly output\n\n"
+            }
+            "asmdoc" => {
+                emb = emb.title("Assembly documentation command").field(
+                    "Example",
+                    format!("{}asmdoc mov\n{}asmdoc adds arm32", prefix, prefix),
+                    false,
+                );
+                "Looks up documentation for an assembly opcode. Defaults to the amd64 \
+                 instruction set unless another is specified\n\n"
             }
             "botinfo" => {
                 emb = emb.title("Bot info command").field(
@@ -148,7 +177,9 @@ pub async fn help(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
         .field("compile", "``` Compiles and executes code ```", false)
         .field("compilers", "``` Displays the compilers for the specified language ```", false)
         .field("languages", "``` Displays all supported languages ```", false)
+        .field("libraries", "``` Displays the libraries for the specified language ```", false)
         .field("asm", "``` Outputs the assembly for the input code```", false)
+        .field("asmdoc", "``` Displays documentation for an assembly opcode ```", false)
         .field("botinfo", "``` Displays information about the bot ```", false)
         .field("cpp", format!("``` Executes c++ code using geordi-like syntax\n See {}help cpp for more info ```", prefix), false)
         .field("format", "``` Formats code using a code formatter (i.e. clang-format or rustfmt) ```", false)

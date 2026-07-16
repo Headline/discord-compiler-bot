@@ -1,4 +1,5 @@
 pub mod asm;
+pub mod asmdoc;
 pub mod block;
 pub mod botinfo;
 pub mod compile;
@@ -10,5 +11,6 @@ pub mod help;
 pub mod insights;
 pub mod invite;
 pub mod languages;
+pub mod libraries;
 pub mod ping;
 pub mod unblock;
