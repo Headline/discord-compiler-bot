@@ -6,9 +6,9 @@
 //! at startup so the rest of the bot can keep resolving targets offline.
 
 use godbolt::{
-    ClientState, CompilationRequest, CompilationResult, Compiler, Executor, ExecutorCompiler,
-    Format, FormatRequest, FormatResult, Godbolt, GodboltError, Language, RequestOptions, Session,
-    SessionCompiler,
+    AsmDocumentation, ClientState, CompilationRequest, CompilationResult, Compiler, Executor,
+    ExecutorCompiler, Format, FormatRequest, FormatResult, Godbolt, GodboltError, Language,
+    Library, RequestOptions, Session, SessionCompiler,
 };
 
 use crate::utls::constants::USER_AGENT;
@@ -84,6 +84,20 @@ impl GodboltService {
             .iter()
             .map(|entry| &entry.language)
             .find(|language| language.id.eq_ignore_ascii_case(language_id))
+    }
+
+    /// Fetches the libraries available for a language
+    pub async fn libraries_for(&self, language_id: &str) -> Result<Vec<Library>, GodboltError> {
+        self.client.libraries_for(language_id).await
+    }
+
+    /// Fetches documentation for an assembly opcode
+    pub async fn asm_doc(
+        &self,
+        instruction_set: &str,
+        opcode: &str,
+    ) -> Result<AsmDocumentation, GodboltError> {
+        self.client.asm_doc(instruction_set, opcode).await
     }
 
     /// Compiles `source` with the given compiler and options
