@@ -534,8 +534,8 @@ fn fix_common_problems(language: &str, code: String) -> String {
     }
 }
 
-/// Remove `-lib <library>:<version>` flags from the compiler options,
-/// returning the extracted library specs
+/// Remove `-lib` flags (`-lib fmt:trunk`, `-lib fmt`, `-libfmt`) from the
+/// compiler options, returning the extracted library specs
 fn take_library_specs(options: &mut Vec<String>) -> Result<Vec<String>, CommandError> {
     let mut specs = Vec::new();
     let mut remaining = Vec::new();
@@ -547,6 +547,8 @@ fn take_library_specs(options: &mut Vec<String>) -> Result<Vec<String>, CommandE
                 CommandError::from("The `-lib` flag requires a library, e.g. `-lib fmt:trunk`")
             })?;
             specs.push(spec);
+        } else if let Some(spec) = opt.strip_prefix("-lib") {
+            specs.push(spec.to_string());
         } else {
             remaining.push(opt);
         }
@@ -591,32 +593,34 @@ async fn resolve_libraries(
                 ))
             })?;
 
-        let version = library
-            .versions
-            .iter()
-            .find(|ver| {
-                ver.id.eq_ignore_ascii_case(version_str)
-                    || ver.version.eq_ignore_ascii_case(version_str)
-                    || ver
-                        .alias
-                        .iter()
-                        .any(|alias| alias.eq_ignore_ascii_case(version_str))
-            })
-            .ok_or_else(|| {
-                let versions =
-                    summarize_names(library.versions.iter().map(|ver| ver.version.as_str()));
-                if version_str.is_empty() {
-                    CommandError::from(format!(
-                        "Library '{}' requires a version, e.g. `-lib {}:<version>`.\n\nAvailable versions: {}",
-                        library.id, library.id, versions
-                    ))
-                } else {
+        let version = if version_str.is_empty() {
+            library.versions.last().ok_or_else(|| {
+                CommandError::from(format!(
+                    "Library '{}' has no versions available.",
+                    library.id
+                ))
+            })?
+        } else {
+            library
+                .versions
+                .iter()
+                .find(|ver| {
+                    ver.id.eq_ignore_ascii_case(version_str)
+                        || ver.version.eq_ignore_ascii_case(version_str)
+                        || ver
+                            .alias
+                            .iter()
+                            .any(|alias| alias.eq_ignore_ascii_case(version_str))
+                })
+                .ok_or_else(|| {
                     CommandError::from(format!(
                         "Unknown version '{}' for library '{}'.\n\nAvailable versions: {}",
-                        version_str, library.id, versions
+                        version_str,
+                        library.id,
+                        summarize_names(library.versions.iter().map(|ver| ver.version.as_str()))
                     ))
-                }
-            })?;
+                })?
+        };
 
         selections.push(LibrarySelection {
             id: library.id.clone(),
@@ -726,6 +730,28 @@ mod tests {
         let specs = take_library_specs(&mut options).unwrap();
         assert_eq!(specs, vec!["fmt:trunk", "ctre:dev"]);
         assert_eq!(options, vec!["-O2", "-Wall"]);
+    }
+
+    #[test]
+    fn takes_concatenated_library_specs() {
+        let mut options = vec![
+            String::from("-libboost"),
+            String::from("-O2"),
+            String::from("-libfmt:trunk"),
+        ];
+
+        let specs = take_library_specs(&mut options).unwrap();
+        assert_eq!(specs, vec!["boost", "fmt:trunk"]);
+        assert_eq!(options, vec!["-O2"]);
+    }
+
+    #[test]
+    fn takes_library_specs_without_versions() {
+        let mut options = vec![String::from("-lib"), String::from("boost")];
+
+        let specs = take_library_specs(&mut options).unwrap();
+        assert_eq!(specs, vec!["boost"]);
+        assert!(options.is_empty());
     }
 
     #[test]

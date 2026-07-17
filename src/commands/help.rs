@@ -52,7 +52,8 @@ pub async fn help(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
                         "Libraries",
                         format!(
                             "Compiler Explorer targets may compile against libraries with \
-                             `-lib <library>:<version>`, i.e. `{}compile c++ -lib fmt:trunk`",
+                             `-lib <library>:<version>`, i.e. `{}compile c++ -lib fmt:trunk`. \
+                             Omit the version to use the newest, i.e. `-lib boost` or `-libboost`",
                             prefix
                         ),
                         false,
