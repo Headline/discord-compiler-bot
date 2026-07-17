@@ -333,9 +333,8 @@ pub fn panic_embed(panic_info: String) -> CreateEmbed {
 }
 
 pub fn build_welcome_embed() -> CreateEmbed {
-    let footer = CreateEmbedFooter::new(
-        "powered by godbolt.org & wandbox.org // created by Michael Flaherty (@headline)",
-    );
+    let footer =
+        CreateEmbedFooter::new("powered by godbolt.org & wandbox.org // created by @headline");
     let prefix = env::var("BOT_PREFIX").expect("Bot prefix is not set!");
 
     CreateEmbed::new()
@@ -349,7 +348,7 @@ pub fn build_welcome_embed() -> CreateEmbed {
             format!("{}compile python\n```py\nprint('hello world')\n```", prefix),
             true,
         )
-        .field("Learning Time!", format!("If you like reading the manuals of things, read our [getting started](https://github.com/Headline/discord-compiler-bot/wiki/Getting-Started) wiki or if you are confident type `{0}help` to view all commands.", prefix), false)
+        .field("Learning Time!", format!("If you like reading the manuals of things, read our [getting started](https://github.com/Headline/discord-compiler-bot/wiki/1.-Getting-Started) wiki or if you are confident type `{0}help` to view all commands.", prefix), false)
         .field("Support", "If you ever run into any issues please stop by our [support server](https://discord.com/invite/nNNEZ6s) and we'll give you a hand.", true)
         .footer(footer)
 }
