@@ -198,7 +198,7 @@ async fn get_url_code(url: &str, author: &User) -> Result<String, CommandError> 
         return Err(CommandError::from("Unknown paste service. Please use pastebin.com, hastebin.com, or GitHub gists.\n\nAlso please be sure to use a 'raw text' link"));
     }
 
-    let response = match reqwest::get(url).await {
+    let response = match crate::apis::HTTP_CLIENT.get(url).send().await {
         Ok(b) => b,
         Err(_e) => {
             return Err(CommandError::from(
@@ -282,7 +282,7 @@ pub async fn get_message_attachment(
                 attached.size / 1000
             )));
         }
-        return match reqwest::get(&attached.url).await {
+        return match crate::apis::HTTP_CLIENT.get(&attached.url).send().await {
             Ok(r) => {
                 let bytes = r.bytes().await.unwrap();
                 let cnt_type = content_inspector::inspect(&bytes);

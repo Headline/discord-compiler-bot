@@ -67,6 +67,8 @@ impl CompilationManager {
 
 impl CompilationManager {
     pub async fn new() -> Result<Self, Box<dyn Error>> {
+        let http = crate::apis::HTTP_CLIENT.clone();
+
         let mut broken_compilers = std::collections::HashSet::new();
         broken_compilers.insert(String::from("ghc-head"));
         broken_compilers.insert(String::from("go-head"));
@@ -74,15 +76,16 @@ impl CompilationManager {
         let mut broken_languages = std::collections::HashSet::new();
         broken_languages.insert(String::from("cpp"));
 
-        let wandbox = match WandboxService::new(broken_compilers, broken_languages).await {
-            Ok(wb) => Some(wb),
-            Err(e) => {
-                error!("Unable to load WandBox: {}", e);
-                None
-            }
-        };
+        let wandbox =
+            match WandboxService::new(http.clone(), broken_compilers, broken_languages).await {
+                Ok(wb) => Some(wb),
+                Err(e) => {
+                    error!("Unable to load WandBox: {}", e);
+                    None
+                }
+            };
 
-        let godbolt = match GodboltService::new().await {
+        let godbolt = match GodboltService::new(http).await {
             Ok(gb) => Some(gb),
             Err(e) => {
                 error!("Unable to load Compiler Explorer: {}", e);
