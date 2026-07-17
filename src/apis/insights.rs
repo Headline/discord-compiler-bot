@@ -24,7 +24,7 @@ pub struct InsightsAPI {
 impl InsightsAPI {
     pub fn new() -> Self {
         InsightsAPI {
-            client: reqwest::Client::new(),
+            client: crate::apis::HTTP_CLIENT.clone(),
         }
     }
 

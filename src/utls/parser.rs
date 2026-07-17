@@ -1,4 +1,4 @@
-use crate::utls::constants::{CODE_BLOCK_REGEX, C_LIKE_INCLUDE_REGEX, URL_ALLOW_LIST};
+use crate::utls::constants::{CODE_BLOCK_REGEX, C_LIKE_INCLUDE_REGEX, URL_ALLOW_LIST, USER_AGENT};
 
 use serenity::framework::standard::CommandError;
 use serenity::model::channel::{Attachment, Message};
@@ -190,15 +190,18 @@ async fn get_url_code(url: &str, author: &User) -> Result<String, CommandError> 
     }
 
     let host_str = host.unwrap().to_string();
+    if host_str == "godbolt.org" {
+        return get_godbolt_shortlink_code(&url).await;
+    }
     if !URL_ALLOW_LIST.contains(&host_str.as_str()) {
         warn!(
             "Blocked URL request to: {} by {} [{}]",
             host_str, author.id, author.name
         );
-        return Err(CommandError::from("Unknown paste service. Please use pastebin.com, hastebin.com, or GitHub gists.\n\nAlso please be sure to use a 'raw text' link"));
+        return Err(CommandError::from("Unknown paste service. Please use pastebin.com, hastebin.com, GitHub gists, or a godbolt.org shortlink.\n\nAlso please be sure to use a 'raw text' link"));
     }
 
-    let response = match reqwest::get(url).await {
+    let response = match crate::apis::HTTP_CLIENT.get(url).send().await {
         Ok(b) => b,
         Err(_e) => {
             return Err(CommandError::from(
@@ -211,6 +214,41 @@ async fn get_url_code(url: &str, author: &User) -> Result<String, CommandError> 
         Ok(t) => Ok(t),
         Err(_e) => Err(CommandError::from("Unable to grab resource")),
     }
+}
+
+/// Fetches the source code saved behind a godbolt.org shortlink
+/// (e.g. `https://godbolt.org/z/abc123`)
+async fn get_godbolt_shortlink_code(url: &reqwest::Url) -> Result<String, CommandError> {
+    let link_id = url
+        .path_segments()
+        .and_then(|mut segments| match (segments.next(), segments.next()) {
+            (Some("z"), Some(id)) if !id.is_empty() => Some(id.to_string()),
+            _ => None,
+        })
+        .ok_or_else(|| {
+            CommandError::from(
+                "Unsupported godbolt.org link. Please use a shortlink, i.e. https://godbolt.org/z/abc123",
+            )
+        })?;
+
+    let client = godbolt::Godbolt::builder()
+        .user_agent(USER_AGENT)
+        .http_client(crate::apis::HTTP_CLIENT.clone())
+        .build();
+
+    let state = client.shortlink_info(&link_id).await.map_err(|e| {
+        CommandError::from(format!(
+            "Unable to fetch godbolt shortlink '{}': {}",
+            link_id, e
+        ))
+    })?;
+
+    state
+        .sessions
+        .into_iter()
+        .map(|session| session.source)
+        .find(|source| !source.is_empty())
+        .ok_or_else(|| CommandError::from("No source code found behind the godbolt shortlink"))
 }
 
 pub async fn find_code_block(
@@ -282,7 +320,7 @@ pub async fn get_message_attachment(
                 attached.size / 1000
             )));
         }
-        return match reqwest::get(&attached.url).await {
+        return match crate::apis::HTTP_CLIENT.get(&attached.url).send().await {
             Ok(r) => {
                 let bytes = r.bytes().await.unwrap();
                 let cnt_type = content_inspector::inspect(&bytes);

@@ -28,10 +28,14 @@ impl WandboxService {
     /// `broken_compilers` and any (lowercase) language names in
     /// `broken_languages`
     pub async fn new(
+        http: reqwest::Client,
         broken_compilers: HashSet<String>,
         broken_languages: HashSet<String>,
     ) -> Result<Self, WandboxError> {
-        let client = Wandbox::builder().user_agent(USER_AGENT).build();
+        let client = Wandbox::builder()
+            .user_agent(USER_AGENT)
+            .http_client(http)
+            .build();
 
         let mut languages: Vec<WandboxLanguage> = Vec::new();
         for mut compiler in client.compilers().await? {

@@ -60,7 +60,7 @@ pub async fn libraries(ctx: &Context, msg: &Message, mut args: Args) -> CommandR
         "Supported Libraries",
         &avatar,
         &msg.author.name,
-        "*Use a library with `-lib <library>:<version>`*",
+        "*Use a library with `-lib <library>:<version>`, or `-lib <library>` for the newest version*",
     );
     let mut menu = Menu::new(ctx, msg, &pages);
     menu.run().await?;

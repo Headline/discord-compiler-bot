@@ -29,8 +29,11 @@ pub struct GodboltService {
 }
 
 impl GodboltService {
-    pub async fn new() -> Result<Self, GodboltError> {
-        let client = Godbolt::builder().user_agent(USER_AGENT).build();
+    pub async fn new(http: reqwest::Client) -> Result<Self, GodboltError> {
+        let client = Godbolt::builder()
+            .user_agent(USER_AGENT)
+            .http_client(http)
+            .build();
         let catalog = client.catalog().await?;
         let formats = client.formats().await?;
 

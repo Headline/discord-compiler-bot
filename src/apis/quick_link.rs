@@ -9,7 +9,7 @@ pub struct LinkAPI {
 impl LinkAPI {
     pub fn new(request_base: &str, redirect_base: &str) -> Self {
         LinkAPI {
-            client: reqwest::Client::new(),
+            client: crate::apis::HTTP_CLIENT.clone(),
             request_base: request_base.to_string(),
             redirect_base: redirect_base.to_string(),
         }
