@@ -10,7 +10,7 @@ pub mod wandbox;
 lazy_static! {
     /// Shared client for all outbound API traffic
     pub static ref HTTP_CLIENT: reqwest::Client = reqwest::Client::builder()
-        .timeout(Duration::from_secs(10))
+        .timeout(Duration::from_secs(30))
         .build()
         .expect("Unable to build shared http client");
 }
