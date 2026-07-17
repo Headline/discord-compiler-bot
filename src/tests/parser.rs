@@ -321,4 +321,3 @@ async fn parse_url_with_block_stdin() {
     assert_eq!(parser_result.url, "https://pastebin.com/raw/ERqDRZva");
     assert_eq!(parser_result.code, "int main() {}");
 }
-
