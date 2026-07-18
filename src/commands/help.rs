@@ -61,7 +61,7 @@ pub async fn help(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
                  running the program. Press the Execute button within 30 seconds to run it, \
                  or use the execute command to compile & run in one step\n\n"
             }
-            "execute" => {
+            "execute" | "exec" | "exe" => {
                 emb = emb.title("Execute command").field(
                     "Example",
                     format!(

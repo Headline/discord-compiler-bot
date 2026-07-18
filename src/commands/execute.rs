@@ -8,6 +8,7 @@ use crate::commands::compile::{build_link_button, handle_request};
 use crate::utls::discordhelpers;
 
 #[command]
+#[aliases("exec", "exe")]
 #[bucket = "nospam"]
 pub async fn execute(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
     let result = handle_request(ctx, &msg.content, &msg.author, msg, true).await?;

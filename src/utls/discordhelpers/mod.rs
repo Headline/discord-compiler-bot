@@ -168,7 +168,8 @@ pub async fn handle_edit(
             let mut err = embeds::build_fail_embed(&author, &e.to_string());
             embeds::edit_message_embed(ctx, &mut old, &mut err, None).await?;
         }
-    } else if content.starts_with(&format!("{}execute", prefix)) {
+    } else if content.starts_with(&format!("{}exe", prefix)) {
+        // matches the execute command and its exec/exe aliases
         if let Err(e) = handle_edit_compile(
             ctx,
             content,
@@ -406,7 +407,7 @@ pub async fn send_global_presence(shard_manager: &MutexGuard<'_, Arc<ShardManage
     };
 
     // update shard guild count & presence
-    let presence_str = format!("in {} servers | ;invite", server_count);
+    let presence_str = format!("{} servers | ;invite ;exec ;asm", server_count);
 
     let runners = shard_manager.runners.lock().await;
     for (_, v) in runners.iter() {
