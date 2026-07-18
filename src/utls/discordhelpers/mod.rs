@@ -91,6 +91,7 @@ pub async fn handle_edit(
     author: User,
     mut old: Message,
     original_message: Message,
+    was_executed: bool,
 ) -> serenity::Result<()> {
     let prefix = {
         let data = ctx.data.read().await;
@@ -132,6 +133,21 @@ pub async fn handle_edit(
             author.clone(),
             old.clone(),
             original_message.clone(),
+            was_executed,
+        )
+        .await
+        {
+            let mut err = embeds::build_fail_embed(&author, &e.to_string());
+            embeds::edit_message_embed(ctx, &mut old, &mut err, None).await?;
+        }
+    } else if content.starts_with(&format!("{}execute", prefix)) {
+        if let Err(e) = handle_edit_compile(
+            ctx,
+            content,
+            author.clone(),
+            old.clone(),
+            original_message.clone(),
+            true,
         )
         .await
         {
@@ -212,8 +228,9 @@ pub async fn handle_edit_compile(
     author: User,
     mut old: Message,
     original_msg: Message,
+    execute: bool,
 ) -> CommandResult {
-    let result = compile::handle_request(ctx, &content, &author, &original_msg).await?;
+    let result = compile::handle_request(ctx, &content, &author, &original_msg, execute).await?;
 
     discordhelpers::send_completion_react(ctx, &old, result.details.success).await?;
 

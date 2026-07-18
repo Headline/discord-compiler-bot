@@ -203,6 +203,7 @@ impl EventHandler for Handler {
                         author.clone(),
                         msg.our_msg.clone(),
                         msg.original_msg.clone(),
+                        msg.executed,
                     )
                     .await
                     {

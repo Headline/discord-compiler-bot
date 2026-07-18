@@ -23,6 +23,8 @@ pub struct CompilationDetails {
     pub godbolt_base64: Option<String>,
     /// Whether compilation/execution succeeded
     pub success: bool,
+    /// Whether this result includes program execution
+    pub executed: bool,
 }
 
 /// The result of a compilation request, containing everything needed to display to the user
@@ -35,6 +37,14 @@ pub struct CompilationResult {
 enum Backend {
     CompilerExplorer,
     WandBox,
+}
+
+/// What kind of request to send to Compiler Explorer
+#[derive(Clone, Copy, PartialEq)]
+enum GodboltMode {
+    Execute,
+    Check,
+    Assembly,
 }
 
 /// Manages compilation requests across multiple backend services (Godbolt, WandBox).
@@ -96,15 +106,35 @@ impl CompilationManager {
         Ok(CompilationManager { wandbox, godbolt })
     }
 
-    /// Compile code and return a result ready for display.
+    /// Compile code without executing it and return a result ready for display.
+    /// WandBox targets fall back to full execution since WandBox cannot skip
+    /// the run step.
     pub async fn compile(
         &self,
         request: &ParserResult,
         author: &User,
     ) -> Result<CompilationResult, CommandError> {
+        self.dispatch(request, author, GodboltMode::Check).await
+    }
+
+    /// Compile and execute code and return a result ready for display.
+    pub async fn execute(
+        &self,
+        request: &ParserResult,
+        author: &User,
+    ) -> Result<CompilationResult, CommandError> {
+        self.dispatch(request, author, GodboltMode::Execute).await
+    }
+
+    async fn dispatch(
+        &self,
+        request: &ParserResult,
+        author: &User,
+        mode: GodboltMode,
+    ) -> Result<CompilationResult, CommandError> {
         match self.resolve_backend(&request.target) {
             Some(Backend::CompilerExplorer) => {
-                self.compile_with_godbolt(request, author, false).await
+                self.compile_with_godbolt(request, author, mode).await
             }
             Some(Backend::WandBox) => self.compile_with_wandbox(request, author).await,
             None => {
@@ -127,16 +157,18 @@ impl CompilationManager {
         request: &ParserResult,
         author: &User,
     ) -> Result<CompilationResult, CommandError> {
-        self.compile_with_godbolt(request, author, true).await
+        self.compile_with_godbolt(request, author, GodboltMode::Assembly)
+            .await
     }
 
     /// Compile using Compiler Explorer (godbolt.org).
-    /// Used by both `compile` (execute mode) and `assembly` (asm mode).
+    /// Used by `compile` (check mode), `execute` (execute mode), and
+    /// `assembly` (asm mode).
     async fn compile_with_godbolt(
         &self,
         request: &ParserResult,
         author: &User,
-        asm_mode: bool,
+        mode: GodboltMode,
     ) -> Result<CompilationResult, CommandError> {
         let godbolt = self.godbolt.as_ref().ok_or_else(|| {
             CommandError::from(
@@ -145,6 +177,7 @@ impl CompilationManager {
         })?;
 
         // Resolve target to a specific compiler
+        let asm_mode = mode == GodboltMode::Assembly;
         let target = normalize_target(&request.target);
         let compiler = godbolt.resolve(target).ok_or_else(|| {
             if asm_mode {
@@ -174,10 +207,10 @@ impl CompilationManager {
         };
 
         // Build request options
-        let mut options = if asm_mode {
-            build_asm_options(request)
-        } else {
-            build_execute_options(request)
+        let mut options = match mode {
+            GodboltMode::Execute => build_execute_options(request),
+            GodboltMode::Check => build_check_options(request),
+            GodboltMode::Assembly => build_asm_options(request),
         };
         options.libraries = resolve_libraries(godbolt, &compiler.lang, &library_specs).await?;
         let preprocessor = options.compiler_options.produce_pp.is_some();
@@ -193,6 +226,7 @@ impl CompilationManager {
             compiler: compiler.name.clone(),
             godbolt_base64,
             success: response.code == 0,
+            executed: mode == GodboltMode::Execute,
         };
 
         let embed_options = EmbedOptions::new(asm_mode, preprocessor, details.clone());
@@ -237,6 +271,7 @@ impl CompilationManager {
             compiler: compiler_name,
             godbolt_base64: None,
             success: response.status == Some(0),
+            executed: true,
         };
 
         let embed_options = EmbedOptions::new(false, false, details.clone());
@@ -278,6 +313,7 @@ impl CompilationManager {
             compiler: compiler.name.clone(),
             godbolt_base64,
             success: response.code == 0,
+            executed: true,
         };
 
         Ok((details, response))
@@ -666,6 +702,30 @@ fn build_execute_options(request: &ParserResult) -> RequestOptions {
             demangle: Some(true),
             directives: Some(true),
             execute: Some(true),
+            intel: Some(true),
+            labels: Some(true),
+            trim: Some(true),
+            ..Default::default()
+        },
+        ..Default::default()
+    }
+}
+
+/// Build request options for a compile-only check
+fn build_check_options(request: &ParserResult) -> RequestOptions {
+    RequestOptions {
+        user_arguments: request.options.join(" "),
+        compiler_options: CompilerOptions {
+            skip_asm: true,
+            executor_request: false,
+            ..Default::default()
+        },
+        execute_parameters: Default::default(),
+        filters: CompilationFilters {
+            comment_only: Some(true),
+            demangle: Some(true),
+            directives: Some(true),
+            execute: Some(false),
             intel: Some(true),
             labels: Some(true),
             trim: Some(true),

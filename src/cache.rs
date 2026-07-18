@@ -74,6 +74,8 @@ impl TypeMapKey for InsightsAPICache {
 pub struct MessageCacheEntry {
     pub our_msg: Message,
     pub original_msg: Message,
+    /// Whether the last operation on this message ran the program
+    pub executed: bool,
 }
 
 impl MessageCacheEntry {
@@ -81,6 +83,7 @@ impl MessageCacheEntry {
         MessageCacheEntry {
             our_msg,
             original_msg,
+            executed: false,
         }
     }
 }

@@ -1,6 +1,10 @@
 use std::fmt::Write as _;
+use std::time::Duration;
 
-use serenity::all::{CreateActionRow, CreateButton, CreateMessage};
+use serenity::all::{
+    ButtonStyle, CreateActionRow, CreateButton, CreateInteractionResponse, CreateMessage,
+    EditMessage,
+};
 use serenity::builder::CreateEmbed;
 use serenity::client::Context;
 use serenity::framework::standard::CommandError;
@@ -11,26 +15,31 @@ use serenity::model::user::User;
 use crate::cache::{CompilerCache, ConfigCache, LinkAPICache, MessageCache, MessageCacheEntry};
 use crate::managers::compilation::{CompilationDetails, CompilationResult};
 use crate::utls::discordhelpers::embeds;
+use crate::utls::parser::ParserResult;
 use crate::utls::{discordhelpers, parser};
+
+const EXECUTE_BUTTON_TIMEOUT: Duration = Duration::from_secs(30);
 
 #[command]
 #[bucket = "nospam"]
 pub async fn compile(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
-    let result = handle_request(ctx, &msg.content, &msg.author, msg).await?;
+    let result = handle_request(ctx, &msg.content, &msg.author, msg, false).await?;
 
-    let data = ctx.data.read().await;
+    let link_button = build_link_button(ctx, &result.details).await;
+    let offer_execute = result.details.success && !result.details.executed;
 
-    // Build message with optional godbolt link button
+    let mut buttons = link_button.clone();
+    if offer_execute {
+        buttons.push(
+            CreateButton::new(format!("execute:{}", msg.id.get()))
+                .label("Execute")
+                .style(ButtonStyle::Primary),
+        );
+    }
+
     let mut new_msg = CreateMessage::new().embed(result.embed);
-    if let Some(b64) = &result.details.godbolt_base64 {
-        if let Some(link_cache) = data.get::<LinkAPICache>() {
-            let long_url = format!("https://godbolt.org/clientstate/{}", b64);
-            let link_cache_lock = link_cache.read().await;
-            if let Some(short_url) = link_cache_lock.get_link(long_url).await {
-                let btn = CreateButton::new_link(short_url).label("View on godbolt.org");
-                new_msg = new_msg.components(vec![CreateActionRow::Buttons(vec![btn])]);
-            }
-        }
+    if !buttons.is_empty() {
+        new_msg = new_msg.components(vec![CreateActionRow::Buttons(buttons)]);
     }
 
     let sent = msg.channel_id.send_message(&ctx.http, new_msg).await?;
@@ -39,10 +48,118 @@ pub async fn compile(ctx: &Context, msg: &Message, _args: Args) -> CommandResult
     discordhelpers::send_completion_react(ctx, &sent, result.details.success).await?;
 
     // Cache for edit tracking
-    let mut message_cache = data.get::<MessageCache>().unwrap().lock().await;
-    message_cache.insert(msg.id.get(), MessageCacheEntry::new(sent, msg.clone()));
+    {
+        let data = ctx.data.read().await;
+        let mut message_cache = data.get::<MessageCache>().unwrap().lock().await;
+        let mut entry = MessageCacheEntry::new(sent.clone(), msg.clone());
+        entry.executed = result.details.executed;
+        message_cache.insert(msg.id.get(), entry);
+    }
+
+    if offer_execute {
+        await_execute_button(ctx, msg, sent, result.parse_result, link_button).await?;
+    }
 
     debug!("Command executed");
+    Ok(())
+}
+
+/// Build the "View on godbolt.org" link button if a shortened link is available
+pub async fn build_link_button(ctx: &Context, details: &CompilationDetails) -> Vec<CreateButton> {
+    let mut buttons = Vec::new();
+    if let Some(b64) = &details.godbolt_base64 {
+        let data = ctx.data.read().await;
+        if let Some(link_cache) = data.get::<LinkAPICache>() {
+            let long_url = format!("https://godbolt.org/clientstate/{}", b64);
+            let link_cache_lock = link_cache.read().await;
+            if let Some(short_url) = link_cache_lock.get_link(long_url).await {
+                buttons.push(CreateButton::new_link(short_url).label("View on godbolt.org"));
+            }
+        }
+    }
+    buttons
+}
+
+/// Wait for the requester to press Execute, running the code if pressed.
+/// The button is removed once we stop waiting.
+async fn await_execute_button(
+    ctx: &Context,
+    request_msg: &Message,
+    mut sent: Message,
+    parse_result: ParserResult,
+    link_button: Vec<CreateButton>,
+) -> CommandResult {
+    let interaction = sent
+        .await_component_interaction(&ctx.shard)
+        .author_id(request_msg.author.id)
+        .timeout(EXECUTE_BUTTON_TIMEOUT)
+        .await;
+
+    let components = if link_button.is_empty() {
+        Vec::new()
+    } else {
+        vec![CreateActionRow::Buttons(link_button)]
+    };
+
+    let Some(mci) = interaction else {
+        sent.edit(&ctx.http, EditMessage::new().components(components))
+            .await?;
+        return Ok(());
+    };
+
+    mci.create_response(&ctx.http, CreateInteractionResponse::Acknowledge)
+        .await?;
+
+    // mark as executed so edits re-execute rather than compile
+    let compilation_manager = {
+        let data = ctx.data.read().await;
+        {
+            let mut message_cache = data.get::<MessageCache>().unwrap().lock().await;
+            if let Some(entry) = message_cache.get_mut(&request_msg.id.get()) {
+                entry.executed = true;
+            }
+        }
+        data.get::<CompilerCache>().unwrap().clone()
+    };
+    let result = {
+        let compilation_manager_lock = compilation_manager.read().await;
+        compilation_manager_lock
+            .execute(&parse_result, &request_msg.author)
+            .await
+    };
+
+    match result {
+        Ok(CompilationResult { details, embed }) => {
+            if let Ok(updated) = sent.channel_id.message(&ctx.http, sent.id).await {
+                for reaction in &updated.reactions {
+                    if reaction.me {
+                        let _ = discordhelpers::delete_bot_reacts(
+                            ctx,
+                            &updated,
+                            reaction.reaction_type.clone(),
+                        )
+                        .await;
+                    }
+                }
+            }
+            let _ = discordhelpers::send_completion_react(ctx, &sent, details.success).await;
+
+            sent.edit(
+                &ctx.http,
+                EditMessage::new().embed(embed).components(components),
+            )
+            .await?;
+        }
+        Err(e) => {
+            let embed = embeds::build_fail_embed(&request_msg.author, &e.to_string());
+            sent.edit(
+                &ctx.http,
+                EditMessage::new().embed(embed).components(components),
+            )
+            .await?;
+        }
+    }
+
     Ok(())
 }
 
@@ -50,14 +167,17 @@ pub async fn compile(ctx: &Context, msg: &Message, _args: Args) -> CommandResult
 pub struct HandleRequestResult {
     pub embed: CreateEmbed,
     pub details: CompilationDetails,
+    pub parse_result: ParserResult,
 }
 
-/// Parse message, compile code, and return result ready for display.
+/// Parse message, compile code (running it if `execute` is set), and return
+/// result ready for display.
 pub async fn handle_request(
     ctx: &Context,
     content: &str,
     author: &User,
     msg: &Message,
+    execute: bool,
 ) -> Result<HandleRequestResult, CommandError> {
     // Extract needed data and release lock immediately
     let (loading_reaction, compilation_manager) = {
@@ -94,9 +214,15 @@ pub async fn handle_request(
     // Compile the code - this is the slow part, no locks held
     let result = {
         let compilation_manager_lock = compilation_manager.read().await;
-        compilation_manager_lock
-            .compile(&parse_result, author)
-            .await
+        if execute {
+            compilation_manager_lock
+                .execute(&parse_result, author)
+                .await
+        } else {
+            compilation_manager_lock
+                .compile(&parse_result, author)
+                .await
+        }
     };
 
     // Remove loading indicator
@@ -108,7 +234,11 @@ pub async fn handle_request(
     // Log compilation if configured
     log_compilation(ctx, msg, &parse_result, details.success).await;
 
-    Ok(HandleRequestResult { embed, details })
+    Ok(HandleRequestResult {
+        embed,
+        details,
+        parse_result,
+    })
 }
 
 /// Get the configured loading reaction or default hourglass

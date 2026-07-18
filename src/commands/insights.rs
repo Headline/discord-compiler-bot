@@ -85,6 +85,7 @@ pub async fn handle_request(
             compiler: String::new(),
             godbolt_base64: None,
             success: resp_obj.return_code == 0,
+            executed: true,
         };
         Ok((details, build_insights_response_embed(&author, resp_obj)))
     } else {

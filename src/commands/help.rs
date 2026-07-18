@@ -58,7 +58,26 @@ pub async fn help(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
                         ),
                         false,
                     );
-                "Sends a compilation request\n\n"
+                "Sends a compilation request, reporting the compiler's diagnostics without \
+                 running the program. Press the Execute button within 30 seconds to run it, \
+                 or use the execute command to compile & run in one step\n\n"
+            }
+            "execute" => {
+                emb = emb.title("Execute command").field(
+                    "Example",
+                    format!(
+                        "{}execute c++\n\
+                          \\`\\`\\`\n\
+                          #include <iostream>\n\n\
+                          int main() {{ \n\
+                          \tstd::cout << \"Hello, world\";\n\
+                          }}\n\
+                          \\`\\`\\`\n",
+                        prefix
+                    ),
+                    false,
+                );
+                "Compiles and executes code, displaying the program's output\n\n"
             }
             "compilers" => {
                 emb = emb.title("Compilers command").field(
@@ -175,11 +194,12 @@ pub async fn help(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
         .color(COLOR_OKAY)
         .title("Commands")
         .field("invite", "``` Grabs the bot's invite link ```", false)
-        .field("compile", "``` Compiles and executes code ```", false)
+        .field("compile", "``` Compiles code ```", false)
+        .field("execute", "``` Executes code ```", false)
+        .field("asm",     "``` Displays assembly```", false)
         .field("compilers", "``` Displays the compilers for the specified language ```", false)
         .field("languages", "``` Displays all supported languages ```", false)
         .field("libraries", "``` Displays the libraries for the specified language ```", false)
-        .field("asm", "``` Outputs the assembly for the input code```", false)
         .field("asmdoc", "``` Displays documentation for an assembly opcode ```", false)
         .field("botinfo", "``` Displays information about the bot ```", false)
         .field("cpp", format!("``` Executes c++ code using geordi-like syntax\n See {}help cpp for more info ```", prefix), false)

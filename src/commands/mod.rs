@@ -5,6 +5,7 @@ pub mod botinfo;
 pub mod compile;
 pub mod compilers;
 pub mod cpp;
+pub mod execute;
 pub mod format;
 pub mod formats;
 pub mod help;
