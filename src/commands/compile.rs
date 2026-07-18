@@ -37,7 +37,7 @@ pub async fn compile(ctx: &Context, msg: &Message, _args: Args) -> CommandResult
         );
     }
 
-    let mut new_msg = CreateMessage::new().embed(result.embed);
+    let mut new_msg = discordhelpers::reply_to(msg, CreateMessage::new().embed(result.embed));
     if !buttons.is_empty() {
         new_msg = new_msg.components(vec![CreateActionRow::Buttons(buttons)]);
     }

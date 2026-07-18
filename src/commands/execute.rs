@@ -13,7 +13,7 @@ pub async fn execute(ctx: &Context, msg: &Message, _args: Args) -> CommandResult
     let result = handle_request(ctx, &msg.content, &msg.author, msg, true).await?;
 
     // Build message with optional godbolt link button
-    let mut new_msg = CreateMessage::new().embed(result.embed);
+    let mut new_msg = discordhelpers::reply_to(msg, CreateMessage::new().embed(result.embed));
     let buttons = build_link_button(ctx, &result.details).await;
     if !buttons.is_empty() {
         new_msg = new_msg.components(vec![CreateActionRow::Buttons(buttons)]);

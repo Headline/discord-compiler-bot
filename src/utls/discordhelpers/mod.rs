@@ -16,8 +16,17 @@ use tokio::sync::MutexGuard;
 
 use crate::commands::compile;
 use crate::utls::discordhelpers::embeds::embed_message;
-use serenity::all::{ActivityData, CreateEmbedFooter, ShardManager};
+use serenity::all::{
+    ActivityData, CreateAllowedMentions, CreateEmbedFooter, CreateMessage, ShardManager,
+};
 use std::fmt::Write as _;
+
+/// Turn a message builder into a silent reply to the invoking message
+pub fn reply_to(msg: &Message, new_msg: CreateMessage) -> CreateMessage {
+    new_msg
+        .reference_message(msg)
+        .allowed_mentions(CreateAllowedMentions::new().replied_user(false))
+}
 
 pub fn build_menu_items(
     items: Vec<String>,

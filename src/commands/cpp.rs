@@ -22,7 +22,7 @@ pub async fn cpp(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
     let data = ctx.data.read().await;
 
     // Build message with optional godbolt link button
-    let mut new_msg = CreateMessage::new().embed(result.embed);
+    let mut new_msg = discordhelpers::reply_to(msg, CreateMessage::new().embed(result.embed));
     if let Some(b64) = &result.details.godbolt_base64 {
         if let Some(link_cache) = data.get::<LinkAPICache>() {
             let long_url = format!("https://godbolt.org/clientstate/{}", b64);

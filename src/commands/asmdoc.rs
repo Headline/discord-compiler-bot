@@ -65,7 +65,7 @@ pub async fn asmdoc(ctx: &Context, msg: &Message, mut args: Args) -> CommandResu
         emb = emb.url(url);
     }
 
-    embeds::dispatch_embed(&ctx.http, msg.channel_id, emb).await?;
+    embeds::reply_embed(&ctx.http, msg, emb).await?;
 
     debug!("Command executed");
     Ok(())

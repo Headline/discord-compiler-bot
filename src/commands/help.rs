@@ -1,6 +1,5 @@
 use std::env;
 
-use serenity::all::CreateMessage;
 use serenity::{
     builder::CreateEmbed,
     framework::standard::{macros::command, Args, CommandResult},
@@ -182,7 +181,7 @@ pub async fn help(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
         };
 
         emb = emb.description(description);
-        embeds::dispatch_embed(&ctx.http, msg.channel_id, emb).await?;
+        embeds::reply_embed(&ctx.http, msg, emb).await?;
 
         return Ok(());
     }
@@ -207,8 +206,7 @@ pub async fn help(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
         .field("formats", "``` Displays all formatting options & styles ```", false)
         .field("insights", "``` Sends a code block to cppinsights.io ```", false);
 
-    let new_msg = CreateMessage::new().embed(embed);
-    msg.channel_id.send_message(&ctx.http, new_msg).await?;
+    embeds::reply_embed(&ctx.http, msg, embed).await?;
 
     debug!("Command executed");
     Ok(())

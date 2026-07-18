@@ -14,9 +14,7 @@ use crate::utls::{discordhelpers, parser};
 pub async fn insights(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
     let (_details, embed) =
         handle_request(ctx.clone(), msg.content.clone(), msg.author.clone(), msg).await?;
-    if let Ok(sent_msg) =
-        discordhelpers::embeds::dispatch_embed(&ctx.http, msg.channel_id, embed).await
-    {
+    if let Ok(sent_msg) = discordhelpers::embeds::reply_embed(&ctx.http, msg, embed).await {
         // add delete cache
         let data_read = ctx.data.read().await;
         let mut delete_cache = data_read.get::<MessageCache>().unwrap().lock().await;

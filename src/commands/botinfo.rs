@@ -1,4 +1,4 @@
-use serenity::builder::{CreateEmbed, CreateMessage};
+use serenity::builder::CreateEmbed;
 use serenity::framework::standard::{macros::command, Args, CommandResult};
 use serenity::model::prelude::*;
 use serenity::prelude::*;
@@ -7,6 +7,7 @@ use std::env;
 
 use crate::cache::ConfigCache;
 use crate::utls::constants::COLOR_OKAY;
+use crate::utls::discordhelpers::embeds;
 
 #[command]
 pub async fn botinfo(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
@@ -63,10 +64,7 @@ pub async fn botinfo(ctx: &Context, msg: &Message, _args: Args) -> CommandResult
             ("Build Information", build_info.as_str(), false),
         ]);
 
-    let new_msg = CreateMessage::new().embed(emb);
-    let msg = msg.channel_id.send_message(&ctx.http, new_msg).await;
-
-    if let Err(why) = msg {
+    if let Err(why) = embeds::reply_embed(&ctx.http, msg, emb).await {
         warn!("Error sending embed: {:?}", why);
     }
 

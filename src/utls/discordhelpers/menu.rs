@@ -26,9 +26,12 @@ impl Menu {
     }
 
     pub async fn run(&mut self) -> Result<(), CommandError> {
-        let msg = CreateMessage::new()
-            .embed(self.pages[self.page].clone())
-            .components(self.components.clone());
+        let msg = crate::utls::discordhelpers::reply_to(
+            &self.msg,
+            CreateMessage::new()
+                .embed(self.pages[self.page].clone())
+                .components(self.components.clone()),
+        );
         let mut m = self
             .msg
             .channel_id

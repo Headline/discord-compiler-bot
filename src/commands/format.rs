@@ -1,4 +1,5 @@
 use crate::cache::CompilerCache;
+use crate::utls::discordhelpers;
 use crate::utls::parser::{get_message_attachment, ParserResult};
 use serenity::all::{CreateAttachment, CreateMessage};
 use serenity::framework::standard::{
@@ -124,9 +125,12 @@ pub async fn format(ctx: &Context, msg: &Message, mut args: Args) -> CommandResu
         let _ = file.flush();
         let attachment = CreateAttachment::path(path.clone()).await?;
 
-        let new_msg = CreateMessage::new()
-            .add_file(attachment)
-            .content("Powered by godbolt.org");
+        let new_msg = discordhelpers::reply_to(
+            msg,
+            CreateMessage::new()
+                .add_file(attachment)
+                .content("Powered by godbolt.org"),
+        );
 
         msg.channel_id.send_message(&ctx.http, new_msg).await?;
         let _ = std::fs::remove_file(&path);

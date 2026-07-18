@@ -319,6 +319,16 @@ pub async fn dispatch_embed(
     channel.send_message(&http, emb_msg).await
 }
 
+/// Send an embed as a silent reply to the invoking message
+pub async fn reply_embed(
+    http: &Http,
+    msg: &Message,
+    emb: CreateEmbed,
+) -> serenity::Result<Message> {
+    let emb_msg = discordhelpers::reply_to(msg, embed_message(emb));
+    msg.channel_id.send_message(&http, emb_msg).await
+}
+
 pub fn build_dblvote_embed(tag: String) -> CreateEmbed {
     CreateEmbed::new()
         .color(COLOR_OKAY)

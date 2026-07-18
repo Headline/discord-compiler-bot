@@ -308,7 +308,7 @@ pub async fn before(ctx: &Context, msg: &Message, _: &str) -> bool {
         If you feel that this has been done in error, request an unban in the support server.",
         );
 
-        let _ = embeds::dispatch_embed(&ctx.http, msg.channel_id, emb).await;
+        let _ = embeds::reply_embed(&ctx.http, msg, emb).await;
         if author_blocked {
             warn!("Blocked user {} [{}]", msg.author.name, msg.author.id.get());
         } else {
@@ -329,7 +329,7 @@ pub async fn after(
 ) {
     if let Err(e) = command_result {
         let emb = embeds::build_fail_embed(&msg.author, &format!("{}", e));
-        let sent_fail = embeds::dispatch_embed(&ctx.http, msg.channel_id, emb).await;
+        let sent_fail = embeds::reply_embed(&ctx.http, msg, emb).await;
         if let Ok(sent) = sent_fail {
             let data = ctx.data.read().await;
             let mut message_cache = data.get::<MessageCache>().unwrap().lock().await;
@@ -342,6 +342,6 @@ pub async fn after(
 pub async fn dispatch_error(ctx: &Context, msg: &Message, error: DispatchError, _: &str) {
     if let DispatchError::Ratelimited(_) = error {
         let emb = embeds::build_fail_embed(&msg.author, "You are sending requests too fast!");
-        let _ = embeds::dispatch_embed(&ctx.http, msg.channel_id, emb).await;
+        let _ = embeds::reply_embed(&ctx.http, msg, emb).await;
     }
 }
