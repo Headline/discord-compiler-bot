@@ -7,7 +7,7 @@ use std::sync::Arc;
 
 use serenity::{builder::CreateEmbed, http::Http, model::prelude::*};
 
-use crate::cache::ConfigCache;
+use crate::cache::{ConfigCache, MessageCache};
 use crate::utls::constants::*;
 use crate::utls::discordhelpers;
 use serenity::client::Context;
@@ -17,7 +17,8 @@ use tokio::sync::MutexGuard;
 use crate::commands::compile;
 use crate::utls::discordhelpers::embeds::embed_message;
 use serenity::all::{
-    ActivityData, CreateAllowedMentions, CreateEmbedFooter, CreateMessage, ShardManager,
+    ActivityData, CreateActionRow, CreateAllowedMentions, CreateEmbedFooter, CreateMessage,
+    EditMessage, ShardManager,
 };
 use std::fmt::Write as _;
 
@@ -122,6 +123,23 @@ pub async fn handle_edit(
         }
     }
 
+    // invalidate any collector waiting on the previous button and remove the
+    // buttons so they cannot be pressed while the new request is in flight
+    let generation = {
+        let data = ctx.data.read().await;
+        let mut message_cache = data.get::<MessageCache>().unwrap().lock().await;
+        message_cache
+            .get_mut(&original_message.id.get())
+            .map(|entry| {
+                entry.button_generation += 1;
+                entry.button_generation
+            })
+            .unwrap_or(0)
+    };
+    let _ = old
+        .edit(&ctx.http, EditMessage::new().components(Vec::new()))
+        .await;
+
     if content.starts_with(&format!("{}asm", prefix)) {
         if let Err(e) = handle_edit_asm(
             ctx,
@@ -143,6 +161,7 @@ pub async fn handle_edit(
             old.clone(),
             original_message.clone(),
             was_executed,
+            generation,
         )
         .await
         {
@@ -157,6 +176,7 @@ pub async fn handle_edit(
             old.clone(),
             original_message.clone(),
             true,
+            generation,
         )
         .await
         {
@@ -231,6 +251,7 @@ pub async fn handle_edit_cpp(
     Ok(())
 }
 
+#[allow(clippy::too_many_arguments)]
 pub async fn handle_edit_compile(
     ctx: &Context,
     content: String,
@@ -238,13 +259,44 @@ pub async fn handle_edit_compile(
     mut old: Message,
     original_msg: Message,
     execute: bool,
+    generation: u64,
 ) -> CommandResult {
     let result = compile::handle_request(ctx, &content, &author, &original_msg, execute).await?;
 
     discordhelpers::send_completion_react(ctx, &old, result.details.success).await?;
 
-    let mut embed = result.embed;
-    embeds::edit_message_embed(ctx, &mut old, &mut embed, Some(result.details)).await?;
+    let link_button = compile::build_link_button(ctx, &result.details).await;
+    let offer_execute = !execute && result.details.success && !result.details.executed;
+
+    let mut buttons = link_button.clone();
+    if offer_execute {
+        buttons.push(compile::execute_button(&original_msg));
+    }
+    let components = if buttons.is_empty() {
+        Vec::new()
+    } else {
+        vec![CreateActionRow::Buttons(buttons)]
+    };
+
+    old.edit(
+        &ctx.http,
+        EditMessage::new()
+            .embed(result.embed)
+            .components(components),
+    )
+    .await?;
+
+    if offer_execute {
+        compile::await_execute_button(
+            ctx,
+            &original_msg,
+            old,
+            generation,
+            result.parse_result,
+            link_button,
+        )
+        .await?;
+    }
     Ok(())
 }
 

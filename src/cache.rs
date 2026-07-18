@@ -76,6 +76,8 @@ pub struct MessageCacheEntry {
     pub original_msg: Message,
     /// Whether the last operation on this message ran the program
     pub executed: bool,
+    /// Incremented on each edit; collectors with an older value ignore events
+    pub button_generation: u64,
 }
 
 impl MessageCacheEntry {
@@ -84,6 +86,7 @@ impl MessageCacheEntry {
             our_msg,
             original_msg,
             executed: false,
+            button_generation: 0,
         }
     }
 }

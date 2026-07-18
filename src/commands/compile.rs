@@ -30,11 +30,7 @@ pub async fn compile(ctx: &Context, msg: &Message, _args: Args) -> CommandResult
 
     let mut buttons = link_button.clone();
     if offer_execute {
-        buttons.push(
-            CreateButton::new(format!("execute:{}", msg.id.get()))
-                .label("Execute")
-                .style(ButtonStyle::Primary),
-        );
+        buttons.push(execute_button(msg));
     }
 
     let mut new_msg = discordhelpers::reply_to(msg, CreateMessage::new().embed(result.embed));
@@ -57,11 +53,17 @@ pub async fn compile(ctx: &Context, msg: &Message, _args: Args) -> CommandResult
     }
 
     if offer_execute {
-        await_execute_button(ctx, msg, sent, result.parse_result, link_button).await?;
+        await_execute_button(ctx, msg, sent, 0, result.parse_result, link_button).await?;
     }
 
     debug!("Command executed");
     Ok(())
+}
+
+pub fn execute_button(msg: &Message) -> CreateButton {
+    CreateButton::new(format!("execute:{}", msg.id.get()))
+        .label("Execute")
+        .style(ButtonStyle::Primary)
 }
 
 /// Build the "View on godbolt.org" link button if a shortened link is available
@@ -81,11 +83,13 @@ pub async fn build_link_button(ctx: &Context, details: &CompilationDetails) -> V
 }
 
 /// Wait for the requester to press Execute, running the code if pressed.
-/// The button is removed once we stop waiting.
-async fn await_execute_button(
+/// The button is removed once we stop waiting. Edits increment the entry's
+/// button_generation; a collector holding an older value does nothing.
+pub async fn await_execute_button(
     ctx: &Context,
     request_msg: &Message,
     mut sent: Message,
+    generation: u64,
     parse_result: ParserResult,
     link_button: Vec<CreateButton>,
 ) -> CommandResult {
@@ -94,6 +98,17 @@ async fn await_execute_button(
         .author_id(request_msg.author.id)
         .timeout(EXECUTE_BUTTON_TIMEOUT)
         .await;
+
+    let current_generation = {
+        let data = ctx.data.read().await;
+        let mut message_cache = data.get::<MessageCache>().unwrap().lock().await;
+        message_cache
+            .get_mut(&request_msg.id.get())
+            .map(|entry| entry.button_generation)
+    };
+    if current_generation != Some(generation) {
+        return Ok(());
+    }
 
     let components = if link_button.is_empty() {
         Vec::new()

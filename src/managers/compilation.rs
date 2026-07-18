@@ -198,9 +198,9 @@ impl CompilationManager {
         let library_specs = take_library_specs(&mut request.options)?;
         let request = &request;
 
-        // Prepare code with boilerplate if needed
-
-        let code = if !asm_mode {
+        // Prepare code with boilerplate if needed; compile-only checks and
+        // assembly requests send the code as-is
+        let code = if mode == GodboltMode::Execute {
             boilerplate_generation(&compiler.lang, &request.code)
         } else {
             request.code.to_owned()
