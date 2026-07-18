@@ -43,6 +43,11 @@ impl BoilerPlateGenerator for CGenerator {
                 return false;
             }
         }
+
+        if self.input.contains("#include") {
+            return false;
+        }
+
         true
     }
 }

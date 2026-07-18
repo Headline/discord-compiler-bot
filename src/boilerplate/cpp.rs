@@ -44,6 +44,11 @@ impl BoilerPlateGenerator for CppGenerator {
                 return false;
             }
         }
+
+        if self.input.contains("#include") {
+            return false;
+        }
+
         true
     }
 }
