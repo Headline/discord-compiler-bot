@@ -87,6 +87,124 @@ impl ToEmbed for wandbox::CompilationResult {
     }
 }
 
+impl ToEmbed for crate::apis::sourcepawn::SourcePawnResponse {
+    fn to_embed(self, author: &User, options: &EmbedOptions) -> CreateEmbed {
+        let mut embed = CreateEmbed::new();
+        let overall = self.compile.success && self.run.as_ref().map(|r| r.success).unwrap_or(true);
+        embed = embed.color(if overall { COLOR_OKAY } else { COLOR_FAIL });
+
+        let compiler_msg = clean_spcomp_output(
+            &format!("{}\n{}", self.compile.stdout, self.compile.stderr),
+            // The size stats are only interesting for compile-only requests
+            self.run.is_none() && !options.is_assembly,
+        );
+
+        if options.is_assembly {
+            if !self.compile.success {
+                return embed.field(
+                    "Compilation Errors",
+                    format!(
+                        "```\n{}```",
+                        discordhelpers::conform_external_str(&compiler_msg, MAX_ERROR_LEN, true)
+                    ),
+                    false,
+                );
+            }
+
+            let asm_text = self.asm.map(|asm| asm.stdout).unwrap_or_default();
+            let (pieces, remainder) = chunk_output(asm_text.lines());
+            let (new_embed, output) =
+                append_output_fields(embed, pieces, remainder, "Assembly Output", "");
+            embed = new_embed;
+
+            if !output {
+                embed = embed
+                    .title("Compilation successful")
+                    .description("No assembly generated.");
+            }
+        } else {
+            if !compiler_msg.is_empty() {
+                let str = discordhelpers::conform_external_str(&compiler_msg, MAX_ERROR_LEN, true);
+                embed = embed.field("Compiler Output", format!("```\n{}\n```", str), false);
+            }
+
+            match &self.run {
+                Some(run) => {
+                    let mut program = run.stdout.trim().to_string();
+                    if !run.stderr.trim().is_empty() {
+                        if !program.is_empty() {
+                            program.push('\n');
+                        }
+                        program.push_str(run.stderr.trim());
+                    }
+                    if run.truncated {
+                        if !program.is_empty() {
+                            program.push('\n');
+                        }
+                        program.push_str("… (output truncated)");
+                    }
+                    if run.timed_out {
+                        if !program.is_empty() {
+                            program.push('\n');
+                        }
+                        program.push_str("Execution timed out.");
+                    } else if !run.success {
+                        if let Some(code) = run.exit_code.filter(|&code| code != 0) {
+                            if !program.is_empty() {
+                                program.push('\n');
+                            }
+                            program.push_str(&format!("Exited with code {}.", code));
+                        }
+                    }
+
+                    if !program.is_empty() {
+                        let str =
+                            discordhelpers::conform_external_str(&program, MAX_OUTPUT_LEN, true);
+                        embed = embed.field("Program Output", format!("```\n{}\n```", str), false);
+                    } else {
+                        embed = embed.title("Execution successful");
+                    }
+                }
+                None => {
+                    if compiler_msg.is_empty() {
+                        embed = embed.title("Compilation successful");
+                    }
+                }
+            }
+        }
+
+        let mut text = author.name.clone();
+        if !options.compilation_info.language.is_empty() {
+            text = format!("{} | {}", text, options.compilation_info.language);
+        }
+        if !options.compilation_info.compiler.is_empty() {
+            text = format!("{} | {}", text, options.compilation_info.compiler);
+        }
+
+        embed.footer(CreateEmbedFooter::new(text))
+    }
+}
+
+/// Drop spcomp's banner (and optionally its size stats) from compiler output
+fn clean_spcomp_output(output: &str, keep_stats: bool) -> String {
+    output
+        .lines()
+        .filter(|line| {
+            !line.starts_with("SourcePawn Compiler") && !line.starts_with("Copyright (c)")
+        })
+        .filter(|line| {
+            keep_stats
+                || !(line.starts_with("Code size:")
+                    || line.starts_with("Data size:")
+                    || line.starts_with("Stack/heap size:")
+                    || line.starts_with("Total requirements:"))
+        })
+        .collect::<Vec<_>>()
+        .join("\n")
+        .trim()
+        .to_string()
+}
+
 impl ToEmbed for godbolt::CompilationResult {
     fn to_embed(self, author: &User, options: &EmbedOptions) -> CreateEmbed {
         let mut embed = CreateEmbed::new();

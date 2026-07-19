@@ -48,6 +48,7 @@ services:
       # - DBL_TOKEN=
       # - DBL_WEBHOOK_PORT=
       # - DBL_WEBHOOK_PASSWORD=
+      # - SOURCEPAWN_API_URL= see https://github.com/Headline/sourcepawn-api
 ```
 ### Manually
 There's only two steps required to get this bot up-and-running. Our release builds only support 64-bit, if you'd like to run this on a different architecture you will have to compile the project yourself, this is also true if you wish to host this bot on MacOS.

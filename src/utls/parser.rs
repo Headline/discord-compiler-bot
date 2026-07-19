@@ -29,6 +29,7 @@ pub fn shortname_to_qualified(language: &str) -> &str {
         "hs" | "lhs" => "haskell",
         "jl" => "julia",
         "gvy" => "groovy",
+        "sp" | "pawn" => "sourcepawn",
         _ => language,
     }
 }

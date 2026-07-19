@@ -26,6 +26,9 @@ pub async fn languages(ctx: &Context, msg: &Message, _args: Args) -> CommandResu
             }
         }
     }
+    if compiler_manager.sourcepawn().is_some() {
+        items.push(String::from("sourcepawn*"));
+    }
 
     let avatar = {
         let data_read = ctx.data.read().await;

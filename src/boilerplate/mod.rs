@@ -5,3 +5,4 @@ pub mod dart;
 pub mod generator;
 pub mod java;
 pub mod php;
+pub mod sourcepawn;

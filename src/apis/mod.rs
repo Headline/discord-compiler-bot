@@ -5,6 +5,7 @@ pub mod dbl;
 pub mod godbolt;
 pub mod insights;
 pub mod quick_link;
+pub mod sourcepawn;
 pub mod wandbox;
 
 lazy_static! {

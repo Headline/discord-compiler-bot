@@ -5,6 +5,7 @@ use serenity::framework::standard::CommandError;
 use serenity::model::user::User;
 
 use crate::apis::godbolt::GodboltService;
+use crate::apis::sourcepawn::SourcePawnService;
 use crate::apis::wandbox::WandboxService;
 use crate::boilerplate::generator::boilerplate_factory;
 use crate::utls::constants::JAVA_PUBLIC_CLASS_REGEX;
@@ -37,6 +38,7 @@ pub struct CompilationResult {
 enum Backend {
     CompilerExplorer,
     WandBox,
+    SourcePawn,
 }
 
 /// What kind of request to send to Compiler Explorer
@@ -50,12 +52,14 @@ enum GodboltMode {
 /// Manages compilation requests across multiple backend services (Godbolt, WandBox).
 ///
 /// Resolution order:
-/// 1. Some languages are hardcoded to WandBox (scala, nim, typescript, javascript)
-/// 2. If Compiler Explorer supports the target, use it
-/// 3. Fall back to WandBox
+/// 1. sourcepawn goes to the self-hosted SourcePawn service, if configured
+/// 2. Some languages are hardcoded to WandBox (scala, nim, typescript, javascript)
+/// 3. If Compiler Explorer supports the target, use it
+/// 4. Fall back to WandBox
 pub struct CompilationManager {
     wandbox: Option<WandboxService>,
     godbolt: Option<GodboltService>,
+    sourcepawn: Option<SourcePawnService>,
 }
 
 impl CompilationManager {
@@ -72,6 +76,11 @@ impl CompilationManager {
     /// Get reference to WandBox instance, if available
     pub fn wandbox(&self) -> Option<&WandboxService> {
         self.wandbox.as_ref()
+    }
+
+    /// Get reference to the SourcePawn service, if configured
+    pub fn sourcepawn(&self) -> Option<&SourcePawnService> {
+        self.sourcepawn.as_ref()
     }
 }
 
@@ -95,7 +104,7 @@ impl CompilationManager {
                 }
             };
 
-        let godbolt = match GodboltService::new(http).await {
+        let godbolt = match GodboltService::new(http.clone()).await {
             Ok(gb) => Some(gb),
             Err(e) => {
                 error!("Unable to load Compiler Explorer: {}", e);
@@ -103,7 +112,25 @@ impl CompilationManager {
             }
         };
 
-        Ok(CompilationManager { wandbox, godbolt })
+        let sourcepawn = match std::env::var("SOURCEPAWN_API_URL") {
+            Ok(url) => match SourcePawnService::new(http, &url).await {
+                Ok(sp) => {
+                    info!("SourcePawn service loaded ({})", sp.compiler_name());
+                    Some(sp)
+                }
+                Err(e) => {
+                    error!("Unable to load SourcePawn service at '{}': {}", url, e);
+                    None
+                }
+            },
+            Err(_) => None,
+        };
+
+        Ok(CompilationManager {
+            wandbox,
+            godbolt,
+            sourcepawn,
+        })
     }
 
     /// Compile code without executing it and return a result ready for display.
@@ -147,6 +174,10 @@ impl CompilationManager {
                 self.compile_with_wandbox(request, author, boilerplate)
                     .await
             }
+            Some(Backend::SourcePawn) => {
+                self.compile_with_sourcepawn(request, author, mode, boilerplate)
+                    .await
+            }
             None => {
                 let target = if request.target.starts_with('@') {
                     format!("\\{}", request.target)
@@ -161,14 +192,62 @@ impl CompilationManager {
         }
     }
 
-    /// Compile code and return assembly output (Godbolt only).
+    /// Compile code and return assembly output (Godbolt, or pcode disassembly
+    /// for SourcePawn targets).
     pub async fn assembly(
         &self,
         request: &ParserResult,
         author: &User,
     ) -> Result<CompilationResult, CommandError> {
+        if let Some(Backend::SourcePawn) = self.resolve_backend(&request.target) {
+            return self
+                .compile_with_sourcepawn(request, author, GodboltMode::Assembly, false)
+                .await;
+        }
         self.compile_with_godbolt(request, author, GodboltMode::Assembly, false)
             .await
+    }
+
+    /// Compile using the self-hosted SourcePawn service.
+    async fn compile_with_sourcepawn(
+        &self,
+        request: &ParserResult,
+        author: &User,
+        mode: GodboltMode,
+        boilerplate: bool,
+    ) -> Result<CompilationResult, CommandError> {
+        let sourcepawn = self.sourcepawn.as_ref().ok_or_else(|| {
+            CommandError::from(
+                "The SourcePawn service is unavailable. This may be due to an outage. Please try again later.",
+            )
+        })?;
+
+        let code = if boilerplate {
+            boilerplate_generation("sourcepawn", &request.code)
+        } else {
+            request.code.to_owned()
+        };
+
+        let asm_mode = mode == GodboltMode::Assembly;
+        let response = sourcepawn
+            .compile(&code, mode == GodboltMode::Execute, asm_mode)
+            .await
+            .map_err(|e| CommandError::from(format!("SourcePawn request failed: {}", e)))?;
+
+        let success = response.compile.success
+            && response.run.as_ref().map(|run| run.success).unwrap_or(true);
+        let details = CompilationDetails {
+            language: String::from("sourcepawn"),
+            compiler: sourcepawn.compiler_name(),
+            godbolt_base64: None,
+            success,
+            executed: mode == GodboltMode::Execute,
+        };
+
+        let embed_options = EmbedOptions::new(asm_mode, false, details.clone());
+        let embed = response.to_embed(author, &embed_options);
+
+        Ok(CompilationResult { details, embed })
     }
 
     /// Compile using Compiler Explorer (godbolt.org).
@@ -334,6 +413,10 @@ impl CompilationManager {
 
     /// Determine which backend should handle the given target.
     fn resolve_backend(&self, target: &str) -> Option<Backend> {
+        if target == "sourcepawn" && self.sourcepawn.is_some() {
+            return Some(Backend::SourcePawn);
+        }
+
         // These languages are only available on WandBox
         const WANDBOX_ONLY: &[&str] = &["scala", "nim", "typescript", "javascript"];
         if WANDBOX_ONLY.contains(&target) {
@@ -400,6 +483,13 @@ impl CompilationManager {
         match self.resolve_backend(language) {
             Some(Backend::CompilerExplorer) => self.list_godbolt_compilers(language, filter),
             Some(Backend::WandBox) => self.list_wandbox_compilers(language, filter),
+            Some(Backend::SourcePawn) => {
+                let sourcepawn = self.sourcepawn.as_ref().unwrap();
+                Ok(vec![format!(
+                    "{} -> **sourcepawn**",
+                    sourcepawn.compiler_name()
+                )])
+            }
             None => Err(CommandError::from(format!(
                 "Unable to find compilers for target '{}'.",
                 language
