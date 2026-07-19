@@ -114,16 +114,21 @@ impl CompilationManager {
         request: &ParserResult,
         author: &User,
     ) -> Result<CompilationResult, CommandError> {
-        self.dispatch(request, author, GodboltMode::Check).await
+        self.dispatch(request, author, GodboltMode::Check, false)
+            .await
     }
 
     /// Compile and execute code and return a result ready for display.
+    /// Boilerplate generation only applies to the ;execute command; the
+    /// Execute button runs the code exactly as it was checked.
     pub async fn execute(
         &self,
         request: &ParserResult,
         author: &User,
+        boilerplate: bool,
     ) -> Result<CompilationResult, CommandError> {
-        self.dispatch(request, author, GodboltMode::Execute).await
+        self.dispatch(request, author, GodboltMode::Execute, boilerplate)
+            .await
     }
 
     async fn dispatch(
@@ -131,12 +136,17 @@ impl CompilationManager {
         request: &ParserResult,
         author: &User,
         mode: GodboltMode,
+        boilerplate: bool,
     ) -> Result<CompilationResult, CommandError> {
         match self.resolve_backend(&request.target) {
             Some(Backend::CompilerExplorer) => {
-                self.compile_with_godbolt(request, author, mode).await
+                self.compile_with_godbolt(request, author, mode, boilerplate)
+                    .await
             }
-            Some(Backend::WandBox) => self.compile_with_wandbox(request, author).await,
+            Some(Backend::WandBox) => {
+                self.compile_with_wandbox(request, author, boilerplate)
+                    .await
+            }
             None => {
                 let target = if request.target.starts_with('@') {
                     format!("\\{}", request.target)
@@ -157,7 +167,7 @@ impl CompilationManager {
         request: &ParserResult,
         author: &User,
     ) -> Result<CompilationResult, CommandError> {
-        self.compile_with_godbolt(request, author, GodboltMode::Assembly)
+        self.compile_with_godbolt(request, author, GodboltMode::Assembly, false)
             .await
     }
 
@@ -169,6 +179,7 @@ impl CompilationManager {
         request: &ParserResult,
         author: &User,
         mode: GodboltMode,
+        boilerplate: bool,
     ) -> Result<CompilationResult, CommandError> {
         let godbolt = self.godbolt.as_ref().ok_or_else(|| {
             CommandError::from(
@@ -198,9 +209,7 @@ impl CompilationManager {
         let library_specs = take_library_specs(&mut request.options)?;
         let request = &request;
 
-        // Prepare code with boilerplate if needed; compile-only checks and
-        // assembly requests send the code as-is
-        let code = if mode == GodboltMode::Execute {
+        let code = if boilerplate {
             boilerplate_generation(&compiler.lang, &request.code)
         } else {
             request.code.to_owned()
@@ -240,6 +249,7 @@ impl CompilationManager {
         &self,
         request: &ParserResult,
         author: &User,
+        boilerplate: bool,
     ) -> Result<CompilationResult, CommandError> {
         let wandbox = self.wandbox.as_ref().ok_or_else(|| {
             CommandError::from(
@@ -250,8 +260,11 @@ impl CompilationManager {
         // Resolve target to language and compiler
         let (language, compiler_name) = self.resolve_wandbox_target(wandbox, &request.target)?;
 
-        // Prepare code with boilerplate if needed
-        let code = boilerplate_generation(&language, &request.code);
+        let code = if boilerplate {
+            boilerplate_generation(&language, &request.code)
+        } else {
+            request.code.to_owned()
+        };
 
         // Build and send compilation request
         let compilation_request = wandbox::CompilationRequest {

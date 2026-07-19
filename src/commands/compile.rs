@@ -139,7 +139,7 @@ pub async fn await_execute_button(
     let result = {
         let compilation_manager_lock = compilation_manager.read().await;
         compilation_manager_lock
-            .execute(&parse_result, &request_msg.author)
+            .execute(&parse_result, &request_msg.author, false)
             .await
     };
 
@@ -231,7 +231,7 @@ pub async fn handle_request(
         let compilation_manager_lock = compilation_manager.read().await;
         if execute {
             compilation_manager_lock
-                .execute(&parse_result, author)
+                .execute(&parse_result, author, true)
                 .await
         } else {
             compilation_manager_lock
