@@ -67,7 +67,7 @@ impl TypeMapKey for LinkAPICache {
 /// Contains the cpp insights api - used for ;insights
 pub struct InsightsAPICache;
 impl TypeMapKey for InsightsAPICache {
-    type Value = Arc<Mutex<InsightsAPI>>;
+    type Value = Arc<InsightsAPI>;
 }
 
 #[derive(Clone)]
@@ -203,7 +203,7 @@ pub async fn fill(
 
     // Cpp insights
     let insights = InsightsAPI::new();
-    data.insert::<InsightsAPICache>(Arc::new(Mutex::new(insights)));
+    data.insert::<InsightsAPICache>(Arc::new(insights));
 
     // Stats tracking (server/shard counts)
     let stats = StatsManager::new();

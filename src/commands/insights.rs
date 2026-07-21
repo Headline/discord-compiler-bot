@@ -32,7 +32,7 @@ pub async fn handle_request(
     msg: &Message,
 ) -> std::result::Result<(CompilationDetails, CreateEmbed), CommandError> {
     let data_read = ctx.data.read().await;
-    let insights_lock = data_read.get::<InsightsAPICache>().unwrap();
+    let insights_api = data_read.get::<InsightsAPICache>().unwrap().clone();
     let botinfo_lock = data_read.get::<ConfigCache>().unwrap();
     let botinfo = botinfo_lock.read().await;
 
@@ -70,10 +70,7 @@ pub async fn handle_request(
         ));
     }
 
-    let resp = {
-        let insights = insights_lock.lock().await;
-        insights.get_insights(req).await
-    };
+    let resp = insights_api.get_insights(req).await;
     discordhelpers::delete_bot_reacts(&ctx, msg, loading_reaction).await?;
 
     if let Some(resp_obj) = resp {

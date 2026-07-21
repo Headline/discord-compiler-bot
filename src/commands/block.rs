@@ -13,10 +13,11 @@ pub async fn block(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
 
     let arg = args.parse::<u64>()?;
 
-    let data = ctx.data.read().await;
-    let mut blocklist = data.get::<BlocklistCache>().unwrap().write().await;
-
-    blocklist.block(arg);
+    {
+        let data = ctx.data.read().await;
+        let mut blocklist = data.get::<BlocklistCache>().unwrap().write().await;
+        blocklist.block(arg);
+    }
 
     msg.channel_id
         .say(&ctx.http, format!("Blocked snowflake `{}`", &arg))

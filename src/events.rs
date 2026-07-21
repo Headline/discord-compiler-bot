@@ -12,6 +12,7 @@ use serenity::{
 
 use crate::{
     cache::*,
+    managers::command::CommandManager,
     utls::{discordhelpers, discordhelpers::embeds, discordhelpers::interactions::send_error_msg},
 };
 
@@ -63,14 +64,13 @@ impl EventHandler for Handler {
         let now: DateTime<Utc> = Utc::now();
         if guild.joined_at.unix_timestamp() + 30 > now.timestamp() {
             // post new server to join log
-            {
+            let join_log = {
                 let info = data.get::<ConfigCache>().unwrap().read().await;
-                if let Some(log) = info.get("JOIN_LOG") {
-                    if let Ok(id) = log.parse::<u64>() {
-                        let emb = embeds::build_join_embed(&guild);
-                        discordhelpers::manual_dispatch(ctx.http.clone(), id, emb).await;
-                    }
-                }
+                info.get("JOIN_LOG").and_then(|log| log.parse::<u64>().ok())
+            };
+            if let Some(log_id) = join_log {
+                let emb = embeds::build_join_embed(&guild);
+                discordhelpers::manual_dispatch(ctx.http.clone(), log_id, emb).await;
             }
 
             // count the join; the background flusher pushes stats & presence
@@ -101,14 +101,13 @@ impl EventHandler for Handler {
         let data = ctx.data.read().await;
 
         // post leave to join log
-        {
+        let join_log = {
             let info = data.get::<ConfigCache>().unwrap().read().await;
-            if let Some(log) = info.get("JOIN_LOG") {
-                if let Ok(join_id) = log.parse::<u64>() {
-                    let emb = embeds::build_leave_embed(&incomplete.id);
-                    discordhelpers::manual_dispatch(ctx.http.clone(), join_id, emb).await;
-                }
-            }
+            info.get("JOIN_LOG").and_then(|log| log.parse::<u64>().ok())
+        };
+        if let Some(log_id) = join_log {
+            let emb = embeds::build_leave_embed(&incomplete.id);
+            discordhelpers::manual_dispatch(ctx.http.clone(), log_id, emb).await;
         }
 
         // count the leave; the background flusher pushes stats & presence
@@ -223,11 +222,7 @@ impl EventHandler for Handler {
 
     async fn interaction_create(&self, ctx: Context, interaction: Interaction) {
         if let Interaction::Command(command) = interaction {
-            let cmd_result = {
-                let data_read = ctx.data.read().await;
-                let commands = data_read.get::<CommandCache>().unwrap().read().await;
-                commands.on_command(&ctx, &command).await
-            };
+            let cmd_result = CommandManager::on_command(&ctx, &command).await;
 
             match cmd_result {
                 Ok(_) => {}

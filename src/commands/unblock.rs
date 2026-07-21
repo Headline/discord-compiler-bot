@@ -13,10 +13,11 @@ pub async fn unblock(ctx: &Context, msg: &Message, args: Args) -> CommandResult 
 
     let arg = args.parse::<u64>()?;
 
-    let data = ctx.data.read().await;
-    let mut blocklist = data.get::<BlocklistCache>().unwrap().write().await;
-
-    blocklist.unblock(arg);
+    {
+        let data = ctx.data.read().await;
+        let mut blocklist = data.get::<BlocklistCache>().unwrap().write().await;
+        blocklist.unblock(arg);
+    }
 
     msg.channel_id
         .say(&ctx.http, format!("Unblocked snowflake `{}`", &arg))

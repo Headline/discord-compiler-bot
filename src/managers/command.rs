@@ -16,7 +16,7 @@ impl CommandManager {
         }
     }
 
-    pub async fn on_command(&self, ctx: &Context, command: &CommandInteraction) -> CommandResult {
+    pub async fn on_command(ctx: &Context, command: &CommandInteraction) -> CommandResult {
         let command_name = command.data.name.to_lowercase();
 
         match command_name.as_str() {
