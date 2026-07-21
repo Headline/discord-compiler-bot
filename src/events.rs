@@ -122,6 +122,11 @@ impl EventHandler for Handler {
     }
 
     async fn guild_delete(&self, ctx: Context, incomplete: UnavailableGuild, _full: Option<Guild>) {
+        // ignore unavailable (outage?)
+        if incomplete.unavailable {
+            return;
+        }
+
         let data = ctx.data.read().await;
 
         // post new server to join log
