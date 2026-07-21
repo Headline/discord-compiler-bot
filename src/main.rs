@@ -33,6 +33,7 @@ use crate::commands::{
     format::*, formats::*, help::*, insights::*, invite::*, languages::*, libraries::*, ping::*,
     unblock::*,
 };
+use crate::managers::stats::StatsManager;
 use crate::utls::discordhelpers::embeds::panic_embed;
 use crate::utls::discordhelpers::manual_dispatch;
 
@@ -129,6 +130,8 @@ async fn main() -> Result<(), Box<dyn Error>> {
         client.shard_manager.clone(),
     )
     .await?;
+
+    StatsManager::spawn_flusher(client.data.clone());
     if let Ok(plog) = env::var("PANIC_LOG") {
         let default_panic = std::panic::take_hook();
         let http = client.http.clone();

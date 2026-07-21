@@ -63,11 +63,8 @@ impl EventHandler for Handler {
         let now: DateTime<Utc> = Utc::now();
         if guild.joined_at.unix_timestamp() + 30 > now.timestamp() {
             // post new server to join log
-            let id;
             {
                 let info = data.get::<ConfigCache>().unwrap().read().await;
-                id = info.get("BOT_ID").unwrap().parse::<u64>().unwrap();
-
                 if let Some(log) = info.get("JOIN_LOG") {
                     if let Ok(id) = log.parse::<u64>() {
                         let emb = embeds::build_join_embed(&guild);
@@ -76,36 +73,10 @@ impl EventHandler for Handler {
                 }
             }
 
-            // Update server count
-            let (server_count, shard_count, should_update) = {
+            // count the join; the background flusher pushes stats & presence
+            {
                 let mut stats = data.get::<StatsManagerCache>().unwrap().lock().await;
                 stats.new_server();
-                (
-                    stats.server_count(),
-                    stats.shard_count(),
-                    stats.should_update_presence(),
-                )
-            };
-
-            // ensure we're actually loaded in before we start posting our server counts
-            if server_count > 0 && should_update {
-                let new_stats = dbl::types::ShardStats::Cumulative {
-                    server_count,
-                    shard_count: Some(shard_count as u64),
-                };
-
-                // Clone dbl client to use outside lock scope
-                if let Some(dbl_cache) = data.get::<DblCache>() {
-                    let dbl = dbl_cache.read().await.clone();
-                    if let Err(e) = dbl.update_stats(id, new_stats).await {
-                        warn!("Failed to post stats to dbl: {}", e);
-                    }
-                }
-
-                // update guild count in presence
-                let shard_manager = data.get::<ShardManagerCache>().unwrap().lock().await;
-                discordhelpers::send_global_presence(&shard_manager, server_count).await;
-                drop(shard_manager);
             }
 
             info!("Joining {}", guild.name);
@@ -129,46 +100,21 @@ impl EventHandler for Handler {
 
         let data = ctx.data.read().await;
 
-        // post new server to join log
-        let info = data.get::<ConfigCache>().unwrap().read().await;
-        let id = info.get("BOT_ID").unwrap().parse::<u64>().unwrap(); // used later
-        if let Some(log) = info.get("JOIN_LOG") {
-            if let Ok(join_id) = log.parse::<u64>() {
-                let emb = embeds::build_leave_embed(&incomplete.id);
-                discordhelpers::manual_dispatch(ctx.http.clone(), join_id, emb).await;
+        // post leave to join log
+        {
+            let info = data.get::<ConfigCache>().unwrap().read().await;
+            if let Some(log) = info.get("JOIN_LOG") {
+                if let Ok(join_id) = log.parse::<u64>() {
+                    let emb = embeds::build_leave_embed(&incomplete.id);
+                    discordhelpers::manual_dispatch(ctx.http.clone(), join_id, emb).await;
+                }
             }
         }
 
-        // Update server count
-        let (server_count, shard_count, should_update) = {
+        // count the leave; the background flusher pushes stats & presence
+        {
             let mut stats = data.get::<StatsManagerCache>().unwrap().lock().await;
             stats.leave_server();
-            (
-                stats.server_count(),
-                stats.shard_count(),
-                stats.should_update_presence(),
-            )
-        };
-
-        // ensure we're actually loaded in before we start posting our server counts
-        if server_count > 0 && should_update {
-            let new_stats = dbl::types::ShardStats::Cumulative {
-                server_count,
-                shard_count: Some(shard_count as u64),
-            };
-
-            // Clone dbl client to use outside lock
-            if let Some(dbl_cache) = data.get::<DblCache>() {
-                let dbl = dbl_cache.read().await.clone();
-                if let Err(e) = dbl.update_stats(id, new_stats).await {
-                    warn!("Failed to post stats to dbl: {}", e);
-                }
-            }
-
-            // update guild count in presence
-            let shard_manager = data.get::<ShardManagerCache>().unwrap().lock().await;
-            discordhelpers::send_global_presence(&shard_manager, server_count).await;
-            drop(shard_manager);
         }
 
         info!("Leaving {}", &incomplete.id);
