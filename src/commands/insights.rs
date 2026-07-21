@@ -33,8 +33,7 @@ pub async fn handle_request(
 ) -> std::result::Result<(CompilationDetails, CreateEmbed), CommandError> {
     let data_read = ctx.data.read().await;
     let insights_api = data_read.get::<InsightsAPICache>().unwrap().clone();
-    let botinfo_lock = data_read.get::<ConfigCache>().unwrap();
-    let botinfo = botinfo_lock.read().await;
+    let botinfo = data_read.get::<ConfigCache>().unwrap().read().await.clone();
 
     let loading_reaction = {
         if let Some(loading_id) = botinfo.get("LOADING_EMOJI_ID") {

@@ -9,7 +9,7 @@ use crate::{cache::ConfigCache, utls::constants::*};
 
 pub async fn help(ctx: &Context, msg: &CommandInteraction) -> CommandResult {
     let data = ctx.data.read().await;
-    let botinfo = data.get::<ConfigCache>().unwrap().read().await;
+    let botinfo = data.get::<ConfigCache>().unwrap().read().await.clone();
     let invite_link = botinfo.get("INVITE_LINK").unwrap();
     let dbl_link = botinfo.get("DISCORDBOTS_LINK").unwrap();
     let github_link = botinfo.get("GITHUB_LINK").unwrap();

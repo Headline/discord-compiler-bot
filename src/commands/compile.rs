@@ -299,7 +299,7 @@ async fn log_compilation(
     success: bool,
 ) {
     let data = ctx.data.read().await;
-    let config = data.get::<ConfigCache>().unwrap().read().await;
+    let config = data.get::<ConfigCache>().unwrap().read().await.clone();
 
     if let Some(log_channel) = config.get("COMPILE_LOG") {
         if let Ok(channel_id) = log_channel.parse::<u64>() {

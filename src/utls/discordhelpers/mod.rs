@@ -325,8 +325,7 @@ pub async fn send_completion_react(
 ) -> Result<Reaction, serenity::Error> {
     let reaction;
     let data = ctx.data.read().await;
-    let botinfo_lock = data.get::<ConfigCache>().unwrap();
-    let botinfo = botinfo_lock.read().await;
+    let botinfo = data.get::<ConfigCache>().unwrap().read().await.clone();
     match success {
         true => {
             if let Some(success_id) = botinfo.get("SUCCESS_EMOJI_ID") {
