@@ -77,14 +77,18 @@ impl EventHandler for Handler {
             }
 
             // Update server count
-            let (server_count, shard_count) = {
+            let (server_count, shard_count, should_update) = {
                 let mut stats = data.get::<StatsManagerCache>().unwrap().lock().await;
                 stats.new_server();
-                (stats.server_count(), stats.shard_count())
+                (
+                    stats.server_count(),
+                    stats.shard_count(),
+                    stats.should_update_presence(),
+                )
             };
 
             // ensure we're actually loaded in before we start posting our server counts
-            if server_count > 0 {
+            if server_count > 0 && should_update {
                 let new_stats = dbl::types::ShardStats::Cumulative {
                     server_count,
                     shard_count: Some(shard_count as u64),
@@ -131,14 +135,18 @@ impl EventHandler for Handler {
         }
 
         // Update server count
-        let (server_count, shard_count) = {
+        let (server_count, shard_count, should_update) = {
             let mut stats = data.get::<StatsManagerCache>().unwrap().lock().await;
             stats.leave_server();
-            (stats.server_count(), stats.shard_count())
+            (
+                stats.server_count(),
+                stats.shard_count(),
+                stats.should_update_presence(),
+            )
         };
 
         // ensure we're actually loaded in before we start posting our server counts
-        if server_count > 0 {
+        if server_count > 0 && should_update {
             let new_stats = dbl::types::ShardStats::Cumulative {
                 server_count,
                 shard_count: Some(shard_count as u64),

@@ -1,9 +1,14 @@
+// minimum server count drift before we refresh presence/stats, so a burst of
+// guild events can't flood the gateway with presence updates
+const PRESENCE_UPDATE_THRESHOLD: u64 = 20;
+
 pub struct StatsManager {
     servers: u64,
     shards: u32,
     boot_count: Vec<u64>,
     leave_queue: u64,
     join_queue: u64,
+    last_presence: u64,
 }
 
 impl StatsManager {
@@ -14,6 +19,7 @@ impl StatsManager {
             join_queue: 0,
             shards: 0,
             boot_count: Vec::new(),
+            last_presence: 0,
         }
     }
 
@@ -32,6 +38,17 @@ impl StatsManager {
         // leave queue
         self.servers -= self.leave_queue;
         self.leave_queue = 0;
+
+        self.last_presence = self.servers;
+    }
+
+    pub fn should_update_presence(&mut self) -> bool {
+        if self.servers.abs_diff(self.last_presence) >= PRESENCE_UPDATE_THRESHOLD {
+            self.last_presence = self.servers;
+            true
+        } else {
+            false
+        }
     }
 
     /// Registers a new server
