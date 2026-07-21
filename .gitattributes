@@ -1,0 +1,6 @@
+# Force CRLF line endings in every working tree (Windows edits, Linux pulls).
+* text=auto eol=crlf
+
+# Leave vendored third-party sources untouched.
+alliedmodders/** -text
+sourcepawn-api/** -text
