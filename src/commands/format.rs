@@ -7,7 +7,6 @@ use serenity::framework::standard::{
 };
 use serenity::model::prelude::*;
 use serenity::prelude::*;
-use std::io::Write;
 
 #[command]
 pub async fn format(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
@@ -118,12 +117,7 @@ pub async fn format(ctx: &Context, msg: &Message, mut args: Args) -> CommandResu
     }
 
     if !attachment_name.is_empty() {
-        let _ = std::fs::create_dir("temp");
-        let path = format!("temp/{}", attachment_name);
-        let mut file = std::fs::File::create(&path)?;
-        let _ = file.write_all(answer.as_bytes());
-        let _ = file.flush();
-        let attachment = CreateAttachment::path(path.clone()).await?;
+        let attachment = CreateAttachment::bytes(answer.into_bytes(), attachment_name);
 
         let new_msg = discordhelpers::reply_to(
             msg,
@@ -133,7 +127,6 @@ pub async fn format(ctx: &Context, msg: &Message, mut args: Args) -> CommandResu
         );
 
         msg.channel_id.send_message(&ctx.http, new_msg).await?;
-        let _ = std::fs::remove_file(&path);
     } else {
         msg.reply(
             &ctx.http,

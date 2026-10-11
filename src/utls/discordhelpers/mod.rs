@@ -409,7 +409,7 @@ pub async fn send_global_presence(shard_manager: &MutexGuard<'_, Arc<ShardManage
     let presence_str = format!("{} servers | ;invite ;exec ;asm", server_count);
 
     let runners = shard_manager.runners.lock().await;
-    for (_, v) in runners.iter() {
+    for v in runners.values() {
         v.runner_tx.set_presence(
             Some(ActivityData::playing(&presence_str)),
             OnlineStatus::Online,

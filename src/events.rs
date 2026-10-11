@@ -116,7 +116,7 @@ impl EventHandler for Handler {
             stats.leave_server();
         }
 
-        info!("Leaving {}", &incomplete.id);
+        info!("Leaving {}", incomplete.id);
     }
 
     async fn message_delete(

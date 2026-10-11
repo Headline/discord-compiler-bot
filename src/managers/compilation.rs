@@ -8,7 +8,7 @@ use crate::apis::godbolt::GodboltService;
 use crate::apis::sourcepawn::SourcePawnService;
 use crate::apis::wandbox::WandboxService;
 use crate::boilerplate::generator::boilerplate_factory;
-use crate::utls::constants::JAVA_PUBLIC_CLASS_REGEX;
+use crate::utls::constants::{JAVA_PUBLIC_CLASS_REGEX, MAX_FILTER_LEN};
 use crate::utls::discordhelpers::embeds::{EmbedOptions, ToEmbed};
 use crate::utls::parser::{shortname_to_qualified, ParserResult};
 use godbolt::{CompilationFilters, CompilerOptions, LibrarySelection, PpOptions, RequestOptions};
@@ -479,6 +479,7 @@ impl CompilationManager {
     ) -> Result<Vec<String>, CommandError> {
         let lower_lang = language.to_lowercase();
         let language = shortname_to_qualified(&lower_lang);
+        let filter = filter.map(truncate_filter);
 
         match self.resolve_backend(language) {
             Some(Backend::CompilerExplorer) => self.list_godbolt_compilers(language, filter),
@@ -505,6 +506,7 @@ impl CompilationManager {
     ) -> Result<Vec<String>, CommandError> {
         let lower_lang = language.to_lowercase();
         let language = shortname_to_qualified(&lower_lang);
+        let filter = filter.map(truncate_filter);
 
         let godbolt = self.godbolt.as_ref().ok_or_else(|| {
             CommandError::from(
@@ -574,7 +576,7 @@ impl CompilationManager {
             }
 
             for compiler in &cache_entry.compilers {
-                let display = format!("{} -> **{}**", &compiler.name, &compiler.id);
+                let display = format!("{} -> **{}**", compiler.name, compiler.id);
 
                 if let Some(filter_str) = filter {
                     if !matches_filter(&compiler.id, &compiler.name, filter_str) {
@@ -877,7 +879,7 @@ fn build_asm_options(request: &ParserResult) -> RequestOptions {
 
 #[cfg(test)]
 mod tests {
-    use super::take_library_specs;
+    use super::{take_library_specs, truncate_filter, MAX_FILTER_LEN};
 
     #[test]
     fn takes_library_specs_out_of_options() {
@@ -931,6 +933,14 @@ mod tests {
         let mut options = vec![String::from("-O2"), String::from("-lib")];
         assert!(take_library_specs(&mut options).is_err());
     }
+
+    #[test]
+    fn truncates_long_filter_on_char_boundary() {
+        let filter = "é".repeat(MAX_FILTER_LEN + 10);
+        let truncated = truncate_filter(&filter);
+        assert_eq!(truncated.chars().count(), MAX_FILTER_LEN);
+        assert_eq!(truncate_filter("gcc"), "gcc");
+    }
 }
 
 /// Check if a compiler matches the filter string
@@ -938,6 +948,14 @@ fn matches_filter(id: &str, name: &str, filter: &str) -> bool {
     filter
         .split_whitespace()
         .any(|part| id.contains(part) || name.contains(part))
+}
+
+/// Limit filter length, similarity scoring is O(n * m) in the filter length
+fn truncate_filter(filter: &str) -> &str {
+    match filter.char_indices().nth(MAX_FILTER_LEN) {
+        Some((idx, _)) => &filter[..idx],
+        None => filter,
+    }
 }
 
 /// Compute similarity score for sorting filtered results
