@@ -21,6 +21,7 @@ pub const URL_ALLOW_LIST: [&str; 4] = [
 
 pub const MAX_OUTPUT_LEN: usize = 250;
 pub const MAX_ERROR_LEN: usize = 997;
+pub const MAX_URL_CODE_LEN: usize = 512 * 1000;
 
 // Boilerplate Regexes
 lazy_static! {

@@ -1,4 +1,6 @@
-use crate::utls::constants::{CODE_BLOCK_REGEX, C_LIKE_INCLUDE_REGEX, URL_ALLOW_LIST, USER_AGENT};
+use crate::utls::constants::{
+    CODE_BLOCK_REGEX, C_LIKE_INCLUDE_REGEX, MAX_URL_CODE_LEN, URL_ALLOW_LIST, USER_AGENT,
+};
 
 use serenity::framework::standard::CommandError;
 use serenity::model::channel::{Attachment, Message};
@@ -202,7 +204,7 @@ async fn get_url_code(url: &str, author: &User) -> Result<String, CommandError> 
         return Err(CommandError::from("Unknown paste service. Please use pastebin.com, hastebin.com, GitHub gists, or a godbolt.org shortlink.\n\nAlso please be sure to use a 'raw text' link"));
     }
 
-    let response = match crate::apis::HTTP_CLIENT.get(url).send().await {
+    let mut response = match crate::apis::HTTP_CLIENT.get(url).send().await {
         Ok(b) => b,
         Err(_e) => {
             return Err(CommandError::from(
@@ -211,10 +213,35 @@ async fn get_url_code(url: &str, author: &User) -> Result<String, CommandError> 
         }
     };
 
-    match response.text().await {
-        Ok(t) => Ok(t),
-        Err(_e) => Err(CommandError::from("Unable to grab resource")),
+    let too_large = || {
+        CommandError::from(format!(
+            "Linked file too large, the limit is `{} KB`",
+            MAX_URL_CODE_LEN / 1000
+        ))
+    };
+
+    if let Some(len) = response.content_length() {
+        if len > MAX_URL_CODE_LEN as u64 {
+            return Err(too_large());
+        }
     }
+
+    // content-length may be absent, so enforce the limit while reading as well
+    let mut bytes = Vec::new();
+    loop {
+        match response.chunk().await {
+            Ok(Some(chunk)) => {
+                if bytes.len() + chunk.len() > MAX_URL_CODE_LEN {
+                    return Err(too_large());
+                }
+                bytes.extend_from_slice(&chunk);
+            }
+            Ok(None) => break,
+            Err(_e) => return Err(CommandError::from("Unable to grab resource")),
+        }
+    }
+
+    Ok(String::from_utf8_lossy(&bytes).into_owned())
 }
 
 /// Fetches the source code saved behind a godbolt.org shortlink

@@ -91,7 +91,10 @@ pub async fn diff_msg(ctx: &Context, msg: &CommandInteraction) -> CommandResult 
 }
 
 pub fn run_diff(first: &str, second: &str) -> String {
-    let diff = similar::TextDiff::from_lines(first, second);
+    // bound the time spent diffing so large inputs cannot stall a runtime worker
+    let diff = similar::TextDiff::configure()
+        .timeout(Duration::from_millis(500))
+        .diff_lines(first, second);
     let mut output = String::new();
     for change in diff.iter_all_changes() {
         let sign = match change.tag() {
