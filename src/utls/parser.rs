@@ -156,8 +156,10 @@ pub async fn get_components(
     else if let Some(replied_msg) = reply {
         let attachment = get_message_attachment(&replied_msg.attachments).await?;
         if !attachment.0.is_empty() {
-            if !result.target.is_empty() {
-                result.target = attachment.1;
+            // only fall back to the file extension if no target was given
+            if result.target.is_empty() {
+                let lower_ext = attachment.1.to_lowercase();
+                result.target = shortname_to_qualified(&lower_ext).to_owned();
             }
             result.code = attachment.0;
         }
