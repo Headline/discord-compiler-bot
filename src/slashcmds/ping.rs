@@ -1,4 +1,5 @@
-use serenity::{framework::standard::CommandResult, prelude::*};
+use crate::framework::CommandResult;
+use serenity::prelude::*;
 
 use serenity::all::{
     CommandInteraction, CreateInteractionResponse, CreateInteractionResponseMessage,

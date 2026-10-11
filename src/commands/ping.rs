@@ -1,12 +1,11 @@
-use serenity::framework::standard::{macros::command, Args, CommandResult};
+use crate::framework::CommandResult;
 use serenity::model::prelude::*;
 use serenity::prelude::*;
 
 use serenity::all::EditMessage;
 use std::time::Instant;
 
-#[command]
-pub async fn ping(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
+pub async fn ping(ctx: &Context, msg: &Message, _args: &str) -> CommandResult {
     let old = Instant::now();
     let mut m = msg.reply(&ctx.http, "🏓 Pong!\n...").await?;
     let new = Instant::now();

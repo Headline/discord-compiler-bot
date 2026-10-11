@@ -1,4 +1,4 @@
-use serenity::framework::standard::{macros::command, Args, CommandResult};
+use crate::framework::CommandResult;
 use serenity::model::prelude::*;
 use serenity::prelude::*;
 
@@ -6,8 +6,7 @@ use crate::cache::{CompilerCache, ConfigCache};
 use crate::utls::discordhelpers;
 use crate::utls::discordhelpers::menu::Menu;
 
-#[command]
-pub async fn languages(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
+pub async fn languages(ctx: &Context, msg: &Message, _args: &str) -> CommandResult {
     let data_read = ctx.data.read().await;
     let compiler_cache = data_read.get::<CompilerCache>().unwrap();
     let compiler_manager = compiler_cache.read().await;

@@ -1,7 +1,7 @@
 use std::error::Error;
 
+use crate::framework::CommandError;
 use serenity::builder::CreateEmbed;
-use serenity::framework::standard::CommandError;
 use serenity::model::user::User;
 
 use crate::apis::godbolt::GodboltService;

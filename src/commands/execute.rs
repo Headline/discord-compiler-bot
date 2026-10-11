@@ -1,16 +1,13 @@
+use crate::framework::CommandResult;
 use serenity::all::{CreateActionRow, CreateMessage};
 use serenity::client::Context;
-use serenity::framework::standard::{macros::command, Args, CommandResult};
 use serenity::model::channel::Message;
 
 use crate::cache::{MessageCache, MessageCacheEntry};
 use crate::commands::compile::{build_link_button, handle_request};
 use crate::utls::discordhelpers;
 
-#[command]
-#[aliases("exec", "exe")]
-#[bucket = "nospam"]
-pub async fn execute(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
+pub async fn execute(ctx: &Context, msg: &Message, _args: &str) -> CommandResult {
     let result = handle_request(ctx, &msg.content, &msg.author, msg, true).await?;
 
     // Build message with optional godbolt link button

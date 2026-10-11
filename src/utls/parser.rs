@@ -2,7 +2,7 @@ use crate::utls::constants::{
     CODE_BLOCK_REGEX, C_LIKE_INCLUDE_REGEX, MAX_URL_CODE_LEN, URL_ALLOW_LIST, USER_AGENT,
 };
 
-use serenity::framework::standard::CommandError;
+use crate::framework::CommandError;
 use serenity::model::channel::{Attachment, Message};
 use serenity::model::user::User;
 

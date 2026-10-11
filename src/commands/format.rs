@@ -1,35 +1,20 @@
 use crate::cache::CompilerCache;
+use crate::framework::{CommandError, CommandResult};
 use crate::utls::discordhelpers;
 use crate::utls::parser::{get_message_attachment, ParserResult};
 use serenity::all::{CreateAttachment, CreateMessage};
-use serenity::framework::standard::{
-    macros::command, Args, CommandError, CommandResult, Delimiter,
-};
 use serenity::model::prelude::*;
 use serenity::prelude::*;
 
-#[command]
-pub async fn format(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
+pub async fn format(ctx: &Context, msg: &Message, args: &str) -> CommandResult {
     let mut fmt = String::from("clangformat");
     let mut style = String::from("webkit");
-    if !args.is_empty() {
-        // do not include ``` codeblocks into arg parsing.. lets just substr and replace args
-        let idx = msg.content.find('`');
-        if let Some(idx) = idx {
-            let substr: String = msg.content.chars().take(idx).collect();
-            args = Args::new(&substr, &[Delimiter::Single(' ')]);
-            args.advance();
-        }
-
-        // kind of odd - but since we replaced args we try again...
-        if !args.is_empty() {
-            fmt = args.single::<String>()?.trim().to_owned();
-
-            style = String::from("");
-            if !args.is_empty() {
-                style = args.single::<String>()?.trim().to_owned();
-            }
-        }
+    // do not include ``` codeblocks into arg parsing
+    let head = args.split('`').next().unwrap_or_default();
+    let mut parts = head.split_whitespace();
+    if let Some(user_fmt) = parts.next() {
+        fmt = user_fmt.to_owned();
+        style = parts.next().unwrap_or_default().to_owned();
     }
 
     let data = ctx.data.read().await;

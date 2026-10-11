@@ -1,6 +1,6 @@
+use crate::framework::{CommandError, CommandResult};
 use serenity::all::CreateEmbedFooter;
 use serenity::builder::CreateEmbed;
-use serenity::framework::standard::{macros::command, Args, CommandError, CommandResult};
 use serenity::model::prelude::*;
 use serenity::prelude::*;
 
@@ -8,12 +8,11 @@ use crate::cache::CompilerCache;
 use crate::utls::constants::COLOR_OKAY;
 use crate::utls::discordhelpers::embeds;
 
-#[command]
-#[bucket = "nospam"]
-pub async fn asmdoc(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
-    let opcode = args
-        .single::<String>()
-        .map_err(|_| {
+pub async fn asmdoc(ctx: &Context, msg: &Message, args: &str) -> CommandResult {
+    let mut parts = args.split_whitespace();
+    let opcode = parts
+        .next()
+        .ok_or_else(|| {
             CommandError::from(
                 "Please supply an opcode to look up, i.e. `;asmdoc mov` or `;asmdoc adds arm32`",
             )
@@ -21,11 +20,10 @@ pub async fn asmdoc(ctx: &Context, msg: &Message, mut args: Args) -> CommandResu
         .to_lowercase();
 
     // Optional second argument selects the instruction set
-    let instruction_set = if args.is_empty() {
-        String::from("amd64")
-    } else {
-        args.single::<String>()?.to_lowercase()
-    };
+    let instruction_set = parts
+        .next()
+        .map(str::to_lowercase)
+        .unwrap_or_else(|| String::from("amd64"));
 
     let data = ctx.data.read().await;
     let compiler_manager = data.get::<CompilerCache>().unwrap().read().await;

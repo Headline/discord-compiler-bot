@@ -1,5 +1,5 @@
+use crate::framework::{CommandError, CommandResult};
 use serenity::builder::CreateEmbed;
-use serenity::framework::standard::{macros::command, Args, CommandError, CommandResult};
 use serenity::model::prelude::*;
 use serenity::prelude::*;
 
@@ -10,8 +10,7 @@ use crate::managers::compilation::CompilationDetails;
 use crate::utls::discordhelpers::embeds::build_insights_response_embed;
 use crate::utls::{discordhelpers, parser};
 
-#[command]
-pub async fn insights(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
+pub async fn insights(ctx: &Context, msg: &Message, _args: &str) -> CommandResult {
     let (_details, embed) =
         handle_request(ctx.clone(), msg.content.clone(), msg.author.clone(), msg).await?;
     if let Ok(sent_msg) = discordhelpers::embeds::reply_embed(&ctx.http, msg, embed).await {

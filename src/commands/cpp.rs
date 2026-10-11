@@ -1,8 +1,8 @@
+use crate::framework::CommandError;
+use crate::framework::CommandResult;
 use serenity::all::{CreateActionRow, CreateButton, CreateMessage};
 use serenity::builder::CreateEmbed;
 use serenity::client::Context;
-use serenity::framework::standard::CommandError;
-use serenity::framework::standard::{macros::command, Args, CommandResult};
 use serenity::model::channel::{Message, ReactionType};
 use serenity::model::user::User;
 
@@ -13,10 +13,7 @@ use crate::utls::discordhelpers;
 use crate::utls::discordhelpers::embeds::{EmbedOptions, ToEmbed};
 use crate::utls::parser::ParserResult;
 
-#[command]
-#[aliases("c++")]
-#[bucket = "nospam"]
-pub async fn cpp(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
+pub async fn cpp(ctx: &Context, msg: &Message, _args: &str) -> CommandResult {
     let result = handle_request(ctx, &msg.content, &msg.author, msg).await?;
 
     let data = ctx.data.read().await;

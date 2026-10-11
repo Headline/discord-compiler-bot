@@ -1,7 +1,8 @@
+use crate::framework::CommandResult;
 use serenity::all::{
     CommandInteraction, CreateInteractionResponse, CreateInteractionResponseMessage,
 };
-use serenity::{framework::standard::CommandResult, prelude::*};
+use serenity::prelude::*;
 
 use crate::{cache::ConfigCache, utls::discordhelpers::embeds};
 

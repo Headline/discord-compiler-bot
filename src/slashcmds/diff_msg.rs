@@ -1,8 +1,8 @@
 use std::time::Duration;
 
-use serenity::all::standard::CommandError;
+use crate::framework::{CommandError, CommandResult};
 use serenity::all::{CommandInteraction, CreateEmbed, EditInteractionResponse, User};
-use serenity::{framework::standard::CommandResult, prelude::*};
+use serenity::prelude::*;
 use similar::ChangeTag;
 
 use crate::utls::parser::{find_code_block, ParserResult};
