@@ -130,12 +130,12 @@ impl ToEmbed for crate::apis::sourcepawn::SourcePawnResponse {
 
             match &self.run {
                 Some(run) => {
-                    let mut program = run.stdout.trim().to_string();
+                    let mut program = run.stdout.trim_end().to_string();
                     if !run.stderr.trim().is_empty() {
                         if !program.is_empty() {
                             program.push('\n');
                         }
-                        program.push_str(run.stderr.trim());
+                        program.push_str(run.stderr.trim_end());
                     }
                     if run.truncated {
                         if !program.is_empty() {
@@ -286,8 +286,8 @@ impl ToEmbed for godbolt::CompilationResult {
                 writeln!(errs, "{}", line.text).unwrap();
             }
 
-            let stdout = output.trim();
-            let stderr = errs.trim();
+            let stdout = output.trim_end();
+            let stderr = errs.trim_end();
             let mut output = false;
             if !stdout.is_empty() {
                 let str = discordhelpers::conform_external_str(stdout, MAX_OUTPUT_LEN, true);
