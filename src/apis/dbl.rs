@@ -1,7 +1,13 @@
 use std::env;
 use std::sync::Arc;
+use std::time::Duration;
 
+use tokio::net::TcpListener;
 use tokio::sync::RwLock;
+
+use hyper::server::conn::http1;
+use hyper_util::rt::TokioIo;
+use hyper_util::service::TowerToHyperService;
 
 use serenity::{http::Http, prelude::TypeMap};
 use warp::{
@@ -86,8 +92,33 @@ impl BotsListApi {
             })
             .recover(custom_error);
 
+        let listener = match TcpListener::bind(("0.0.0.0", port)).await {
+            Ok(listener) => listener,
+            Err(e) => return error!("Unable to bind webhook to port {}: {}", port, e),
+        };
+
+        // warp::serve's future cannot be proven Send, so connections are accepted here instead
         info!("Starting webhook");
-        warp::serve(webhook).run(([0, 0, 0, 0], port)).await;
+        loop {
+            let stream = match listener.accept().await {
+                Ok((stream, _)) => stream,
+                Err(e) => {
+                    warn!("Unable to accept webhook connection: {}", e);
+                    tokio::time::sleep(Duration::from_secs(1)).await;
+                    continue;
+                }
+            };
+
+            let service = TowerToHyperService::new(warp::service(webhook.clone()));
+            tokio::spawn(async move {
+                if let Err(e) = http1::Builder::new()
+                    .serve_connection(TokioIo::new(stream), service)
+                    .await
+                {
+                    warn!("Webhook connection error: {}", e);
+                }
+            });
+        }
     }
 
     fn send_vote(user_id: u64, vote_channel: u64, http: Arc<Http>, data: Arc<RwLock<TypeMap>>) {

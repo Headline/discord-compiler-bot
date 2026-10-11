@@ -38,7 +38,9 @@ indoc = "2.0.0"
 #dbl
 dbl-rs = "0.3"
 futures-util = "0.3.6"
-warp = "0.3"
+warp = "0.4"
+hyper = { version = "1", features = ["server", "http1"] }
+hyper-util = { version = "0.1", features = ["tokio", "service"] }
 chrono = "0.4.19"
 
 [dependencies.serenity]
