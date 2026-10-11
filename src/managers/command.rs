@@ -1,7 +1,8 @@
 use crate::slashcmds;
 
+use crate::framework::CommandResult;
 use serenity::all::{Command, CommandInteraction, CommandType, CreateCommand};
-use serenity::{client::Context, framework::standard::CommandResult, model::guild::Guild};
+use serenity::{client::Context, model::guild::Guild};
 
 pub struct CommandManager {
     commands_registered: bool,

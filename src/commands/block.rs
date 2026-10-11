@@ -1,17 +1,15 @@
-use serenity::framework::standard::{macros::command, Args, CommandError, CommandResult};
+use crate::framework::{CommandError, CommandResult};
 use serenity::model::prelude::*;
 use serenity::prelude::*;
 
 use crate::cache::BlocklistCache;
 
-#[command]
-#[owners_only]
-pub async fn block(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
-    if args.len() != 1 {
-        return Err(CommandError::from("Supply an id to block"));
-    }
-
-    let arg = args.parse::<u64>()?;
+pub async fn block(ctx: &Context, msg: &Message, args: &str) -> CommandResult {
+    let mut parts = args.split_whitespace();
+    let arg = match (parts.next(), parts.next()) {
+        (Some(id), None) => id.parse::<u64>()?,
+        _ => return Err(CommandError::from("Supply an id to block")),
+    };
 
     {
         let data = ctx.data.read().await;

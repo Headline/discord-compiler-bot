@@ -1,5 +1,5 @@
+use crate::framework::CommandResult;
 use serenity::builder::CreateEmbed;
-use serenity::framework::standard::{macros::command, Args, CommandResult};
 use serenity::model::prelude::*;
 use serenity::prelude::*;
 
@@ -9,8 +9,7 @@ use crate::cache::ConfigCache;
 use crate::utls::constants::COLOR_OKAY;
 use crate::utls::discordhelpers::embeds;
 
-#[command]
-pub async fn botinfo(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
+pub async fn botinfo(ctx: &Context, msg: &Message, _args: &str) -> CommandResult {
     let invite = env::var("INVITE_LINK").expect("Expected invite link envvar");
     let topgg = env::var("DISCORDBOTS_LINK").expect("Expected top.gg link envvar");
     let github = env::var("GITHUB_LINK").expect("Expected github link envvar");

@@ -8,15 +8,13 @@ mod cache;
 mod commands;
 mod cppeval;
 mod events;
+mod framework;
 mod managers;
 mod slashcmds;
 #[cfg(test)]
 mod tests;
 mod utls;
 
-use serenity::framework::{standard::macros::group, StandardFramework};
-
-use serenity::all::standard::{BucketBuilder, Configuration};
 use serenity::http::Http;
 use serenity::model::id::ApplicationId;
 use serenity::prelude::GatewayIntents;
@@ -29,22 +27,10 @@ use crate::apis::dbl::BotsListApi;
 extern crate log;
 extern crate pretty_env_logger;
 
-/** Command Registration **/
-use crate::commands::{
-    asm::*, asmdoc::*, block::*, botinfo::*, compile::*, compilers::*, cpp::*, execute::*,
-    format::*, formats::*, help::*, insights::*, invite::*, languages::*, libraries::*, ping::*,
-    unblock::*,
-};
+use crate::framework::Dispatcher;
 use crate::managers::stats::StatsManager;
 use crate::utls::discordhelpers::embeds::panic_embed;
 use crate::utls::discordhelpers::manual_dispatch;
-
-#[group]
-#[commands(
-    botinfo, compile, execute, languages, compilers, libraries, ping, help, asm, asmdoc, block,
-    unblock, invite, cpp, formats, format, insights
-)]
-struct General;
 
 /** Spawn bot **/
 #[tokio::main]
@@ -98,20 +84,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let app_id_str = env::var("APPLICATION_ID").expect("Expected application id in .env file");
     let application_id = ApplicationId::new(app_id_str.parse::<u64>().unwrap());
 
-    let configuration = Configuration::new().owners(owners).prefix(&prefix);
-    let mut framework = StandardFramework::new()
-        .group(&GENERAL_GROUP)
-        .before(events::before)
-        .after(events::after)
-        .on_dispatch_error(events::dispatch_error);
-
-    framework.configure(configuration);
-    framework = framework
-        .bucket(
-            "nospam",
-            BucketBuilder::new_user().delay(3).time_span(10).limit(3),
-        )
-        .await;
+    let dispatcher = Dispatcher::new(&prefix, owners, commands::COMMANDS);
 
     let intents = GatewayIntents::GUILDS
         | GatewayIntents::MESSAGE_CONTENT
@@ -120,8 +93,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
         | GatewayIntents::GUILD_MESSAGES;
 
     let mut client = serenity::Client::builder(token, intents)
-        .framework(framework)
-        .event_handler(events::Handler)
+        .event_handler(events::Handler { dispatcher })
         .application_id(application_id)
         .await?;
 

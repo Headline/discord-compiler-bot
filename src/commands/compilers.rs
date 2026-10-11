@@ -1,4 +1,4 @@
-use serenity::framework::standard::{macros::command, Args, CommandError, CommandResult};
+use crate::framework::{CommandError, CommandResult};
 use serenity::model::prelude::*;
 use serenity::prelude::*;
 
@@ -6,13 +6,12 @@ use crate::cache::{CompilerCache, ConfigCache};
 use crate::utls::discordhelpers;
 use crate::utls::discordhelpers::menu::Menu;
 
-#[command]
-#[bucket = "nospam"]
-pub async fn compilers(ctx: &Context, msg: &Message, mut _args: Args) -> CommandResult {
+pub async fn compilers(ctx: &Context, msg: &Message, args: &str) -> CommandResult {
     // grab language arg
-    let user_lang = match _args.single::<String>() {
-        Ok(s) => s,
-        Err(_e) => {
+    let mut parts = args.splitn(2, char::is_whitespace);
+    let user_lang = match parts.next().filter(|s| !s.is_empty()) {
+        Some(s) => s.to_owned(),
+        None => {
             return Err(CommandError::from(
                 "No language specified!\nPlease try giving me a language to search",
             ));
@@ -20,7 +19,7 @@ pub async fn compilers(ctx: &Context, msg: &Message, mut _args: Args) -> Command
     };
 
     let mut filter_opt: Option<&str> = Option::None;
-    let rest = _args.rest();
+    let rest = parts.next().unwrap_or_default().trim();
     if !rest.is_empty() {
         filter_opt = Some(rest);
     };

@@ -1,9 +1,9 @@
+use crate::framework::CommandResult;
 use serenity::all::{
     CommandInteraction, CreateActionRow, CreateButton, CreateEmbed, CreateInteractionResponse,
     CreateInteractionResponseMessage,
 };
 use serenity::client::Context;
-use serenity::framework::standard::CommandResult;
 
 use crate::{cache::ConfigCache, utls::constants::*};
 

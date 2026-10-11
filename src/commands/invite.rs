@@ -1,4 +1,4 @@
-use serenity::framework::standard::{macros::command, Args, CommandResult};
+use crate::framework::CommandResult;
 use serenity::model::prelude::*;
 use serenity::prelude::*;
 
@@ -6,8 +6,7 @@ use std::env;
 
 use crate::utls::discordhelpers::embeds;
 
-#[command]
-pub async fn invite(ctx: &Context, msg: &Message, _: Args) -> CommandResult {
+pub async fn invite(ctx: &Context, msg: &Message, _args: &str) -> CommandResult {
     let invite = env::var("INVITE_LINK").expect("Expected invite link envvar");
 
     let emb = embeds::build_invite_embed(&invite);

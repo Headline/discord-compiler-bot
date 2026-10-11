@@ -1,12 +1,15 @@
 use crate::{
-    cache::CompilerCache, utls::constants::COLOR_WARN, utls::discordhelpers::interactions,
-    utls::parser, utls::parser::ParserResult,
+    cache::CompilerCache,
+    framework::{CommandError, CommandResult},
+    utls::constants::COLOR_WARN,
+    utls::discordhelpers::interactions,
+    utls::parser,
+    utls::parser::ParserResult,
 };
 use futures_util::StreamExt;
 use godbolt::Format;
 use serenity::{
     builder::{CreateInteractionResponse, EditInteractionResponse},
-    framework::standard::{CommandError, CommandResult},
     prelude::*,
 };
 

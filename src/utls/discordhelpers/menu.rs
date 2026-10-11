@@ -1,8 +1,8 @@
+use crate::framework::CommandError;
 use futures_util::StreamExt;
 use serenity::all::{CreateActionRow, CreateButton, CreateMessage, EditMessage};
 use serenity::builder::CreateEmbed;
 use serenity::client::Context;
-use serenity::framework::standard::CommandError;
 use serenity::model::channel::Message;
 use std::time::Duration;
 

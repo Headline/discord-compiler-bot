@@ -1,14 +1,14 @@
 use std::fmt::Write as _;
 use std::time::Duration;
 
+use crate::framework::CommandError;
+use crate::framework::CommandResult;
 use serenity::all::{
     ButtonStyle, CreateActionRow, CreateButton, CreateInteractionResponse, CreateMessage,
     EditMessage,
 };
 use serenity::builder::CreateEmbed;
 use serenity::client::Context;
-use serenity::framework::standard::CommandError;
-use serenity::framework::standard::{macros::command, Args, CommandResult};
 use serenity::model::channel::{Message, ReactionType};
 use serenity::model::user::User;
 
@@ -20,9 +20,7 @@ use crate::utls::{discordhelpers, parser};
 
 const EXECUTE_BUTTON_TIMEOUT: Duration = Duration::from_secs(30);
 
-#[command]
-#[bucket = "nospam"]
-pub async fn compile(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
+pub async fn compile(ctx: &Context, msg: &Message, _args: &str) -> CommandResult {
     let result = handle_request(ctx, &msg.content, &msg.author, msg, false).await?;
 
     let link_button = build_link_button(ctx, &result.details).await;

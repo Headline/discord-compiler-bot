@@ -1,26 +1,20 @@
 use std::env;
 
-use serenity::{
-    builder::CreateEmbed,
-    framework::standard::{macros::command, Args, CommandResult},
-    model::prelude::*,
-    prelude::*,
-};
+use serenity::{builder::CreateEmbed, model::prelude::*, prelude::*};
 
+use crate::framework::CommandResult;
 use crate::utls::constants::*;
 use crate::utls::discordhelpers::embeds;
 
-#[command]
-pub async fn help(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
+pub async fn help(ctx: &Context, msg: &Message, args: &str) -> CommandResult {
     let prefix = env::var("BOT_PREFIX").expect("Bot prefix is not set!");
-    if !args.is_empty() {
-        let cmd = args.parse::<String>().unwrap();
+    if let Some(cmd) = args.split_whitespace().next() {
         let mut emb = CreateEmbed::default()
             .thumbnail(ICON_HELP)
             .color(COLOR_OKAY);
 
         let unknown = format!("Unknown command '{}'", cmd);
-        let description = match cmd.as_str() {
+        let description = match cmd {
             "help" => "Do you like recursion or something?",
             "invite" => {
                 emb = emb.title("Invite command").field(

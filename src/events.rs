@@ -2,7 +2,6 @@ use chrono::{DateTime, Utc};
 use serenity::{
     all::Interaction,
     async_trait,
-    framework::{standard::macros::hook, standard::CommandResult, standard::DispatchError},
     model::{
         channel::Message, event::MessageUpdateEvent, gateway::Ready, guild::Guild, id::ChannelId,
         id::GuildId, id::MessageId, prelude::UnavailableGuild,
@@ -12,11 +11,15 @@ use serenity::{
 
 use crate::{
     cache::*,
+    framework::{CommandResult, Dispatcher},
     managers::command::CommandManager,
     utls::{discordhelpers, discordhelpers::embeds, discordhelpers::interactions::send_error_msg},
 };
 
-pub struct Handler; // event handler for serenity
+// event handler for serenity
+pub struct Handler {
+    pub dispatcher: Dispatcher,
+}
 
 #[async_trait]
 trait ShardsReadyHandler {
@@ -52,6 +55,10 @@ impl ShardsReadyHandler for Handler {
 
 #[async_trait]
 impl EventHandler for Handler {
+    async fn message(&self, ctx: Context, msg: Message) {
+        self.dispatcher.dispatch(&ctx, &msg).await;
+    }
+
     async fn guild_create(&self, ctx: Context, guild: Guild, _is_new: Option<bool>) {
         let data = ctx.data.read().await;
 
@@ -244,8 +251,7 @@ impl EventHandler for Handler {
     }
 }
 
-#[hook]
-pub async fn before(ctx: &Context, msg: &Message, _: &str) -> bool {
+pub async fn before(ctx: &Context, msg: &Message) -> bool {
     let guild_id = msg.guild_id.map(|id| id.get()).unwrap_or(0);
 
     let data = ctx.data.read().await;
@@ -274,13 +280,7 @@ pub async fn before(ctx: &Context, msg: &Message, _: &str) -> bool {
     true
 }
 
-#[hook]
-pub async fn after(
-    ctx: &Context,
-    msg: &Message,
-    _command_name: &str,
-    command_result: CommandResult,
-) {
+pub async fn after(ctx: &Context, msg: &Message, command_result: CommandResult) {
     if let Err(e) = command_result {
         let emb = embeds::build_fail_embed(&msg.author, &format!("{}", e));
         let sent_fail = embeds::reply_embed(&ctx.http, msg, emb).await;
@@ -292,10 +292,7 @@ pub async fn after(
     }
 }
 
-#[hook]
-pub async fn dispatch_error(ctx: &Context, msg: &Message, error: DispatchError, _: &str) {
-    if let DispatchError::Ratelimited(_) = error {
-        let emb = embeds::build_fail_embed(&msg.author, "You are sending requests too fast!");
-        let _ = embeds::reply_embed(&ctx.http, msg, emb).await;
-    }
+pub async fn ratelimited(ctx: &Context, msg: &Message) {
+    let emb = embeds::build_fail_embed(&msg.author, "You are sending requests too fast!");
+    let _ = embeds::reply_embed(&ctx.http, msg, emb).await;
 }
