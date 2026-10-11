@@ -1,4 +1,6 @@
 #![type_length_limit = "1146253"]
+// serenity::Error is large, and boxing it in our wrappers around serenity calls gains nothing
+#![allow(clippy::result_large_err)]
 
 mod apis;
 mod boilerplate;
