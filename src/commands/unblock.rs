@@ -20,7 +20,7 @@ pub async fn unblock(ctx: &Context, msg: &Message, args: Args) -> CommandResult 
     }
 
     msg.channel_id
-        .say(&ctx.http, format!("Unblocked snowflake `{}`", &arg))
+        .say(&ctx.http, format!("Unblocked snowflake `{}`", arg))
         .await?;
     Ok(())
 }

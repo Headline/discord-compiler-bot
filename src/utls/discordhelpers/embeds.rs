@@ -217,7 +217,7 @@ impl ToEmbed for godbolt::CompilationResult {
             if options.is_assembly {
                 let mut errs = String::new();
                 for err_res in &self.stderr {
-                    let line = format!("{}\n", &err_res.text);
+                    let line = format!("{}\n", err_res.text);
                     errs.push_str(&line);
                 }
 

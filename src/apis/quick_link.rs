@@ -40,7 +40,7 @@ impl LinkAPI {
             None
         } else {
             let url = format!("{}{}", self.redirect_base, body.unwrap());
-            info!("Generated url: {}", &url);
+            info!("Generated url: {}", url);
             Some(url)
         }
     }

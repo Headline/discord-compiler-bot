@@ -260,8 +260,8 @@ pub async fn find_code_block(
     let matches = CODE_BLOCK_REGEX.captures_iter(haystack);
 
     let mut captures = Vec::new();
-    let list = matches.enumerate();
-    for (_, cap) in list {
+    let list = matches;
+    for cap in list {
         captures.push(cap);
     }
 
@@ -283,13 +283,13 @@ pub async fn find_code_block(
     }
 
     let code_copy = result.code.clone();
-    let matches = C_LIKE_INCLUDE_REGEX.captures_iter(&code_copy).enumerate();
-    for (_, cap) in matches {
+    let matches = C_LIKE_INCLUDE_REGEX.captures_iter(&code_copy);
+    for cap in matches {
         if let Some(statement) = cap.name("statement") {
             let include_stmt = statement.as_str();
             let url = cap.name("url").unwrap().as_str();
             if let Ok(code) = get_url_code(url, author).await {
-                debug!("Replacing {} with {}", include_stmt, &code);
+                debug!("Replacing {} with {}", include_stmt, code);
                 result.code = result.code.replace(include_stmt, &code);
             }
         }

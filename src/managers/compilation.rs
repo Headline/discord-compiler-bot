@@ -574,7 +574,7 @@ impl CompilationManager {
             }
 
             for compiler in &cache_entry.compilers {
-                let display = format!("{} -> **{}**", &compiler.name, &compiler.id);
+                let display = format!("{} -> **{}**", compiler.name, compiler.id);
 
                 if let Some(filter_str) = filter {
                     if !matches_filter(&compiler.id, &compiler.name, filter_str) {
