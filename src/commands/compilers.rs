@@ -7,6 +7,7 @@ use crate::utls::discordhelpers;
 use crate::utls::discordhelpers::menu::Menu;
 
 #[command]
+#[bucket = "nospam"]
 pub async fn compilers(ctx: &Context, msg: &Message, mut _args: Args) -> CommandResult {
     // grab language arg
     let user_lang = match _args.single::<String>() {
