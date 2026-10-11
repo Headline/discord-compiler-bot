@@ -295,21 +295,21 @@ pub async fn find_code_block(
     }
 
     // support for stdin codeblocks
-    let code_index; // index into captures where we might find our target lang
-    match captures.len() {
+    // index into captures where we might find our target lang
+    let code_index = match captures.len() {
         len if len > 1 => {
             result.stdin = String::from(captures[0].name("code").unwrap().as_str());
             result.code = String::from(captures[1].name("code").unwrap().as_str());
 
-            code_index = 1;
+            1
         }
         1 => {
             result.code = String::from(captures[0].name("code").unwrap().as_str());
 
-            code_index = 0;
+            0
         }
         _ => return Ok(false),
-    }
+    };
 
     let code_copy = result.code.clone();
     let matches = C_LIKE_INCLUDE_REGEX.captures_iter(&code_copy);
