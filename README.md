@@ -6,7 +6,7 @@ A Discord bot which can compile code, display the output of the compiler, and ru
  
  - **[Support Discord](https://discord.gg/ExraTaJ)**
  
- - **[Donation Link](https://donatebot.io/checkout/505721414662225921) ❤️**
+ - **[Sponsor on GitHub](https://github.com/sponsors/Headline) ❤️**
 
 ## 👩‍🏫 Usage
 For a tutorial about how to use this bot, feel free to view our [wiki](https://github.com/Headline/discord-compiler-bot/wiki/1.-Getting-Started)!
@@ -28,7 +28,6 @@ services:
       - BOT_PREFIX=;
       - INVITE_LINK=https://discord.com/oauth2/authorize?client_id=504095380166803466&permissions=379968&scope=applications.commands%20bot
       - GITHUB_LINK=https://github.com/Headline/discord-compiler
-      - STATS_LINK=http://headlinedev.xyz/discord-compiler
 
       # Optional
       # - BOT_ID=

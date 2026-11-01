@@ -12,7 +12,6 @@ pub async fn help(ctx: &Context, msg: &CommandInteraction) -> CommandResult {
     let botinfo = data.get::<ConfigCache>().unwrap().read().await.clone();
     let invite_link = botinfo.get("INVITE_LINK").unwrap();
     let github_link = botinfo.get("GITHUB_LINK").unwrap();
-    let stats_link = botinfo.get("STATS_LINK").unwrap();
 
     let hello_embed = CreateEmbed::new()
         .color(COLOR_OKAY)
@@ -34,7 +33,7 @@ pub async fn help(ctx: &Context, msg: &CommandInteraction) -> CommandResult {
     let buttons = vec![
         CreateButton::new_link(invite_link).label("Invite me"),
         CreateButton::new_link(github_link).label("GitHub"),
-        CreateButton::new_link(stats_link).label("Stats"),
+        CreateButton::new_link(SPONSOR_LINK).label("Sponsor"),
     ];
 
     let response = CreateInteractionResponseMessage::new()
