@@ -35,7 +35,7 @@ use crate::utls::discordhelpers::manual_dispatch;
 /** Spawn bot **/
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
-    if let Err(e) = dotenv::dotenv() {
+    if let Err(e) = dotenvy::dotenv() {
         error!("Unable to find .env configuration file: {}", e);
     }
 
