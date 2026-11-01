@@ -13,7 +13,7 @@ At it's core we are:
 Any behavior that fails to meet these core values will result in your issue or pull request being closed & you may be prevented from interacting with this project again.
 
 ## Pull Requests
-Pull requests to fix issues or add new features are greatly appreciated, but having to outright reject contributions due to them being "not a good fit" is something we don't like to do. We ask that you coordinate changes with us to prevent any wasted time, as your time is valuable. The best place to get in contact with us is in our [support guild](discord.gg/ExraTaJ).
+Pull requests to fix issues or add new features are greatly appreciated, but having to outright reject contributions due to them being "not a good fit" is something we don't like to do. We ask that you coordinate changes with us to prevent any wasted time, as your time is valuable. The best place to get in contact with us is in our [support guild](https://discord.gg/ExraTaJ).
 
 #### Rejection
 *Copied from Phabricator's [Contributing Code guidelines](https://secure.phabricator.com/book/phabcontrib/article/contributing_code/#rejecting-patches).*

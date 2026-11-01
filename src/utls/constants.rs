@@ -9,7 +9,7 @@ pub const COLOR_WARN: u32 = 0xad7805;
 pub const ICON_FAIL: &str = "https://i.imgur.com/LxxYrFj.png";
 pub const ICON_HELP: &str = "https://i.imgur.com/TNzxfMB.png";
 pub const ICON_INVITE: &str = "https://i.imgur.com/CZFt69d.png";
-pub const COMPILER_ICON: &str = "http://i.michaelwflaherty.com/u/XedLoQWCVc.png";
+pub const COMPILER_ICON: &str = "https://compiler.gg/icon.png";
 pub const USER_AGENT: &str =
     const_format::formatcp!("discord-compiler-bot/{}", env!("CARGO_PKG_VERSION"));
 pub const URL_ALLOW_LIST: [&str; 4] = [
