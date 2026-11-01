@@ -27,7 +27,6 @@ services:
       - RUST_LOG=discord_compiler_bot
       - BOT_PREFIX=;
       - INVITE_LINK=https://discord.com/oauth2/authorize?client_id=504095380166803466&permissions=379968&scope=applications.commands%20bot
-      - DISCORDBOTS_LINK=https://discordbots.org/bot/504095380166803466
       - GITHUB_LINK=https://github.com/Headline/discord-compiler
       - STATS_LINK=http://headlinedev.xyz/discord-compiler
 
@@ -44,10 +43,7 @@ services:
       # - COMPILE_LOG=
       # - JOIN_LOG=
       # - PANIC_LOG=
-      # - VOTE_CHANNEL=
       # - DBL_TOKEN=
-      # - DBL_WEBHOOK_PORT=
-      # - DBL_WEBHOOK_PASSWORD=
       # - SOURCEPAWN_API_URL= see https://github.com/Headline/sourcepawn-api
 ```
 ### Manually

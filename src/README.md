@@ -21,7 +21,7 @@ src/                        #  Our source folder
 │   └── structures.rs       ## Stats request models & request dispatch
 │
 ├── apis/                   #  The home of any involved API integration
-│   └──dbl.rs               ## top.gg's webhook logic
+│   └── ...
 │
 └── utls/                   # Module with random utilities to be used throughout the project
     ├── discordhelpers/     # Module with some discord shortcuts to help keep the project clean

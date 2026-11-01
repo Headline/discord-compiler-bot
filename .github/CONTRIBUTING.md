@@ -57,7 +57,7 @@ src/                        #  Our source folder
 ├── events.rs               #  All discord event handlers excluding command callbacks
 │
 ├── apis/                   #  The home of any involved API integration
-│   └── dbl.rs              ## Discord bot's list webhook logic
+│   └── ...
 │
 ├── commands/               #  Module containing all of our command logic
 │   └── ...

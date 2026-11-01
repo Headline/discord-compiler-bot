@@ -447,13 +447,6 @@ pub async fn reply_embed(
     msg.channel_id.send_message(&http, emb_msg).await
 }
 
-pub fn build_dblvote_embed(tag: String) -> CreateEmbed {
-    CreateEmbed::new()
-        .color(COLOR_OKAY)
-        .description(format!("{} voted for us on top.gg!", tag))
-        .thumbnail(ICON_VOTE)
-}
-
 pub fn panic_embed(panic_info: String) -> CreateEmbed {
     CreateEmbed::new()
         .title("Oopsie")

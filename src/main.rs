@@ -21,8 +21,6 @@ use serenity::prelude::GatewayIntents;
 use std::collections::HashSet;
 use std::{env, error::Error};
 
-use crate::apis::dbl::BotsListApi;
-
 #[macro_use]
 extern crate log;
 extern crate pretty_env_logger;
@@ -122,11 +120,6 @@ async fn main() -> Result<(), Box<dyn Error>> {
             }
             default_panic(info);
         }));
-    }
-
-    let dbl = BotsListApi::new();
-    if dbl.should_spawn() {
-        dbl.spawn(client.http.clone(), client.data.clone());
     }
 
     if let Err(why) = client.start_autosharded().await {
