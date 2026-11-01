@@ -33,6 +33,7 @@ pub async fn help(ctx: &Context, msg: &CommandInteraction) -> CommandResult {
     let buttons = vec![
         CreateButton::new_link(invite_link).label("Invite me"),
         CreateButton::new_link(github_link).label("GitHub"),
+        CreateButton::new_link(SPONSOR_LINK).label("Sponsor"),
     ];
 
     let response = CreateInteractionResponseMessage::new()

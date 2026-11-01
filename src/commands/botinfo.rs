@@ -6,7 +6,7 @@ use serenity::prelude::*;
 use std::env;
 
 use crate::cache::ConfigCache;
-use crate::utls::constants::COLOR_OKAY;
+use crate::utls::constants::{COLOR_OKAY, SPONSOR_LINK};
 use crate::utls::discordhelpers::embeds;
 
 pub async fn botinfo(ctx: &Context, msg: &Message, _args: &str) -> CommandResult {
@@ -37,11 +37,13 @@ pub async fn botinfo(ctx: &Context, msg: &Message, _args: &str) -> CommandResult
                 {}
                 [Invitation link]({})
                 [GitHub Repository]({})
+                [Sponsor on GitHub]({})
                 {}",
         env!("CARGO_PKG_DESCRIPTION"),
         "==========================",
         invite,
         github,
+        SPONSOR_LINK,
         "=========================="
     );
 
