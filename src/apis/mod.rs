@@ -1,7 +1,6 @@
 use lazy_static::lazy_static;
 use std::time::Duration;
 
-pub mod dbl;
 pub mod godbolt;
 pub mod insights;
 pub mod quick_link;

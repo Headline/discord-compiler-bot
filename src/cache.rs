@@ -169,7 +169,6 @@ pub async fn fill(
     }
 
     map.insert("INVITE_LINK", env::var("INVITE_LINK")?);
-    map.insert("DISCORDBOTS_LINK", env::var("DISCORDBOTS_LINK")?);
     map.insert("GITHUB_LINK", env::var("GITHUB_LINK")?);
     map.insert("STATS_LINK", env::var("STATS_LINK")?);
     map.insert("BOT_PREFIX", String::from(prefix));

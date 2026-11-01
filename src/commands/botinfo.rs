@@ -11,7 +11,6 @@ use crate::utls::discordhelpers::embeds;
 
 pub async fn botinfo(ctx: &Context, msg: &Message, _args: &str) -> CommandResult {
     let invite = env::var("INVITE_LINK").expect("Expected invite link envvar");
-    let topgg = env::var("DISCORDBOTS_LINK").expect("Expected top.gg link envvar");
     let github = env::var("GITHUB_LINK").expect("Expected github link envvar");
     let stats = env::var("STATS_LINK").expect("Expected stats link envvar");
 
@@ -38,14 +37,12 @@ pub async fn botinfo(ctx: &Context, msg: &Message, _args: &str) -> CommandResult
         "{}\n
                 {}
                 [Invitation link]({})
-                [Vote for us!]({})
                 [GitHub Repository]({})
                 [Statistics Tracker]({})
                 {}",
         env!("CARGO_PKG_DESCRIPTION"),
         "==========================",
         invite,
-        topgg,
         github,
         stats,
         "=========================="
