@@ -13,7 +13,10 @@ use crate::{
     cache::*,
     framework::{CommandResult, Dispatcher},
     managers::command::CommandManager,
-    utls::{discordhelpers, discordhelpers::embeds, discordhelpers::interactions::send_error_msg},
+    utls::{
+        discordhelpers, discordhelpers::embeds, discordhelpers::interactions::send_error_msg,
+        discordhelpers::permissions,
+    },
 };
 
 // event handler for serenity
@@ -237,7 +240,14 @@ impl EventHandler for Handler {
                     // in order to respond to messages with errors, we'll first try to
                     // send an edit, and if that fails we'll pivot to create a new interaction
                     // response
-                    let fail_embed = embeds::build_fail_embed(&command.user, &e.to_string());
+                    let reason = permissions::describe_error(
+                        &ctx.http,
+                        command.guild_id,
+                        command.channel_id,
+                        &e,
+                    )
+                    .await;
+                    let fail_embed = embeds::build_fail_embed(&command.user, &reason);
                     if send_error_msg(&ctx, &command, false, fail_embed.clone())
                         .await
                         .is_err()
@@ -282,7 +292,8 @@ pub async fn before(ctx: &Context, msg: &Message) -> bool {
 
 pub async fn after(ctx: &Context, msg: &Message, command_result: CommandResult) {
     if let Err(e) = command_result {
-        let emb = embeds::build_fail_embed(&msg.author, &format!("{}", e));
+        let reason = permissions::describe_error(&ctx.http, msg.guild_id, msg.channel_id, &e).await;
+        let emb = embeds::build_fail_embed(&msg.author, &reason);
         let sent_fail = embeds::reply_embed(&ctx.http, msg, emb).await;
         if let Ok(sent) = sent_fail {
             let data = ctx.data.read().await;

@@ -1,5 +1,6 @@
 use lazy_static::lazy_static;
 use regex::Regex;
+use serenity::model::Permissions;
 
 pub const COLOR_OKAY: u32 = 0x5dbcd2;
 pub const COLOR_FAIL: u32 = 0xff7761;
@@ -23,6 +24,18 @@ pub const MAX_OUTPUT_LEN: usize = 250;
 pub const MAX_ERROR_LEN: usize = 997;
 pub const MAX_URL_CODE_LEN: usize = 512 * 1000;
 pub const MAX_FILTER_LEN: usize = 64;
+
+/// Discord's error code for "Missing Permissions"
+pub const MISSING_PERMISSIONS_CODE: isize = 50013;
+
+/// Everything the bot needs in a channel to run its commands
+pub const REQUIRED_PERMISSIONS: Permissions = Permissions::VIEW_CHANNEL
+    .union(Permissions::SEND_MESSAGES)
+    .union(Permissions::EMBED_LINKS)
+    .union(Permissions::ATTACH_FILES)
+    .union(Permissions::ADD_REACTIONS)
+    .union(Permissions::USE_EXTERNAL_EMOJIS)
+    .union(Permissions::READ_MESSAGE_HISTORY);
 
 // Boilerplate Regexes
 lazy_static! {

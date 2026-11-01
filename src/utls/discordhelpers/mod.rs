@@ -1,6 +1,7 @@
 pub mod embeds;
 pub mod interactions;
 pub mod menu;
+pub mod permissions;
 
 use std::str;
 use std::sync::Arc;
