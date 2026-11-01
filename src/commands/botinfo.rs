@@ -27,10 +27,14 @@ pub async fn botinfo(ctx: &Context, msg: &Message, _args: &str) -> CommandResult
         botinfo.get("BOT_AVATAR").unwrap().clone()
     };
 
-    let build_info = format!(
-        "Built from commit [{}]({}{}{})",
-        hash_short, github, "/commit/", hash_long
-    );
+    let build_info = if hash_long.is_empty() {
+        String::from("Built from an unknown commit")
+    } else {
+        format!(
+            "Built from commit [{}]({}/commit/{})",
+            hash_short, github, hash_long
+        )
+    };
 
     let body_txt = format!(
         "{}\n

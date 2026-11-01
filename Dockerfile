@@ -1,6 +1,8 @@
 # Builder
 FROM rust:1-slim-bookworm as builder
 WORKDIR /app
+ARG GIT_COMMIT_SHA
+ENV GIT_COMMIT_SHA=${GIT_COMMIT_SHA}
 COPY . .
 RUN apt-get update && apt-get install -y pkg-config libssl-dev
 RUN cargo build --release
