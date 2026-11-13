@@ -321,3 +321,40 @@ async fn parse_url_with_block_stdin() {
     assert_eq!(parser_result.url, "https://pastebin.com/raw/ERqDRZva");
     assert_eq!(parser_result.code, "int main() {}");
 }
+
+#[tokio::test]
+async fn parse_out_lib() {
+    let dummy_user = User::default();
+    let input = indoc::indoc!(
+        ";execute -libfmt -lib scnlib | \"Hello World from compiler and stdin of discord :)\"
+        ```cpp
+        #include <scn/scan.h>
+        #include <fmt/core.h>
+
+        auto
+            main
+            ( void )
+        -> std::int32_t
+        {
+            auto stdinInput { scn::prompt<std::string> ( \"input from stdin: \" , \"{}\" ) };
+            fmt::println ( \"output of stdin: {}\" , stdinInput->value() );
+        }
+        ```"
+    );
+
+    let reply = None;
+    let result = get_components(input, &dummy_user, None, &reply, false).await;
+    if result.is_err() {
+        panic!("Parser failed.");
+    }
+
+    let parser_result = result.unwrap();
+    assert_eq!(parser_result.target, "c++");
+    assert_eq!(parser_result.args.len(), 0);
+    assert_eq!(parser_result.options, ["-libfmt", "-lib", "scnlib"]);
+    assert_eq!(
+        parser_result.stdin,
+        "\"Hello World from compiler and stdin of discord :)\""
+    );
+    assert_eq!(parser_result.url, "");
+}

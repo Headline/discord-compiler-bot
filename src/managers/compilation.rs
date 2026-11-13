@@ -11,7 +11,10 @@ use crate::boilerplate::generator::boilerplate_factory;
 use crate::utls::constants::{JAVA_PUBLIC_CLASS_REGEX, MAX_FILTER_LEN};
 use crate::utls::discordhelpers::embeds::{EmbedOptions, ToEmbed};
 use crate::utls::parser::{shortname_to_qualified, ParserResult};
-use godbolt::{CompilationFilters, CompilerOptions, LibrarySelection, PpOptions, RequestOptions};
+use godbolt::{
+    CompilationFilters, Compiler, CompilerOptions, LibrarySelection, LibraryVersion, PpOptions,
+    RequestOptions,
+};
 
 /// Information about a compilation that callers may need
 #[derive(Default, Clone)]
@@ -300,7 +303,7 @@ impl CompilationManager {
             GodboltMode::Check => build_check_options(request),
             GodboltMode::Assembly => build_asm_options(request),
         };
-        options.libraries = resolve_libraries(godbolt, &compiler.lang, &library_specs).await?;
+        options.libraries = resolve_libraries(godbolt, &compiler, &library_specs).await?;
         let preprocessor = options.compiler_options.produce_pp.is_some();
 
         // Get shareable link
@@ -396,7 +399,7 @@ impl CompilationManager {
 
         let code = boilerplate_generation(&compiler.lang, &request.code);
         let mut options = build_execute_options(request);
-        options.libraries = resolve_libraries(godbolt, &compiler.lang, &library_specs).await?;
+        options.libraries = resolve_libraries(godbolt, &compiler, &library_specs).await?;
         let godbolt_base64 = GodboltService::get_base64(&compiler, &code, &options).ok();
         let response = godbolt.compile(&compiler, &code, options).await?;
 
@@ -703,12 +706,14 @@ fn take_library_specs(options: &mut Vec<String>) -> Result<Vec<String>, CommandE
 /// library list for the given language
 async fn resolve_libraries(
     godbolt: &GodboltService,
-    language_id: &str,
+    compiler: &Compiler,
     specs: &[String],
 ) -> Result<Vec<LibrarySelection>, CommandError> {
     if specs.is_empty() {
         return Ok(Vec::new());
     }
+
+    let language_id = compiler.lang.as_str();
 
     let libraries = godbolt.libraries_for(language_id).await.map_err(|e| {
         CommandError::from(format!(
@@ -735,12 +740,13 @@ async fn resolve_libraries(
             })?;
 
         let version = if version_str.is_empty() {
-            library.versions.last().ok_or_else(|| {
-                CommandError::from(format!(
-                    "Library '{}' has no versions available.",
-                    library.id
-                ))
-            })?
+            default_library_version(&library.versions, compiler.instruction_set.as_deref())
+                .ok_or_else(|| {
+                    CommandError::from(format!(
+                        "Library '{}' has no versions available.",
+                        library.id
+                    ))
+                })?
         } else {
             library
                 .versions
@@ -770,6 +776,115 @@ async fn resolve_libraries(
     }
 
     Ok(selections)
+}
+
+/// Newest library version built for the compiler's architecture, used when a
+/// `-lib` request names no version
+fn default_library_version<'a>(
+    versions: &'a [LibraryVersion],
+    instruction_set: Option<&str>,
+) -> Option<&'a LibraryVersion> {
+    let mut candidates: Vec<&LibraryVersion> = versions
+        .iter()
+        .filter(|ver| builds_for(ver, instruction_set))
+        .collect();
+    if candidates.is_empty() {
+        candidates = versions.iter().collect();
+    }
+
+    candidates
+        .iter()
+        .filter_map(|ver| Some((VersionKey::parse(&ver.version)?, *ver)))
+        .max_by(|(a, _), (b, _)| a.cmp(b))
+        .map(|(_, ver)| ver)
+        .or(candidates.last().copied())
+}
+
+fn builds_for(version: &LibraryVersion, instruction_set: Option<&str>) -> bool {
+    match (instruction_set, version_architecture(&version.version)) {
+        (Some(isa), Some(arch)) => isa == arch,
+        _ => true,
+    }
+}
+
+/// Orders versions by number, then release over pre-release, then suffix
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord)]
+struct VersionKey {
+    numbers: Vec<u64>,
+    release: bool,
+    suffix: String,
+}
+
+impl VersionKey {
+    fn parse(version: &str) -> Option<VersionKey> {
+        let start = version.find(|c: char| c.is_ascii_digit())?;
+        let version = &version[start..];
+        let end = version
+            .find(|c: char| !c.is_ascii_digit() && c != '.')
+            .unwrap_or(version.len());
+        let number = version[..end].trim_end_matches('.');
+        let suffix = version[number.len()..].trim().to_ascii_lowercase();
+
+        Some(VersionKey {
+            numbers: number
+                .split('.')
+                .map(str::parse)
+                .collect::<Result<_, _>>()
+                .ok()?,
+            release: !is_prerelease(&suffix),
+            suffix,
+        })
+    }
+}
+
+fn is_prerelease(suffix: &str) -> bool {
+    suffix
+        .split(|c: char| !c.is_ascii_alphanumeric())
+        .map(|word| word.trim_end_matches(|c: char| c.is_ascii_digit()))
+        .any(|word| {
+            matches!(
+                word,
+                "alpha" | "beta" | "rc" | "pre" | "preview" | "dev" | "snapshot" | "nightly"
+            )
+        })
+}
+
+/// Names used in library versions for each compiler `instructionSet`
+const ARCHITECTURE_NAMES: &[(&str, &[&str])] = &[
+    ("amd64", &["x86_64", "x86-64", "amd64", "x64"]),
+    ("aarch64", &["aarch64", "arm64"]),
+    ("arm32", &["arm", "armhf", "arm hard-float"]),
+    ("riscv64", &["risc-v 64", "riscv64"]),
+    ("riscv32", &["risc-v 32", "riscv32"]),
+    ("powerpc", &["power64", "ppc64", "ppc64le", "powerpc"]),
+    ("s390x", &["s390x"]),
+];
+
+/// Instruction set named in a version's parentheses, e.g. `3.0.1 (arm64)`
+fn version_architecture(version: &str) -> Option<&'static str> {
+    let version = version.to_ascii_lowercase();
+    let notes = version
+        .split('(')
+        .skip(1)
+        .filter_map(|part| part.split(')').next());
+
+    for note in notes {
+        for (isa, names) in ARCHITECTURE_NAMES {
+            if names.iter().any(|name| contains_word(note, name)) {
+                return Some(isa);
+            }
+        }
+    }
+    None
+}
+
+fn contains_word(haystack: &str, word: &str) -> bool {
+    haystack.match_indices(word).any(|(start, _)| {
+        let before = haystack[..start].chars().next_back();
+        let after = haystack[start + word.len()..].chars().next();
+        !before.is_some_and(|c| c.is_ascii_alphanumeric())
+            && !after.is_some_and(|c| c.is_ascii_alphanumeric())
+    })
 }
 
 /// Join names with commas, truncating once the list grows too long for an
@@ -879,7 +994,105 @@ fn build_asm_options(request: &ParserResult) -> RequestOptions {
 
 #[cfg(test)]
 mod tests {
-    use super::{take_library_specs, truncate_filter, MAX_FILTER_LEN};
+    use super::{
+        default_library_version, take_library_specs, truncate_filter, version_architecture,
+        VersionKey, MAX_FILTER_LEN,
+    };
+    use godbolt::LibraryVersion;
+
+    fn versions(list: &[(&str, &str)]) -> Vec<LibraryVersion> {
+        list.iter()
+            .map(|(id, version)| LibraryVersion {
+                id: id.to_string(),
+                version: version.to_string(),
+                ..Default::default()
+            })
+            .collect()
+    }
+
+    #[test]
+    fn picks_highest_library_version() {
+        let versions = versions(&[("112", "1.1.2"), ("401", "4.0.1"), ("04", "0.4")]);
+
+        let version = default_library_version(&versions, None).unwrap();
+        assert_eq!(version.id, "401");
+    }
+
+    #[test]
+    fn picks_release_over_trunk() {
+        let versions = versions(&[("1200", "12.0.0"), ("trunk", "trunk")]);
+
+        let version = default_library_version(&versions, None).unwrap();
+        assert_eq!(version.id, "1200");
+    }
+
+    #[test]
+    fn picks_release_over_prerelease() {
+        let versions = versions(&[("200", "2.0.0"), ("200a", "2.0.0-alpha")]);
+
+        let version = default_library_version(&versions, None).unwrap();
+        assert_eq!(version.id, "200");
+    }
+
+    #[test]
+    fn picks_latest_version_suffix() {
+        let versions = versions(&[("111g", "1.1.1g"), ("111c", "1.1.1c")]);
+
+        let version = default_library_version(&versions, None).unwrap();
+        assert_eq!(version.id, "111g");
+    }
+
+    #[test]
+    fn picks_version_for_compiler_architecture() {
+        let versions = versions(&[
+            ("glibc_x86_64_242", "glibc 2.42 (x86-64)"),
+            ("glibc_aarch64_242", "glibc 2.42 (AArch64)"),
+            ("glibc_s390x_239", "glibc 2.39 (s390x)"),
+        ]);
+
+        let version = default_library_version(&versions, Some("amd64")).unwrap();
+        assert_eq!(version.id, "glibc_x86_64_242");
+        let version = default_library_version(&versions, Some("aarch64")).unwrap();
+        assert_eq!(version.id, "glibc_aarch64_242");
+    }
+
+    #[test]
+    fn picks_any_version_without_matching_architecture() {
+        let versions = versions(&[("301-x86_64", "3.0.1 (x86_64)")]);
+
+        let version = default_library_version(&versions, Some("avr")).unwrap();
+        assert_eq!(version.id, "301-x86_64");
+    }
+
+    #[test]
+    fn picks_last_unnumbered_version() {
+        let versions = versions(&[("dev", "dev"), ("trunk", "trunk")]);
+
+        let version = default_library_version(&versions, None).unwrap();
+        assert_eq!(version.id, "trunk");
+        assert!(default_library_version(&[], None).is_none());
+    }
+
+    #[test]
+    fn parses_version_keys() {
+        let key = |version| VersionKey::parse(version).unwrap();
+
+        assert_eq!(key("v1.84.0").numbers, [1, 84, 0]);
+        assert_eq!(key("glibc 2.42 (x86-64)").numbers, [2, 42]);
+        assert_eq!(key("1.x").numbers, [1]);
+        assert!(VersionKey::parse("trunk").is_none());
+        assert!(key("1.10") > key("1.9"));
+        assert!(key("2.0.0") > key("2.0.0-rc1"));
+        assert!(key("1.9.10-1") > key("1.9.10"));
+    }
+
+    #[test]
+    fn reads_version_architecture() {
+        assert_eq!(version_architecture("3.0.1 (x86_64)"), Some("amd64"));
+        assert_eq!(version_architecture("3.0.1 (arm)"), Some("arm32"));
+        assert_eq!(version_architecture("3.0.1 (arm64)"), Some("aarch64"));
+        assert_eq!(version_architecture("arm 1.0"), None);
+    }
 
     #[test]
     fn takes_library_specs_out_of_options() {
