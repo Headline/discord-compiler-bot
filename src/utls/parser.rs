@@ -86,7 +86,7 @@ pub async fn get_components(
     } else {
         // no compilation manager, just assume target is supplied
         if !ignore_lang {
-            if let Some(param) = args.first() {
+            if let Some(param) = args.first().filter(|p| !p.starts_with('-')) {
                 let lower_param = param.trim().to_lowercase();
                 let language = shortname_to_qualified(&lower_param);
                 args.remove(0);
